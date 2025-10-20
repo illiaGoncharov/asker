@@ -1,0 +1,27 @@
+# Global: единый источник — тема и инфраструктура
+# Игнорируем всё по умолчанию
+*
+
+# Разрешаем инфраструктуру и план
+!/.gitignore
+!/ask.plan.md
+!/docker-compose.yml
+!/.github/**
+!/CURSOR.md
+!/.cursor/**
+
+# Разрешаем wp-content и тему Asker
+!wp-content/
+wp-content/*
+!wp-content/themes/
+wp-content/themes/*
+!wp-content/themes/asker/
+
+# Локальные файлы
+.env
+.DS_Store
+.idea/
+.vscode/
+
+
+

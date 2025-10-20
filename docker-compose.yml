@@ -1,0 +1,46 @@
+version: '3.9'
+services:
+  db:
+    image: mysql:8
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-wordpress}
+      MYSQL_USER: ${MYSQL_USER:-wordpress}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-wordpress}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  wp:
+    image: wordpress:6-php8.2-apache
+    restart: unless-stopped
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: ${MYSQL_USER:-wordpress}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD:-wordpress}
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE:-wordpress}
+    ports:
+      - "${WP_PORT:-8080}:80"
+    volumes:
+      - ./wp-content/themes/asker:/var/www/html/wp-content/themes/asker
+    depends_on:
+      - db
+
+  pma:
+    image: phpmyadmin:latest
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+    ports:
+      - "${PMA_PORT:-8081}:80"
+    depends_on:
+      - db
+
+volumes:
+  db_data:
+
+
+
+
