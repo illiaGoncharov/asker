@@ -1,0 +1,13 @@
+# Игнор локальных и приватных файлов внутри темы
+*.log
+.DS_Store
+.vscode/
+.idea/
+.env
+assets/src/
+NOTES.private.md
+
+
+
+
+

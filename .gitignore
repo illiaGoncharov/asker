@@ -16,12 +16,15 @@ wp-content/*
 !wp-content/themes/
 wp-content/themes/*
 !wp-content/themes/asker/
+!wp-content/themes/asker/**
 
 # Локальные файлы
 .env
 .DS_Store
 .idea/
 .vscode/
+
+
 
 
 
