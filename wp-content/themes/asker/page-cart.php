@@ -579,11 +579,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         if (confirm(`Удалить выбранные товары (${selected.length})?`)) {
-            selected.forEach(cb => {
-                const key = cb.value;
-                removeItem(key, false);
-            });
-            setTimeout(() => location.reload(), 500);
+            const keys = Array.from(selected).map(cb => cb.value);
+            removeItemsSequentially(keys);
         }
     });
     
@@ -607,10 +604,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function removeItem(key, reload = true) {
         const formData = new FormData();
-        formData.append('action', 'remove_cart_item');
+        formData.append('action', 'woocommerce_remove_cart_item');
         formData.append('cart_item_key', key);
         
-        fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+        return fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
             method: 'POST',
             body: formData
         })
@@ -619,7 +616,36 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success && reload) {
                 location.reload();
             }
+            return data;
+        })
+        .catch(error => {
+            console.error('Ошибка удаления товара:', error);
+            return { success: false, error: error };
         });
+    }
+    
+    // Удаление нескольких товаров последовательно
+    async function removeItemsSequentially(keys) {
+        const errors = [];
+        
+        for (const key of keys) {
+            try {
+                const result = await removeItem(key, false);
+                if (!result || !result.success) {
+                    errors.push(key);
+                }
+            } catch (error) {
+                console.error('Ошибка при удалении товара:', key, error);
+                errors.push(key);
+            }
+        }
+        
+        if (errors.length > 0) {
+            alert('Ошибка при удалении ' + errors.length + ' товаров из ' + keys.length);
+        }
+        
+        // Обновляем страницу после всех удалений
+        location.reload();
     }
 });
 </script>

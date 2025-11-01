@@ -4,6 +4,11 @@
  * Данные берутся из ACF (группа «Главная»).
  */
 
+// ВРЕМЕННАЯ ДИАГНОСТИКА - проверяем, что front-page.php загружается
+if ( ! defined( 'WP_USE_THEMES' ) || ! WP_USE_THEMES ) {
+    return;
+}
+
 get_header();
 ?>
 
@@ -11,23 +16,37 @@ get_header();
 // Определяем URL страницы со всеми категориями
 $asker_categories_url = home_url('/categories');
 
-// 1. Сначала ищем страницу по слагу 'categories'
-$asker_categories_page = get_page_by_path('categories');
-if ($asker_categories_page && $asker_categories_page->post_status === 'publish') {
-    $asker_categories_url = get_permalink($asker_categories_page->ID);
-} else {
-    // 2. Ищем страницу по шаблону 'page-categories.php'
-    $pages_with_template = get_pages(array(
-        'meta_key'   => '_wp_page_template',
-        'meta_value' => 'page-categories.php',
-        'number'     => 1,
-        'post_status' => 'publish'
-    ));
-    if (!empty($pages_with_template)) {
-        $asker_categories_url = get_permalink($pages_with_template[0]->ID);
+// Безопасное получение URL страницы категорий с проверками
+if (function_exists('get_page_by_path') && function_exists('home_url')) {
+    // 1. Сначала ищем страницу по слагу 'categories'
+    $asker_categories_page = get_page_by_path('categories');
+    if ($asker_categories_page && isset($asker_categories_page->post_status) && $asker_categories_page->post_status === 'publish') {
+        $permalink = get_permalink($asker_categories_page->ID);
+        if ($permalink && !is_wp_error($permalink)) {
+            $asker_categories_url = $permalink;
+        }
     } else {
-        // 3. Фолбэк на каталог
-        $asker_categories_url = home_url('/shop');
+        // 2. Ищем страницу по шаблону 'page-categories.php'
+        if (function_exists('get_pages')) {
+            $pages_with_template = get_pages(array(
+                'meta_key'   => '_wp_page_template',
+                'meta_value' => 'page-categories.php',
+                'number'     => 1,
+                'post_status' => 'publish'
+            ));
+            if (!empty($pages_with_template) && is_array($pages_with_template) && isset($pages_with_template[0])) {
+                $permalink = get_permalink($pages_with_template[0]->ID);
+                if ($permalink && !is_wp_error($permalink)) {
+                    $asker_categories_url = $permalink;
+                }
+            } else {
+                // 3. Фолбэк на каталог
+                $asker_categories_url = home_url('/shop');
+            }
+        } else {
+            // 3. Фолбэк на каталог
+            $asker_categories_url = home_url('/shop');
+        }
     }
 }
 ?>
@@ -54,12 +73,25 @@ if ($asker_categories_page && $asker_categories_page->post_status === 'publish')
                         continue;
                     }
                     
-                    // Получаем иконку категории
+                    // Получаем иконку категории из стандартного поля WooCommerce "Thumbnail"
                     $thumbnail_id = get_term_meta($category->term_id, 'thumbnail_id', true);
                     $icon_url = '';
                     
                     if ($thumbnail_id) {
-                        $icon_url = wp_get_attachment_image_url($thumbnail_id, 'medium');
+                        // Проверяем тип файла для корректной обработки SVG
+                        $mime_type = get_post_mime_type($thumbnail_id);
+                        
+                        if ($mime_type === 'image/svg+xml') {
+                            // Для SVG используем прямой URL
+                            $icon_url = wp_get_attachment_url($thumbnail_id);
+                        } else {
+                            // Для обычных изображений используем размер medium
+                            $icon_url = wp_get_attachment_image_url($thumbnail_id, 'medium');
+                            if (!$icon_url) {
+                                // Если нет medium, используем полный размер
+                                $icon_url = wp_get_attachment_url($thumbnail_id);
+                            }
+                        }
                     }
                     
                     // Fallback на иконки по названию категории (независимо от слага)

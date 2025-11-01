@@ -6,6 +6,8 @@
 .site-header {
   background: var(--bg-white);
   border-bottom: 1px solid var(--border-gray);
+  position: relative;
+  z-index: 100;
 }
 
 .header-top {
@@ -17,6 +19,8 @@
 
 .header-main {
   padding: 16px 0;
+  position: relative;
+  z-index: 100;
 }
 
 .header-main .container {
@@ -384,6 +388,7 @@ a.btn-catalog:hover {
 .nav-dropdown {
   position: relative;
   display: inline-block;
+  z-index: 101;
 }
 
 .btn-nav-menu {
@@ -411,7 +416,7 @@ a.btn-catalog:hover {
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   min-width: 200px;
-  z-index: 1000;
+  z-index: 102;
   margin-top: 8px;
 }
 

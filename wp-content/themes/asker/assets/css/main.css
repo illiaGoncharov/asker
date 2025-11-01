@@ -653,7 +653,7 @@ input[type="button"] {
   padding: 16px;
   min-width: 200px;
   display: none;
-  z-index: 1000;
+  z-index: 102;
 }
 
 .nav-dropdown-menu.active {
@@ -745,8 +745,10 @@ input[type="button"] {
   justify-content: center;
   flex-wrap: nowrap;
   overflow-x: auto;
+  overflow-y: visible; /* Разрешаем видеть увеличенные элементы */
   scrollbar-width: none;
   -ms-overflow-style: none;
+  padding-top: 10px; /* Добавляем отступ сверху, чтобы увеличенная иконка не обрезалась */
 }
 
 .categories-grid::-webkit-scrollbar {
@@ -765,6 +767,8 @@ input[type="button"] {
   border-radius: 12px;
   width: 200px;
   flex-shrink: 0;
+  position: relative;
+  overflow: visible; /* Разрешаем видеть увеличенные элементы */
 }
 
 /* Адаптивность элементов категорий для больших экранов */
@@ -810,7 +814,7 @@ input[type="button"] {
 }
 
 .category-item:hover {
-  transform: translateY(-3px);
+  /* Убрали translateY, чтобы кружок не поднимался вверх и не обрезался */
   /* background-color: var(--bg-light); */
   /* box-shadow: 0 4px 16px rgba(0,0,0,0.1); */
 }
@@ -826,6 +830,7 @@ input[type="button"] {
   margin-bottom: 12px;
   transition: all 0.2s ease;
   position: relative;
+  overflow: visible; /* Разрешаем иконке увеличиваться за пределы кружка */
 }
 
 .category-icon img {
@@ -836,11 +841,17 @@ input[type="button"] {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  transition: transform 0.2s ease;
 }
 
+/* Увеличиваем только иконку внутри, а не весь контейнер */
 .category-item:hover .category-icon {
-  transform: scale(1.1);
+  transform: none; /* Убираем transform с контейнера */
   /* box-shadow: 0 4px 12px rgba(255, 231, 6, 0.3); */
+}
+
+.category-item:hover .category-icon img {
+  transform: translate(-50%, -50%) scale(1.1); /* Увеличиваем только изображение */
 }
 
 .category-name {
@@ -1661,7 +1672,7 @@ button,
 .shop-product-card,
 .woocommerce ul.products li.product {
   background: var(--bg-white);
-  border: 1px solid var(--border-gray);
+  /* border: 1px solid var(--border-gray); */
   border-radius: 12px;
   padding: 20px;
   position: relative;
@@ -1671,12 +1682,33 @@ button,
   text-align: left;
   margin: 0;
   overflow: hidden;
+  box-shadow: none !important; /* Убираем тень по умолчанию (включая WooCommerce) */
 }
 
+/* Дополнительная защита от WooCommerce стилей - базовое состояние */
+.shop-product-card,
+.woocommerce ul.products li.product,
+.woocommerce-page ul.products li.product,
+body.woocommerce ul.products li.product {
+  box-shadow: none !important;
+  transform: none !important; /* Убираем transform по умолчанию */
+}
+
+/* Убираем тени у всех вложенных элементов при hover */
+.shop-product-card:hover *,
+.woocommerce ul.products li.product:hover *,
+.woocommerce-page ul.products li.product:hover *,
+body.woocommerce ul.products li.product:hover * {
+  box-shadow: none !important;
+}
+
+/* Возвращаем тень только самой карточке при hover */
 .shop-product-card:hover,
-.woocommerce ul.products li.product:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+.woocommerce ul.products li.product:hover,
+.woocommerce-page ul.products li.product:hover,
+body.woocommerce ul.products li.product:hover {
+  transform: translateY(-4px) !important; /* Переопределяем WooCommerce */
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1) !important; /* Только одна тень при hover */
 }
 
 /* Кнопка избранного в Shop */
@@ -1685,7 +1717,8 @@ button,
   position: absolute;
   top: 16px;
   right: 16px;
-  background: rgba(255, 255, 255, 0.95);
+  /* background: rgba(255, 255, 255, 0.95); */
+  background: none;
   border: none;
   border-radius: 50%;
   width: 36px;
@@ -1722,6 +1755,7 @@ button,
   background: #F5F6F8;
   position: relative;
   text-decoration: none;
+  box-shadow: none !important; /* Убираем тени у вложенных элементов */
 }
 
 .shop-product-image a {
@@ -1731,12 +1765,14 @@ button,
   align-items: center;
   justify-content: center;
   text-decoration: none;
+  box-shadow: none !important; /* Убираем тени у ссылок внутри */
 }
 
 .shop-product-image img,
 .woocommerce ul.products li.product img {
-  width: 100%;
-  height: 100%;
+  margin: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
   object-fit: contain;
   transition: transform 0.3s ease;
   background: var(--bg-white)
@@ -1899,17 +1935,67 @@ button,
 .shop-product-card .woocommerce ul.products li.product .button {
   background: var(--primary-black) !important;
   color: var(--bg-white) !important;
+}
+
+/* Состояние загрузки для кнопок "В корзину" */
+.add_to_cart_button.loading {
+  opacity: 0.6 !important;
+  cursor: wait !important;
+  pointer-events: none;
+  position: relative;
+}
+
+.add_to_cart_button.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: var(--bg-white);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Убираем стандартный текст WooCommerce "Добавление..." */
+.add_to_cart_button.loading {
+  color: transparent !important;
+}
+
+/* Восстанавливаем видимость после загрузки */
+.add_to_cart_button:not(.loading) {
+  opacity: 1 !important;
+  cursor: pointer !important;
+  pointer-events: auto;
+}
+
+/* Продолжение стилей для кнопок */
+.woocommerce ul.products li.product .button,
+.woocommerce ul.products li.product .add_to_cart_button,
+.woocommerce ul.products li.product .product_type_simple,
+.shop-product-card .shop-btn-cart,
+.shop-product-card .woocommerce ul.products li.product .button {
   border: none !important;
   border-radius: 50px !important;
   padding: 10px 20px !important;
   font-size: 14px !important;
   font-weight: 500 !important;
+  max-width: 242px !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
   white-space: nowrap !important;
   font-family: var(--font-secondary) !important;
   text-decoration: none !important;
-  display: inline-block !important;
 }
 /* Дополнительные специфичные селекторы для WooCommerce кнопок */
 body.woocommerce .woocommerce ul.products li.product .button,
@@ -1961,8 +2047,328 @@ body.woocommerce-shop .woocommerce ul.products li.product .button,
 }
 
 /* ===== СТРАНИЦА ТОВАРА ===== */
-.single-product .product {
+.single-product-page {
   padding: 40px 0;
+}
+
+/* Layout страницы товара: галерея слева, информация справа */
+.product-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  margin-bottom: 60px;
+}
+
+/* Галерея товара */
+.product-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.product-gallery-main {
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg-white);
+}
+
+.product-gallery-main img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Миниатюры галереи - сетка 3 колонки */
+.product-gallery-thumbs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.product-thumb {
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-white);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.product-thumb:hover {
+  transform: scale(1.05);
+}
+
+.product-thumb img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Информация о товаре */
+.product-summary {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Название товара */
+.product-summary .product-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--primary-black);
+  margin: 0 0 8px 0;
+  font-family: var(--font-manrope);
+  line-height: 1.3;
+  padding-right: 150px;
+}
+
+/* Артикул */
+.product-summary .product-sku {
+  font-size: 13px;
+  color: #6B7280;
+  margin-bottom: 24px;
+  font-family: var(--font-secondary);
+}
+
+.product-summary .product-sku span {
+  font-weight: 500;
+  color: var(--primary-black);
+}
+
+/* Желтая кнопка чата справа вверху */
+.product-chat-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: var(--primary-yellow);
+  border: none;
+  border-radius: 50px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--primary-black);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1.3;
+}
+
+.product-chat-btn:hover {
+  opacity: 0.9;
+}
+
+.product-chat-btn svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.product-chat-btn span {
+  text-align: left;
+}
+
+/* Цена товара */
+.product-summary .product-price {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--primary-black);
+  margin: 0 0 24px 0;
+  font-family: var(--font-manrope);
+}
+
+.product-summary .product-price .amount,
+.product-summary .product-price .woocommerce-Price-amount {
+  font-size: inherit;
+  color: inherit;
+}
+
+/* Форма корзины */
+.product-summary form.cart {
+  margin-bottom: 32px;
+}
+
+.product-summary .cart-form-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Счетчик количества с кнопками +/- */
+.product-summary .quantity-wrapper {
+  display: flex;
+  align-items: center;
+  border: 1px solid #E5E7EB;
+  border-radius: 50px;
+  overflow: hidden;
+  background: var(--bg-white);
+}
+
+.product-summary .quantity-wrapper input.qty {
+  border: none;
+  padding: 14px 16px;
+  font-size: 16px;
+  width: 50px;
+  text-align: center;
+  font-family: var(--font-secondary);
+  font-weight: 500;
+  -moz-appearance: textfield;
+  background: transparent;
+}
+
+.product-summary .quantity-wrapper input.qty::-webkit-outer-spin-button,
+.product-summary .quantity-wrapper input.qty::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.product-summary .quantity-wrapper input.qty:focus {
+  outline: none;
+}
+
+/* Кнопки +/- - только на странице товара */
+.product-summary .qty-btn {
+  background: transparent;
+  border: none;
+  padding: 14px 16px;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--primary-black);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-secondary);
+  line-height: 1;
+}
+
+.product-summary .qty-btn:hover {
+  background: #F9FAFB;
+}
+
+.product-summary .qty-btn:active {
+  background: #F3F4F6;
+}
+
+/* quantity-wrapper убран из каталога - он только на странице товара (.product-summary .quantity-wrapper) */
+
+/* Скрываем заголовок на странице аккаунта */
+.account-page .page-title,
+.account-page h1.page-title,
+.account-page h1:first-of-type,
+.woocommerce-account .page-title,
+.woocommerce-account h1.page-title,
+.woocommerce-account .entry-title,
+.woocommerce-account h1.entry-title,
+body.woocommerce-account .entry-title,
+body.woocommerce-account h1,
+body.woocommerce-account .container > h1,
+.woocommerce-account .section__title,
+body.woocommerce-account .section__title,
+body.woocommerce-account .container .section__title,
+.account-page .section__title {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 0 !important;
+  font-size: 0 !important;
+}
+
+/* qty-btn убраны из каталога - они только на странице товара (.product-summary .quantity-wrapper .qty-btn) */
+
+/* Кнопка "В корзину" - черная */
+.product-summary .single_add_to_cart_button {
+  background: var(--primary-black) !important;
+  color: var(--bg-white) !important;
+  border: none !important;
+  border-radius: 50px;
+  width: 242px;
+  height: 50px;
+  padding: 0;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-summary .single_add_to_cart_button:hover {
+  background: #1F2937 !important;
+  color: var(--bg-white) !important;
+}
+
+/* Краткое описание после кнопок */
+.product-summary .product-short-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--primary-black);
+  margin: 24px 0 0 0;
+  font-family: var(--font-secondary);
+  font-weight: 400;
+}
+
+/* Описание товара */
+.product-summary .product-description {
+  margin-top: 32px;
+  padding-top: 32px;
+  border-top: 1px solid #E5E7EB;
+}
+
+.product-summary .product-description h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--primary-black);
+  margin: 0 0 16px 0;
+  font-family: var(--font-secondary);
+}
+
+.product-summary .product-description-content {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #4B5563;
+  font-family: var(--font-secondary);
+}
+
+.product-summary .product-description-content p {
+  margin: 0 0 8px 0;
+}
+
+.product-summary .product-description-content ul,
+.product-summary .product-description-content ol {
+  margin: 0 0 16px 0;
+  padding-left: 20px;
+}
+
+.product-summary .product-description-content li {
+  margin-bottom: 6px;
+  line-height: 1.6;
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 1024px) {
+  .product-main {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  
+  .product-chat-btn {
+    position: static;
+    margin-bottom: 20px;
+  }
+  
+  .product-summary .product-title {
+    font-size: 22px;
+    padding-right: 0;
+  }
+  
+  .product-summary .product-price {
+    font-size: 28px;
+  }
 }
 
 /* Лайк-кнопка на странице товара */
@@ -2213,10 +2619,12 @@ body.woocommerce-shop .woocommerce ul.products li.product .button,
   display: flex;
   flex-direction: column;
   height: 100%;
+  box-shadow: none; /* Убираем тень по умолчанию */
 }
 
 .product-card:hover {
   transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1); /* Только одна тень при hover */
 }
 
 .favorite-btn {
@@ -3441,14 +3849,6 @@ body.woocommerce-shop .woocommerce ul.products li.product .button,
 .search-results {
 
 }
-
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  margin: 0 0 32px;
-  color: var(--primary-black);
-}
-
 .search-results-grid {
   display: grid;
   gap: 24px;
@@ -3614,10 +4014,10 @@ body.woocommerce-shop .woocommerce ul.products li.product .button,
 
 .page-title {
   font-size: 36px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--primary-black);
   margin: 0;
-  text-align: center;
+  text-align: left;
   font-family: var(--font-primary);
 }
 
@@ -3700,7 +4100,7 @@ body.woocommerce-shop .woocommerce ul.products li.product .button,
   margin: 0 auto;
   padding: 0 20px;
   position: relative;
-  z-index: 1;
+  z-index: 0;
 }
 
 /* Адаптивность контейнеров секций для больших экранов */
@@ -3903,20 +4303,7 @@ button.btn-login,
 }
 
 /* Стили для страницы аккаунта */
-.account-page {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.account-page h1 {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--primary-black);
-  margin-bottom: 30px;
-  text-align: center;
-  font-family: var(--font-primary);
-}
+/* Старые стили .account-page удалены - используются новые ниже */
 
 .account-content h2 {
   font-size: 24px;
@@ -4866,11 +5253,17 @@ button.btn-login,
 
 /* ===== СТРАНИЦА ЛИЧНОГО КАБИНЕТА ===== */
 .account-page {
-  position: relative;
   padding: 40px 0;
   min-height: 80vh;
-  max-width: none;
+  position: relative;
+}
+
+/* Убираем боковые паддинги у контейнера для account-page и устанавливаем z-index */
+.account-page.container {
+  padding: 0;
   margin: 0;
+  position: relative;
+  z-index: 0; 
 }
 
 .account-page::before {
@@ -4893,9 +5286,6 @@ button.btn-login,
   gap: 40px;
   align-items: start;
   position: relative;
-  z-index: 1;
-  max-width: 1200px;
-  margin: 0 auto;
   padding: 0 20px;
 }
 
@@ -5205,6 +5595,127 @@ button.btn-login,
   color: var(--primary-black);
 }
 
+/* ===== ИЗБРАННОЕ В ЛК ===== */
+.wishlist-products {
+  margin-top: 24px;
+}
+
+/* Грид избранного - 3 колонки (автоматически переносится при 4, 7, 10+ товарах) */
+.wishlist-products .products-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+/* Стили для карточек товаров в избранном */
+.wishlist-products .product-card {
+  background: #F5F6F8;
+  border: 1px solid #E5E7EB;
+  border-radius: 24px;
+  padding: 20px;
+  position: relative;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-shadow: none;
+}
+
+.wishlist-products .product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+/* Цена в избранном - не обрезается */
+.wishlist-products .product-price,
+.wishlist-products .product-card .product-price {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+  font-family: var(--font-primary);
+  white-space: nowrap !important; /* Предотвращает перенос цены */
+  overflow: visible !important; /* Убираем обрезание */
+  text-overflow: clip !important; /* Убираем многоточие */
+  width: auto !important; /* Не ограничиваем ширину */
+  min-width: 0 !important; /* Убираем минимальную ширину */
+  max-width: none !important; /* Убираем ограничение максимальной ширины */
+}
+
+/* Стили для валюты в избранном - убираем символ валюты WooCommerce */
+.wishlist-products .product-price .woocommerce-Price-currencySymbol,
+.wishlist-products .product-card .product-price .woocommerce-Price-currencySymbol,
+.wishlist-products .product-price span.woocommerce-Price-currencySymbol {
+  display: none !important;
+}
+
+/* Убираем пробел перед скрытой валютой */
+.wishlist-products .product-price .woocommerce-Price-amount bdi {
+  white-space: nowrap;
+}
+
+/* Добавляем "руб." после суммы в избранном (после скрытия внутреннего символа) */
+.wishlist-products .product-price .woocommerce-Price-amount:after,
+.wishlist-products .product-card .product-price .woocommerce-Price-amount:after {
+  content: " руб.";
+  font-weight: 500;
+  font-size: 16px;
+  margin-left: 4px; /* Небольшой отступ после числа */
+}
+
+/* Контейнер для цены и кнопки в избранном */
+.wishlist-products .product-bottom,
+.wishlist-products .product-card .product-bottom {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  flex-wrap: nowrap; /* Не переносим элементы */
+  min-width: 0; /* Убираем ограничение */
+}
+
+/* Убираем ограничения ширины у контейнера цены */
+.wishlist-products .product-card .product-bottom > * {
+  flex-shrink: 0; /* Не сжимаем элементы */
+}
+
+/* Адаптивность для избранного */
+@media (max-width: 1024px) {
+  .wishlist-products .products-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .wishlist-products .products-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .wishlist-products .product-bottom {
+    flex-wrap: wrap; /* На мобильных можно переносить */
+  }
+}
+
+/* ===== ОТКЛЮЧЕНИЕ БЛОКА "COMING SOON" WOOCOMMERCE ===== */
+.wp-block-woocommerce-coming-soon,
+.woocommerce-coming-soon-store-only,
+.woocommerce-coming-soon-default,
+[data-block-name="woocommerce/coming-soon"],
+div[class*="woocommerce-coming-soon"],
+.wp-site-blocks > div[data-block-name="woocommerce/coming-soon"] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  left: -9999px !important;
+}
+
 /* Дубликат .btn-primary удалён */
 
 /* Пагинация */
@@ -5285,11 +5796,12 @@ button.btn-login,
   border-radius: 12px;
   overflow: hidden;
   transition: all 0.2s ease;
+  box-shadow: none; /* Убираем тень по умолчанию, чтобы не было дублирования */
 }
 
 .product-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1); /* Только одна тень при hover */
 }
 
 .product-image {

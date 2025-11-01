@@ -4,6 +4,12 @@
 
 // Функция открытия попапа чата
 function openChatPopup() {
+    // Проверяем, что DOM загружен
+    if (typeof document === 'undefined' || !document.body) {
+        console.error('DOM не загружен');
+        return;
+    }
+    
     // Создаем попап
     const popup = document.createElement('div');
     popup.className = 'chat-popup';
@@ -43,6 +49,9 @@ function openChatPopup() {
 
 // Функция закрытия попапа чата
 function closeChatPopup() {
+    if (typeof document === 'undefined') {
+        return;
+    }
     const popup = document.querySelector('.chat-popup');
     if (popup) {
         popup.classList.remove('show');
@@ -61,55 +70,99 @@ function startLiveChat() {
 
 // Функция обновления счетчика корзины
 function updateCartCount() {
+    // Используем правильный AJAX URL и action
+    const ajaxUrl = (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) 
+        ? asker_ajax.ajax_url 
+        : (window.wc_add_to_cart_params && window.wc_add_to_cart_params.ajax_url)
+        ? window.wc_add_to_cart_params.ajax_url
+        : null;
+    
+    if (!ajaxUrl) {
+        return; // Не делаем запрос, если URL недоступен
+    }
+    
     // Получаем количество товаров в корзине через AJAX
-    fetch('/wp-admin/admin-ajax.php', {
+    fetch(ajaxUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: 'action=get_cart_count'
+        body: 'action=asker_get_cart_count'
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('HTTP error! status: ' + response.status);
+        }
+        return response.json();
+    })
     .then(data => {
-        const cartCount = document.querySelector('.cart-count');
-        if (cartCount) {
-            cartCount.textContent = data.count;
-            cartCount.setAttribute('data-count', data.count);
+        if (data && data.success && data.data) {
+            const cartCount = document.querySelector('.cart-count');
+            if (cartCount) {
+                cartCount.textContent = data.data.count || 0;
+                cartCount.setAttribute('data-count', data.data.count || 0);
+            }
         }
     })
     .catch(error => {
-        console.log('Ошибка получения количества товаров в корзине:', error);
+        // Тихий catch - не логируем ошибки, чтобы не засорять консоль
     });
 }
 
 // Функция обновления счетчика избранного
 function updateWishlistCount() {
+    // Используем правильный AJAX URL и action
+    const ajaxUrl = (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) 
+        ? asker_ajax.ajax_url 
+        : (window.wc_add_to_cart_params && window.wc_add_to_cart_params.ajax_url)
+        ? window.wc_add_to_cart_params.ajax_url
+        : null;
+    
+    if (!ajaxUrl) {
+        return; // Не делаем запрос, если URL недоступен
+    }
+    
     // Получаем количество товаров в избранном через AJAX
-    fetch('/wp-admin/admin-ajax.php', {
+    fetch(ajaxUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: 'action=get_wishlist_count'
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('HTTP error! status: ' + response.status);
+        }
+        return response.json();
+    })
     .then(data => {
-        const wishlistCount = document.querySelector('.wishlist-count');
-        if (wishlistCount) {
-            wishlistCount.textContent = data.count;
-            wishlistCount.setAttribute('data-count', data.count);
+        if (data && data.success && data.count !== undefined) {
+            const wishlistCount = document.querySelector('.wishlist-count');
+            if (wishlistCount) {
+                wishlistCount.textContent = data.count;
+                wishlistCount.setAttribute('data-count', data.count);
+            }
         }
     })
     .catch(error => {
-        console.log('Ошибка получения количества товаров в избранном:', error);
+        // Тихий catch - не логируем ошибки
     });
 }
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
-    // Обновляем счетчики
-    updateCartCount();
-    updateWishlistCount();
+    // ВРЕМЕННО ОТКЛЮЧЕНО для исправления белого экрана
+    // Обновляем счетчики только если asker_ajax доступен (после полной загрузки скриптов)
+    // Вызываем с небольшой задержкой, чтобы asker_ajax точно был загружен
+    /*
+    setTimeout(function() {
+        if (typeof asker_ajax !== 'undefined') {
+            updateCartCount();
+            updateWishlistCount();
+        }
+    }, 100);
+    */
     
     // Закрытие попапа по клику вне его
     document.addEventListener('click', function(e) {

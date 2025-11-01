@@ -1,9 +1,18 @@
 <?php
 /**
  * Фолбэк-шаблон. Используется для архивов/блога при отсутствии спец-шаблонов.
+ * Для главной страницы принудительно загружаем front-page.php
  */
 
-get_header();
+// НЕ используем exit здесь - это блокирует wp_footer()
+// Вместо этого полагаемся на template_include фильтр в woocommerce.php
+
+// НЕ вызываем get_header() здесь, если это главная страница
+// т.к. front-page.php сам вызовет get_header()
+// Это предотвращает дублирование header
+if ( ! is_front_page() && ! is_home() ) {
+    get_header();
+}
 ?>
 
 <div class="container section">
@@ -27,7 +36,13 @@ get_header();
     <?php endif; ?>
 </div>
 
-<?php get_footer(); ?>
+<?php 
+// НЕ вызываем get_footer() если это главная страница
+// т.к. front-page.php сам вызовет get_footer()
+if ( ! is_front_page() && ! is_home() ) {
+    get_footer();
+}
+?>
 
 
 

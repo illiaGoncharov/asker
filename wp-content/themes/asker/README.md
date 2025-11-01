@@ -78,9 +78,11 @@ asker/
 │   └── helpers.php       # Вспомогательные функции
 ├── woocommerce/
 │   ├── myaccount/
-│   │   └── my-account.php  # Кастомный ЛК
-│   ├── archive-product.php
-│   ├── content-product.php
+│   │   └── my-account.php       # Кастомный ЛК
+│   ├── archive-product.php      # Каталог/категории
+│   ├── single-product.php       # Страница товара
+│   ├── content-single-product.php  # Контент страницы товара
+│   ├── content-product.php      # Карточка товара в списке
 │   └── ...
 ├── page-*.php            # Шаблоны страниц
 ├── header.php
@@ -103,6 +105,8 @@ asker/
 - ✅ Кнопки в хедере: упрощённые hover эффекты (opacity: 0.9).
 - ✅ Исправлен .gitignore для корректного трекинга файлов темы.
 - ✅ **Гигиена проекта**: удалены дублирующие шаблоны, backup файлы, лишняя документация.
+- ✅ **Страница товара**: кастомный шаблон `single-product.php` с хлебными крошками, `content-single-product.php` с двухколоночным layout (галерея + информация).
+- ✅ **Редирект категорий**: автоматическое исправление некорректных URL `/product/category-slug/` → `/product-category/category-slug/`.
 
 ## Что осталось доработать
 - Финальная вычитка отступов/типографики по макету (без фанатизма).

@@ -1,0 +1,38 @@
+{
+  "key": "group_asker_contacts",
+  "title": "Контакты",
+  "fields": [
+    {
+      "key": "field_contact_form_shortcode",
+      "label": "Шорткод контактной формы",
+      "name": "contact_form_shortcode",
+      "type": "text",
+      "instructions": "Вставьте сюда шорткод формы Contact Form 7, например: [contact-form-7 id=\"123\"]",
+      "required": 0
+    }
+  ],
+  "location": [
+    [
+      {
+        "param": "page",
+        "operator": "==",
+        "value": "12"
+      }
+    ],
+    [
+      {
+        "param": "page_template",
+        "operator": "==",
+        "value": "page-contacts.php"
+      }
+    ]
+  ],
+  "position": "normal",
+  "style": "default",
+  "label_placement": "top",
+  "instruction_placement": "label",
+  "active": true,
+  "description": "Поля страницы контактов",
+  "modified": 1729423200
+}
+

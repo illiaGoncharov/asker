@@ -60,7 +60,7 @@
 /* Общий контейнер для контентных страниц */
 .content-page {
   max-width: 900px;
-  margin: 0 auto;
+  /* margin: 0 auto; */
   padding: 32px 20px 64px;
   line-height: 1.7;
   color: #1a1a1a;
@@ -124,10 +124,14 @@
 
 /* Контакты - двухколоночный layout */
 .content-page--contacts {
-  max-width: 1200px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-xl);
+  max-width: inherit;
+  display: flex;
+  justify-content: space-between;
+}
+
+.contact-page__left, 
+.contact-page__right {
+  width: calc(50% - 16px);
 }
 
 @media (max-width: 768px) {
@@ -222,12 +226,12 @@
   padding: 20px;
   position: relative;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  box-shadow: none; /* Убираем тень по умолчанию, чтобы избежать дублирования */
 }
 
 .product-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1); /* Только одна тень при hover */
 }
 
 .product-image {
@@ -342,20 +346,7 @@
    ACCOUNT PAGE STYLES
    ======================================== */
 
-.account-page {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.account-page h1 {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--primary-black);
-  margin-bottom: 30px;
-  text-align: center;
-  font-family: var(--font-primary);
-}
+/* Стили .account-page перенесены в main.css */
 
 .account-content h2 {
   font-size: 24px;
@@ -700,6 +691,7 @@
     font-size: 16px;
     transition: all 0.2s;
     font-family: var(--font-primary);
+    cursor: pointer;
 }
 
 .contact-card__button:hover {

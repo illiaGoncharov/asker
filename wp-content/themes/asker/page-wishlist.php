@@ -58,15 +58,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function removeFromWishlist(productId) {
+        const productIdNum = parseInt(productId, 10);
+        if (isNaN(productIdNum)) {
+            return;
+        }
+        
         const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-        const newFavorites = favorites.filter(id => id !== productId);
+        // Приводим все ID к числам для корректного сравнения
+        const newFavorites = favorites
+            .map(id => parseInt(id, 10))
+            .filter(id => !isNaN(id) && id !== productIdNum);
+        
         localStorage.setItem('favorites', JSON.stringify(newFavorites));
-        renderWishlist();
         
         // Обновляем счетчик в хедере
         if (window.updateWishlistCounter) {
             window.updateWishlistCounter();
         }
+        
+        // Синхронизируем с сервером если пользователь залогинен
+        if (typeof jQuery !== 'undefined' && typeof asker_ajax !== 'undefined') {
+            jQuery.ajax({
+                url: asker_ajax.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'asker_toggle_wishlist',
+                    product_id: productIdNum,
+                    action_type: 'remove'
+                }
+            });
+        }
+        
+        // Перерендериваем список
+        renderWishlist();
     }
     
     // Рендерим избранное при загрузке

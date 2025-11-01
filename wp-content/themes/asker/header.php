@@ -15,19 +15,61 @@
     
     <?php wp_head(); ?>
     
+    <!-- Принудительно удаляем блок Coming Soon и мета-тег -->
+    <script>
+    (function() {
+        // Удаляем мета-тег
+        var meta = document.querySelector('meta[name="woo-coming-soon-page"]');
+        if (meta) meta.remove();
+        
+        // Удаляем блок Coming Soon из DOM сразу после загрузки
+        function removeComingSoon() {
+            var comingSoon = document.querySelector('[data-block-name="woocommerce/coming-soon"]');
+            if (comingSoon) {
+                comingSoon.remove();
+            }
+            var comingSoonClass = document.querySelector('.woocommerce-coming-soon-default, .woocommerce-coming-soon-store-only, .wp-block-woocommerce-coming-soon');
+            if (comingSoonClass) {
+                comingSoonClass.remove();
+            }
+        }
+        
+        // Удаляем сразу
+        removeComingSoon();
+        
+        // Удаляем после загрузки DOM
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', removeComingSoon);
+        }
+        
+        // Удаляем после полной загрузки
+        window.addEventListener('load', removeComingSoon);
+        
+        // Удаляем с интервалом на случай, если блок добавляется динамически
+        var interval = setInterval(function() {
+            removeComingSoon();
+        }, 100);
+        
+        setTimeout(function() {
+            clearInterval(interval);
+        }, 2000);
+    })();
+    </script>
+    
     <!-- Стиль для простого лого -->
     <style>.site-logo{font-weight:700;font-size:18px;letter-spacing:.5px}</style>
     
     <!-- Подключение функций хедера -->
-    <script src="<?php echo get_template_directory_uri(); ?>/assets/js/header-functions.js"></script>
-    
-    <!-- Отладочная информация для проверки разрешения -->
     <script>
-        console.log('Разрешение экрана:', window.screen.width + 'x' + window.screen.height);
-        console.log('Разрешение окна браузера:', window.innerWidth + 'x' + window.innerHeight);
-        console.log('Device Pixel Ratio:', window.devicePixelRatio);
-        console.log('CSS пиксели (window.innerWidth):', window.innerWidth);
+    // Локализуем AJAX URL для header-functions.js, если asker_ajax еще не загружен
+    if (typeof asker_ajax === 'undefined') {
+        var asker_ajax = {
+            ajax_url: '<?php echo esc_js(admin_url('admin-ajax.php')); ?>',
+            nonce: '<?php echo esc_js(wp_create_nonce('asker_ajax_nonce')); ?>'
+        };
+    }
     </script>
+    <script src="<?php echo get_template_directory_uri(); ?>/assets/js/header-functions.js"></script>
     
 </head>
 <body <?php body_class(); ?>>

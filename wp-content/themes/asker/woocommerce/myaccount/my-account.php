@@ -28,10 +28,16 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
 
 ?>
 
-<div class="account-page">
-    <div class="container">
-        <?php if (is_user_logged_in()): ?>
-            <div class="account-layout">
+<div class="account-page container">
+    <?php if (is_user_logged_in()): ?>
+        <!-- Хлебные крошки и заголовок -->
+        <nav class="breadcrumbs">
+            <a href="<?php echo esc_url(home_url('/')); ?>">Главная</a>
+            <span class="breadcrumbs__separator">/</span>
+            <span class="breadcrumbs__current">Мой аккаунт</span>
+        </nav>
+        
+        <div class="account-layout">
                 <!-- Сайдбар -->
                 <aside class="account-sidebar">
                     <div class="sidebar-header">
@@ -174,6 +180,14 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                                         'order' => 'DESC'
                                     ));
                                     
+                                    // Безопасная проверка на случай, если wc_get_orders вернет null или WP_Error
+                                    if (is_wp_error($customer_orders)) {
+                                        $customer_orders = array();
+                                    }
+                                    if (!is_array($customer_orders)) {
+                                        $customer_orders = array();
+                                    }
+                                    
                                     if (!empty($customer_orders)) {
                                         ?>
                                         <table>
@@ -256,6 +270,13 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                                 'status' => array('wc-pending', 'wc-processing', 'wc-on-hold', 'wc-completed', 'wc-cancelled', 'wc-refunded', 'wc-failed'),
                                 'limit' => -1
                             ));
+                            // Безопасная проверка на случай, если wc_get_orders вернет null или WP_Error
+                            if (is_wp_error($all_orders)) {
+                                $all_orders = array();
+                            }
+                            if (!is_array($all_orders)) {
+                                $all_orders = array();
+                            }
                             $orders_count = count($all_orders);
                             if ($orders_count > 10):
                             ?>
@@ -328,6 +349,14 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                                         'orderby' => 'date',
                                         'order' => 'DESC'
                                     ));
+                                    
+                                    // Безопасная проверка на случай, если wc_get_orders вернет null или WP_Error
+                                    if (is_wp_error($all_orders)) {
+                                        $all_orders = array();
+                                    }
+                                    if (!is_array($all_orders)) {
+                                        $all_orders = array();
+                                    }
                                     
                                     if (!empty($all_orders)) {
                                         ?>
@@ -409,74 +438,109 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                     <!-- Вкладка Избранное -->
                     <div class="tab-content" id="wishlist">
                         <div class="content-section">
+                            <h2>Мое избранное</h2>
                             <div class="wishlist-products">
                                 <?php
-                                if (function_exists('yith_wcwl_get_wishlist_items')) {
-                                    $wishlist_items = yith_wcwl_get_wishlist_items();
-                                    
-                                    if (!empty($wishlist_items)) {
-                                        ?>
-                                        <div class="promo-products">
-                                            <?php foreach ($wishlist_items as $item): ?>
-                                                <?php
-                                                $product = wc_get_product($item['product_id']);
-                                                if ($product) {
-                                                    $product_id = $product->get_id();
-                                                    $product_title = $product->get_name();
-                                                    $product_price = $product->get_price_html();
-                                                    $product_image = wp_get_attachment_image_src(get_post_thumbnail_id($product_id), 'medium');
-                                                    $product_url = get_permalink($product_id);
-                                                    ?>
-                                                    <div class="product-card">
-                                                        <div class="product-image">
-                                                            <?php if ($product_image): ?>
-                                                                <img src="<?php echo esc_url($product_image[0]); ?>" alt="<?php echo esc_attr($product_title); ?>">
-                                                            <?php else: ?>
-                                                                <img src="<?php echo get_template_directory_uri(); ?>/assets/images/products/ten_1.png" alt="<?php echo esc_attr($product_title); ?>">
-                                                            <?php endif; ?>
-                                                            <button class="product-favorite active" data-product-id="<?php echo $product_id; ?>" aria-label="Удалить из избранного">
-                                                                <img src="<?php echo get_template_directory_uri(); ?>/assets/images/ui/like[active].svg" alt="Избранное" class="favorite-icon favorite-icon--active">
-                                                                <img src="<?php echo get_template_directory_uri(); ?>/assets/images/ui/like[idle].svg" alt="Добавить в избранное" class="favorite-icon favorite-icon--idle">
-                                                            </button>
-                                                        </div>
-                                                        <div class="product-info">
-                                                            <h3><a href="<?php echo esc_url($product_url); ?>"><?php echo esc_html($product_title); ?></a></h3>
-                                                            <div class="product-price"><?php echo $product_price; ?></div>
-                                                            <button class="add-to-cart" data-product-id="<?php echo $product_id; ?>">
-                                                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                                                                    <path d="M2 3H4L4.4 5M7 13H13L17 5H4.4M7 13L4.4 5M7 13L5.2 15.4C5.1 15.5 5 15.7 5 16V18C5 18.6 5.4 19 6 19H16C16.6 19 17 18.6 17 18V16C17 15.7 16.9 15.5 16.8 15.4L15 13M7 13H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                                                </svg>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <?php
-                                                }
-                                            endforeach; ?>
-                                        </div>
-                                        <?php
-                                    } else {
-                                        ?>
-                                        <div class="no-products">
-                                            <p>В избранном пока нет товаров</p>
-                                            <a href="<?php echo esc_url(home_url('/shop')); ?>" class="btn-primary">Перейти в каталог</a>
-                                        </div>
-                                        <?php
-                                    }
-                                } else {
-                                    ?>
-                                    <div class="no-products">
-                                        <p>Избранные товары отображаются здесь. Добавьте товары в избранное, нажав на иконку ❤️ на карточке товара.</p>
-                                    </div>
-                                    <?php
+                                $customer_id = get_current_user_id();
+                                $wishlist_items = get_user_meta($customer_id, 'asker_wishlist', true);
+                                
+                                // Если в user_meta пусто, пытаемся синхронизировать с localStorage через JS
+                                if (empty($wishlist_items) || !is_array($wishlist_items)) {
+                                    $wishlist_items = array();
                                 }
-                                ?>
+                                
+                                if (!empty($wishlist_items)) :
+                                    ?>
+                                    <div class="products-grid">
+                                        <?php foreach ($wishlist_items as $product_id) :
+                                            $product = wc_get_product($product_id);
+                                            if ($product && $product->is_visible()) :
+                                                $product_image = wp_get_attachment_image_src(get_post_thumbnail_id($product_id), 'medium');
+                                                $product_url = get_permalink($product_id);
+                                                $price = $product->get_price_html();
+                                                // Показываем полную цену (не убираем копейки)
+                                                ?>
+                                                <div class="product-card">
+                                                    <button class="product-favorite active favorite-btn" data-product-id="<?php echo esc_attr($product_id); ?>" aria-label="Удалить из избранного">
+                                                        <img src="<?php echo get_template_directory_uri(); ?>/assets/images/ui/like[active].svg" alt="Избранное" class="favorite-icon favorite-icon--active">
+                                                        <img src="<?php echo get_template_directory_uri(); ?>/assets/images/ui/like[idle].svg" alt="Добавить в избранное" class="favorite-icon favorite-icon--idle">
+                                                    </button>
+                                                    <a href="<?php echo esc_url($product_url); ?>">
+                                                        <?php if ($product_image) : ?>
+                                                            <img class="product-image" src="<?php echo esc_url($product_image[0]); ?>" alt="<?php echo esc_attr($product->get_name()); ?>">
+                                                        <?php else : ?>
+                                                            <div class="product-placeholder"><?php echo esc_html($product->get_name()); ?></div>
+                                                        <?php endif; ?>
+                                                    </a>
+                                                    <h3 class="product-title">
+                                                        <a href="<?php echo esc_url($product_url); ?>"><?php echo esc_html($product->get_name()); ?></a>
+                                                    </h3>
+                                                    <div class="product-bottom">
+                                                        <div class="product-price"><?php echo $price; ?></div>
+                                                        <button class="btn-add-cart add_to_cart_button" data-product-id="<?php echo esc_attr($product_id); ?>">В корзину</button>
+                                                    </div>
+                                                </div>
+                                            <?php
+                                            endif;
+                                        endforeach; ?>
+                                    </div>
+                                <?php else : ?>
+                                    <div class="no-products">
+                                        <p>В вашем избранном пока нет товаров.</p>
+                                        <a href="<?php echo esc_url(home_url('/shop')); ?>" class="btn-primary">Перейти в каталог</a>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
                 </main>
-            </div>
-        <?php else: ?>
-            <div class="auth-page">
+        </div>
+        
+        <script>
+            // Синхронизация избранного: загружаем из user_meta в localStorage при загрузке ЛК
+            jQuery(document).ready(function($) {
+                <?php
+                $wishlist_items = get_user_meta(get_current_user_id(), 'asker_wishlist', true);
+                if (!empty($wishlist_items) && is_array($wishlist_items)) {
+                    $wishlist_json = json_encode(array_map('intval', $wishlist_items));
+                } else {
+                    $wishlist_json = '[]';
+                }
+                ?>
+                const serverWishlist = <?php echo $wishlist_json; ?>;
+                const localWishlist = JSON.parse(localStorage.getItem('favorites') || '[]');
+                
+                // Объединяем: приоритет у сервера (если есть)
+                let mergedWishlist = serverWishlist.length > 0 ? serverWishlist : localWishlist;
+                
+                // Убираем дубликаты
+                mergedWishlist = [...new Set(mergedWishlist)];
+                
+                // Сохраняем объединённый список
+                localStorage.setItem('favorites', JSON.stringify(mergedWishlist));
+                
+                // Если были изменения, синхронизируем с сервером
+                if (JSON.stringify(mergedWishlist) !== JSON.stringify(serverWishlist)) {
+                    if (typeof asker_ajax !== 'undefined') {
+                        $.ajax({
+                            url: asker_ajax.ajax_url,
+                            type: 'POST',
+                            data: {
+                                action: 'asker_sync_wishlist',
+                                product_ids: mergedWishlist
+                            }
+                        });
+                    }
+                }
+                
+                // Обновляем счетчик
+                if (typeof updateWishlistCounter === 'function') {
+                    updateWishlistCounter();
+                }
+            });
+            </script>
+    <?php else: ?>
+        <div class="auth-page">
                 <div class="auth-container">
                     <h1 class="auth-title">Вход в личный кабинет</h1>
                     <p class="auth-subtitle">Для доступа к личному кабинету необходимо войти в систему.</p>
@@ -507,9 +571,8 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                     <div class="auth-links">
                         <a href="<?php echo wp_lostpassword_url(); ?>" class="auth-link">Забыли пароль?</a>
                     </div>
-                </div>
             </div>
-        <?php endif; ?>
-    </div>
+        </div>
+    <?php endif; ?>
 </div>
 

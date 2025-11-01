@@ -1,6 +1,5 @@
 // Общие скрипты темы. Стараться держать без зависимостей.
 
-
 // Бургер-меню навигации
 document.addEventListener('DOMContentLoaded', function() {
     const navMenuToggle = document.getElementById('nav-menu-toggle');
@@ -72,9 +71,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // который уже обновляет .mobile-cart-count
     }
     
-    // Обновляем счетчики при загрузке и при изменениях
+    // Обновляем счетчики при загрузке (без setInterval - он создавал бесконечный цикл)А 
     updateMobileMenuCounters();
-    setInterval(updateMobileMenuCounters, 1000);
 });
 
 // Функционал лайков для товаров
@@ -88,45 +86,284 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Используем делегирование событий для динамически добавляемых элементов
         document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('favorite-btn') || e.target.closest('.favorite-btn') || 
-                e.target.classList.contains('favorite-btn-single') || e.target.closest('.favorite-btn-single')) {
+            // Сначала проверяем btn-remove-favorite (кнопка удаления в списке избранного)
+            let button = null;
+            
+            if (e.target.classList.contains('btn-remove-favorite')) {
+                button = e.target;
+            } else {
+                button = e.target.closest('.btn-remove-favorite');
+            }
+            
+            if (button) {
+                // Обработка кнопки удаления из избранного
                 e.preventDefault();
                 e.stopPropagation();
                 
-                const button = e.target.classList.contains('favorite-btn') || e.target.classList.contains('favorite-btn-single') ? 
-                    e.target : e.target.closest('.favorite-btn, .favorite-btn-single');
                 const productId = button.getAttribute('data-product-id');
-                
-                console.log('Favorite button clicked, product ID:', productId);
-                
                 if (!productId) {
-                    console.log('No product ID found');
                     return;
                 }
                 
+                const productIdNum = parseInt(productId, 10);
+                if (isNaN(productIdNum)) {
+                    return;
+                }
+                
+                // Предотвращаем двойную обработку
+                if (button.hasAttribute('data-processing')) {
+                    return;
+                }
+                button.setAttribute('data-processing', 'true');
+                setTimeout(function() {
+                    button.removeAttribute('data-processing');
+                }, 1000);
+                
+                // Удаляем из избранного
+                let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+                favorites = favorites.map(id => parseInt(id, 10)).filter(id => !isNaN(id) && id !== productIdNum);
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+                
+                // Обновляем счетчик
+                updateWishlistCounter();
+                
+                // Синхронизируем с сервером
+                if (typeof jQuery !== 'undefined' && typeof asker_ajax !== 'undefined') {
+                    jQuery.ajax({
+                        url: asker_ajax.ajax_url,
+                        type: 'POST',
+                        data: {
+                            action: 'asker_toggle_wishlist',
+                            product_id: productIdNum,
+                            action_type: 'remove'
+                        },
+                        success: function(response) {
+                            updateWishlistCounter();
+                            
+                            // Обновляем список если в ЛК
+                            const $wishlistTab = jQuery('#wishlist');
+                            if ($wishlistTab.length && $wishlistTab.is(':visible')) {
+                                setTimeout(function() {
+                                    if (typeof renderWishlistFromLocalStorage === 'function') {
+                                        renderWishlistFromLocalStorage();
+                                    } else if (typeof loadWishlistFromServer === 'function') {
+                                        loadWishlistFromServer();
+                                    }
+                                }, 100);
+                            }
+                        }
+                    });
+                }
+                
+                // Удаляем элемент из DOM если он в списке избранного
+                if (typeof jQuery !== 'undefined') {
+                    const $item = jQuery(button).closest('.wishlist-item, .product-card');
+                    if ($item.length) {
+                        $item.fadeOut(300, function() {
+                            jQuery(this).remove();
+                            // Проверяем, пуст ли список
+                            const $container = jQuery('.wishlist-products, .wishlist-items, #wishlist-content');
+                            if ($container.length) {
+                                // Проверяем, остались ли видимые элементы после удаления
+                                setTimeout(function() {
+                                    const $visibleItems = $container.find('.wishlist-item, .product-card').filter(':visible');
+                                    if ($visibleItems.length === 0) {
+                                        $container.html('<div class="no-products"><p>В вашем избранном пока нет товаров.</p><a href="' + (window.location.origin || '') + '/shop" class="btn-primary">Перейти в каталог</a></div>');
+                                    }
+                                }, 50);
+                            }
+                        });
+                    } else {
+                        // Если не найден через jQuery, пробуем через обычный DOM
+                        const item = button.closest('.wishlist-item, .product-card');
+                        if (item) {
+                            item.style.opacity = '0';
+                            setTimeout(function() {
+                                item.remove();
+                                // Обновляем список если в ЛК
+                                const $wishlistTab = jQuery('#wishlist');
+                                if ($wishlistTab.length && $wishlistTab.is(':visible')) {
+                                    setTimeout(function() {
+                                        if (typeof renderWishlistFromLocalStorage === 'function') {
+                                            renderWishlistFromLocalStorage();
+                                        }
+                                    }, 100);
+                                }
+                            }, 300);
+                        }
+                    }
+                }
+                
+                return;
+            }
+            
+            // Ищем кнопку избранного (может быть сам target или родитель)
+            // Если кликнули прямо на кнопку
+            if (e.target.classList.contains('favorite-btn') || e.target.classList.contains('favorite-btn-single')) {
+                button = e.target;
+            }
+            // Если кликнули на дочерний элемент (например, img внутри кнопки)
+            else {
+                button = e.target.closest('.favorite-btn, .favorite-btn-single');
+            }
+            
+            // Если кнопка не найдена - выходим
+            if (!button) {
+                return;
+            }
+            
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const productId = button.getAttribute('data-product-id');
+                
+                if (!productId) {
+                    return;
+                }
+            
+            // Предотвращаем двойную обработку - проверяем, не обрабатывается ли уже
+            if (button.hasAttribute('data-processing')) {
+                return;
+            }
+            
+            // Ставим флаг обработки
+            button.setAttribute('data-processing', 'true');
+            setTimeout(function() {
+                button.removeAttribute('data-processing');
+            }, 1000);
+                
                 // Получаем текущее состояние из localStorage
-                const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-                const isCurrentlyFavorite = favorites.includes(productId);
+            // Важно: приводим productId к числу для сравнения
+            const productIdNum = parseInt(productId, 10);
+            if (isNaN(productIdNum)) {
+                return; // Некорректный ID
+            }
+            
+            let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+            // Преобразуем все ID в числа для корректного сравнения
+            favorites = favorites.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+            
+            // Проверяем состояние: в localStorage ИЛИ кнопка имеет класс active
+            const isCurrentlyFavorite = favorites.includes(productIdNum) || button.classList.contains('active');
+            
+            // Сохраняем старое состояние для обновления списка
+            const wasFavorite = isCurrentlyFavorite;
                 
                 if (isCurrentlyFavorite) {
                     // Удаляем из избранного
-                    const index = favorites.indexOf(productId);
+                const index = favorites.indexOf(productIdNum);
+                if (index !== -1) {
                     favorites.splice(index, 1);
+                }
                     button.classList.remove('active');
-                    console.log('Removed from favorites:', productId);
                 } else {
                     // Добавляем в избранное
-                    favorites.push(productId);
+                if (!favorites.includes(productIdNum)) {
+                    favorites.push(productIdNum);
+                }
                     button.classList.add('active');
-                    console.log('Added to favorites:', productId);
                 }
                 
+            // Сохраняем обновленный список
                 localStorage.setItem('favorites', JSON.stringify(favorites));
-                console.log('Current favorites:', favorites);
+            
+            // Сразу обновляем счетчик локально
+            updateWishlistCounter();
+                
+            // Синхронизируем с сервером, если пользователь залогинен
+            if (typeof jQuery !== 'undefined' && typeof asker_ajax !== 'undefined') {
+                jQuery.ajax({
+                    url: asker_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'asker_toggle_wishlist',
+                        product_id: productIdNum,
+                        action_type: wasFavorite ? 'remove' : 'add'
+                    },
+                    success: function(response) {
+                        // Обновляем счетчик всегда
+                        updateWishlistCounter();
+                        
+                        // Если удалили из избранного и вкладка "Избранное" видна - обновляем список
+                        if (wasFavorite) {
+                            const $wishlistTab = jQuery('#wishlist');
+                            if ($wishlistTab.length && $wishlistTab.is(':visible')) {
+                                // Сразу обновляем список из localStorage (быстрее)
+                                setTimeout(function() {
+                                    if (typeof renderWishlistFromLocalStorage === 'function') {
+                                        renderWishlistFromLocalStorage();
+                                    } else if (typeof loadWishlistFromServer === 'function') {
+                                        loadWishlistFromServer();
+                                    }
+                                }, 100);
+                            }
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        // При ошибке AJAX всё равно обновляем счетчик
+                        updateWishlistCounter();
+                        
+                        // И обновляем список если в ЛК
+                        const $wishlistTab = jQuery('#wishlist');
+                        if ($wishlistTab.length && $wishlistTab.is(':visible')) {
+                            setTimeout(function() {
+                                if (typeof renderWishlistFromLocalStorage === 'function') {
+                                    renderWishlistFromLocalStorage();
+                                }
+                            }, 100);
+                        }
+                    }
+                });
+            }
                 
                 // Обновляем счетчик в хедере
                 updateWishlistCounter();
+        });
+        
+        // Синхронизируем избранное при загрузке страницы (если пользователь залогинен)
+        // ВРЕМЕННО ОТКЛЮЧЕНО для исправления белого экрана - переносим на событие после загрузки
+        /*
+        if (typeof asker_ajax !== 'undefined' && typeof jQuery !== 'undefined') {
+            const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+            if (favorites.length > 0) {
+                // Пытаемся синхронизировать с сервером
+                jQuery.ajax({
+                    url: asker_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'asker_sync_wishlist',
+                        product_ids: favorites
+                    },
+                            success: function(response) {
+                                // Wishlist synced
+                            }
+                });
             }
+        }
+        */
+        // Переносим на событие после полной загрузки
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                if (typeof asker_ajax !== 'undefined' && typeof jQuery !== 'undefined') {
+                    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+                    if (favorites.length > 0) {
+                        jQuery.ajax({
+                            url: asker_ajax.ajax_url,
+                            type: 'POST',
+                            data: {
+                                action: 'asker_sync_wishlist',
+                                product_ids: favorites
+                            },
+                            success: function(response) {
+                                // Wishlist synced
+                            },
+                            error: function() {
+                                // Тихий fail
+                            }
+                        });
+                    }
+                }
+            }, 2000); // Задержка 2 секунды после полной загрузки
         });
         
         // Восстанавливаем состояние лайков при загрузке
@@ -152,7 +389,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const buttons = document.querySelectorAll(`.favorite-btn[data-product-id="${productId}"], .favorite-btn-single[data-product-id="${productId}"]`);
             buttons.forEach(button => {
                 button.classList.add('active');
-                console.log('Restored favorite state for product:', productId);
             });
         });
         
@@ -160,14 +396,10 @@ document.addEventListener('DOMContentLoaded', function() {
         updateWishlistCounter();
         updateCartCounter();
         
-        // Принудительная синхронизация с сервером при загрузке
-        fetchCartCountFromServer();
-        
         // Дополнительная проверка через небольшую задержку
         setTimeout(() => {
             updateWishlistCounter();
             updateCartCounter();
-            fetchCartCountFromServer();
         }, 100);
         
         // Еще одна проверка через большую задержку для надежности
@@ -212,11 +444,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Функция для обновления счетчика избранного (глобальная)
+    // Убираем рекурсивный вызов, который создавал бесконечный цикл
     window.updateWishlistCounter = function() {
         try {
             const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
             const count = favorites.length;
-            
             
             // Обновляем десктопный счетчик
             const counter = document.querySelector('.wishlist-count');
@@ -233,8 +465,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     counter.style.visibility = 'hidden';
                     counter.style.display = 'none';
                 }
-            } else {
-                console.warn('⚠️ Desktop wishlist counter not found');
             }
             
             // Обновляем мобильный счетчик
@@ -242,16 +472,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (mobileWishlistCount) {
                 mobileWishlistCount.textContent = count;
                 mobileWishlistCount.style.display = count > 0 ? 'inline-flex' : 'none';
-            } else {
-                console.warn('⚠️ Mobile wishlist counter not found');
             }
             
-            // Дополнительная проверка - если счетчики не найдены, попробуем через небольшую задержку
-            if (!counter && !mobileWishlistCount) {
-                setTimeout(() => {
-                    window.updateWishlistCounter();
-                }, 100);
-            }
+            // УБРАНО: рекурсивный вызов создавал бесконечный цикл
+            // Если счетчики не найдены - это нормально, не нужно пытаться снова
             
         } catch (error) {
             console.error('❌ Error updating wishlist counter:', error);
@@ -260,7 +484,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Функция для обновления счетчика корзины (глобальная)
     window.updateCartCounter = function() {
-        // Сразу запрашиваем данные с сервера - это единственный источник истины для WooCommerce корзины
         fetchCartCountFromServer();
     }
 
@@ -276,9 +499,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (!json || !json.success) return;
                     const serverCount = parseInt(json.data && json.data.count ? json.data.count : '0', 10) || 0;
                     
-                    if (json.data.removed_invalid > 0) {
-                        console.log('🧹 Removed invalid items:', json.data.removed_invalid);
-                    }
+                    // Removed invalid items if needed
                     
                     // Обновляем счетчик на основе серверных данных
                     const counter = document.querySelector('.cart-count');
@@ -304,11 +525,10 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) {}
     }
 
-    // Дергаем сервер после ключевых событий Woo
+    // Обновляем счетчик после событий WooCommerce
     if (window.jQuery) {
         const $ = window.jQuery;
         $(document.body).on('added_to_cart updated_wc_div wc_fragments_refreshed removed_from_cart', function(e) {
-            console.log('WooCommerce event triggered:', e.type);
             // Небольшая задержка, чтобы дать серверу время обработать запрос
             setTimeout(() => {
                 fetchCartCountFromServer();
@@ -317,7 +537,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // WooCommerce сам управляет корзиной через свои AJAX-запросы
-    // Мы только слушаем события и обновляем счетчик
+    // Мы слушаем события и обновляем счетчик
     
     // Дополнительная инициализация при полной загрузке страницы
     window.addEventListener('load', function() {
@@ -340,7 +560,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Функция очистки корзины на сервере
     window.clearCartOnServer = function() {
-        console.log('🧹 Clearing cart on server...');
         
         // Сначала очищаем localStorage
         localStorage.removeItem('cart');
@@ -455,45 +674,6 @@ document.addEventListener('DOMContentLoaded', function() {
         maxInput.addEventListener('input', updateSlider);
     }
     
-    // Кнопки +/- для количества товара
-    document.addEventListener('click', function(e) {
-        // Кнопка "плюс"
-        if (e.target.classList.contains('plus') || e.target.closest('.qty-btn.plus')) {
-            e.preventDefault();
-            const button = e.target.classList.contains('plus') ? e.target : e.target.closest('.qty-btn.plus');
-            const qtyInput = button.parentElement.querySelector('input.qty');
-            
-            if (qtyInput) {
-                const currentVal = parseInt(qtyInput.value) || 0;
-                const maxVal = parseInt(qtyInput.getAttribute('max')) || 999;
-                const step = parseInt(qtyInput.getAttribute('step')) || 1;
-                
-                if (currentVal < maxVal) {
-                    qtyInput.value = currentVal + step;
-                    qtyInput.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            }
-        }
-        
-        // Кнопка "минус"
-        if (e.target.classList.contains('minus') || e.target.closest('.qty-btn.minus')) {
-            e.preventDefault();
-            const button = e.target.classList.contains('minus') ? e.target : e.target.closest('.qty-btn.minus');
-            const qtyInput = button.parentElement.querySelector('input.qty');
-            
-            if (qtyInput) {
-                const currentVal = parseInt(qtyInput.value) || 0;
-                const minVal = parseInt(qtyInput.getAttribute('min')) || 1;
-                const step = parseInt(qtyInput.getAttribute('step')) || 1;
-                
-                if (currentVal > minVal) {
-                    qtyInput.value = currentVal - step;
-                    qtyInput.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            }
-        }
-    });
-    
     // Full-bleed стили теперь применяются через CSS без JavaScript
 
 // Фильтр цены в каталоге
@@ -520,7 +700,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Применяем фильтр при нажатии Enter
         minPriceInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                e.preventDefault();
+            e.preventDefault();
                 updatePriceFilter();
             }
         });
@@ -540,38 +720,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Переключение вкладок в личном кабинете
 function initAccountTabs() {
-    console.log('🔍 ЛК: проверка элементов...');
     const accountNav = document.querySelector('.account-nav');
     
     if (!accountNav) {
-        console.warn('❌ ЛК: .account-nav не найден. Находимся на странице ЛК?');
         return false;
     }
-    
-    const navItemsCount = accountNav.querySelectorAll('.nav-item').length;
-    const tabContents = document.querySelectorAll('.tab-content');
-    
-    console.log('✅ ЛК: элементы найдены');
-    console.log('   Найдено вкладок навигации:', navItemsCount);
-    console.log('   Найдено контентных блоков:', tabContents.length);
     
     // Используем делегирование событий для надёжности
     accountNav.addEventListener('click', function(e) {
         const navItem = e.target.closest('.nav-item');
         if (!navItem) {
-            console.log('❌ ЛК: клик не по .nav-item');
             return;
         }
         
-        e.preventDefault();
+            e.preventDefault();
         
         const targetTab = navItem.getAttribute('data-tab');
         if (!targetTab) {
-            console.error('❌ ЛК: не найден атрибут data-tab у вкладки');
             return;
         }
-        
-        console.log('🖱️ ЛК: клик по вкладке:', targetTab);
         
         // Убираем активный класс у всех элементов навигации
         accountNav.querySelectorAll('.nav-item').forEach(nav => {
@@ -590,14 +757,160 @@ function initAccountTabs() {
         const targetContent = document.getElementById(targetTab);
         if (targetContent) {
             targetContent.classList.add('active');
-            console.log('✅ ЛК: показана вкладка:', targetTab);
-        } else {
-            console.error('❌ ЛК: не найден контент для вкладки:', targetTab);
+            
+            // Если переключились на вкладку "Избранное" - обновляем список
+            if (targetTab === 'wishlist') {
+                updateWishlistTab();
+            }
         }
     });
     
-    console.log('✅ ЛК: обработчик событий установлен');
     return true;
+}
+
+// Функция обновления вкладки "Избранное"
+function updateWishlistTab() {
+    if (typeof jQuery === 'undefined' || typeof asker_ajax === 'undefined') {
+        console.warn('⚠️ jQuery или asker_ajax не доступен');
+        return;
+    }
+    
+    const $wishlistContainer = jQuery('.wishlist-products');
+    if (!$wishlistContainer.length) {
+        console.warn('⚠️ Контейнер избранного не найден');
+        return;
+    }
+    
+    // Показываем индикатор загрузки
+    $wishlistContainer.html('<div class="wishlist-loading">Обновление избранного...</div>');
+    
+    // Синхронизируем localStorage с сервером
+    const localFavorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+    
+    if (localFavorites.length > 0) {
+        // Сначала синхронизируем с сервером
+        jQuery.ajax({
+            url: asker_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'asker_sync_wishlist',
+                product_ids: localFavorites
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Затем загружаем актуальный список
+                    loadWishlistFromServer();
+                }
+            },
+            error: function() {
+                // Если синхронизация не удалась, всё равно загружаем список
+                loadWishlistFromServer();
+            }
+        });
+    } else {
+        // Если localStorage пуст, просто загружаем с сервера
+        loadWishlistFromServer();
+    }
+}
+
+// Функция загрузки избранного с сервера
+function loadWishlistFromServer() {
+    if (typeof jQuery === 'undefined' || typeof asker_ajax === 'undefined') {
+        renderWishlistFromLocalStorage();
+        return;
+    }
+    
+    const $wishlistContainer = jQuery('.wishlist-products');
+    
+    // Используем AJAX endpoint для получения HTML
+    jQuery.ajax({
+        url: asker_ajax.ajax_url,
+        type: 'POST',
+        data: {
+            action: 'asker_get_wishlist_products',
+            product_ids: [] // Пустой массив = загрузить из user_meta для авторизованных
+        },
+        success: function(response) {
+            if (response.success && response.data && response.data.html) {
+                $wishlistContainer.html(response.data.html);
+                
+                // Обновляем состояние кнопок лайков после загрузки
+                setTimeout(function() {
+                    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+                    jQuery('.favorite-btn').each(function() {
+                        const productId = parseInt(jQuery(this).attr('data-product-id'));
+                        if (favorites.includes(productId)) {
+                            jQuery(this).addClass('active');
+                        }
+                    });
+                }, 100);
+            } else {
+                renderWishlistFromLocalStorage();
+            }
+        },
+        error: function() {
+            renderWishlistFromLocalStorage();
+        }
+    });
+}
+
+// Функция рендеринга избранного из localStorage
+function renderWishlistFromLocalStorage() {
+    if (typeof jQuery === 'undefined') {
+        return;
+    }
+    
+    const $wishlistContainer = jQuery('.wishlist-products');
+    if (!$wishlistContainer.length) {
+        return;
+    }
+    
+    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+    
+    // Преобразуем в числа и фильтруем валидные ID
+    const favoriteIds = favorites.map(id => parseInt(id, 10)).filter(id => !isNaN(id) && id > 0);
+    
+    if (favoriteIds.length === 0) {
+        $wishlistContainer.html('<div class="no-products"><p>В вашем избранном пока нет товаров.</p><a href="' + window.location.origin + '/shop" class="btn-primary">Перейти в каталог</a></div>');
+        return;
+    }
+    
+    // Загружаем информацию о товарах
+    if (typeof asker_ajax !== 'undefined') {
+        jQuery.ajax({
+            url: asker_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'asker_get_wishlist_products',
+                product_ids: favoriteIds
+            },
+            success: function(response) {
+                if (response.success && response.data && response.data.html) {
+                    $wishlistContainer.html(response.data.html);
+                    
+                    // Обновляем состояние кнопок лайков после загрузки
+                    setTimeout(function() {
+                        const currentFavorites = JSON.parse(localStorage.getItem('favorites') || '[]').map(id => parseInt(id, 10));
+                        jQuery('.favorite-btn, .favorite-btn-single').each(function() {
+                            const productId = parseInt(jQuery(this).attr('data-product-id'));
+                            if (currentFavorites.includes(productId)) {
+                                jQuery(this).addClass('active');
+                            } else {
+                                jQuery(this).removeClass('active');
+                            }
+                        });
+                    }, 100);
+                } else {
+                    $wishlistContainer.html('<div class="no-products"><p>Не удалось загрузить избранное.</p></div>');
+                }
+            },
+            error: function() {
+                $wishlistContainer.html('<div class="no-products"><p>Ошибка загрузки избранного.</p></div>');
+            }
+        });
+    } else {
+        $wishlistContainer.html('<div class="no-products"><p>Ошибка загрузки избранного.</p></div>');
+    }
 }
 
 // Инициализация при загрузке DOM
@@ -606,4 +919,409 @@ if (document.readyState === 'loading') {
 } else {
     // DOM уже загружен
     initAccountTabs();
+}
+
+// ===== КНОПКИ +/- для количества товара =====
+// КРИТИЧНО: Ждем загрузки jQuery перед выполнением кода
+(function() {
+    'use strict';
+    
+    function initJQueryCode() {
+        if (typeof jQuery === 'undefined') {
+            setTimeout(initJQueryCode, 50);
+            return;
+        }
+        
+        jQuery(document).ready(function($) {
+    
+    // Функция обновления quantity у кнопки корзины
+    function updateCartButtonQuantity(input) {
+        const $input = $(input);
+        const newValue = $input.val() || $input.attr('data-quantity') || $input.attr('min') || 1;
+        
+        // Обновляем data-quantity у input
+        $input.attr('data-quantity', newValue);
+        $input.val(newValue); // Синхронизируем значение
+        
+        // Обновляем data-quantity у кнопки корзины
+        const $productCard = $input.closest('.shop-product-card');
+        if ($productCard.length > 0) {
+            const $cartBtn = $productCard.find('.add_to_cart_button');
+            if ($cartBtn.length > 0) {
+                $cartBtn.attr('data-quantity', newValue);
+            }
+        }
+    }
+    
+    // Обработчик кнопок +/-
+    $(document).on('click', '.qty-minus, .qty-plus', function(e) {
+            e.preventDefault();
+        e.stopPropagation();
+        
+        const $button = $(this);
+        const $wrapper = $button.closest('.quantity-wrapper');
+        const $input = $wrapper.find('input.qty');
+        
+        if ($input.length === 0) return false;
+        
+        let currentValue = parseInt($input.val(), 10);
+        if (isNaN(currentValue) || currentValue < 1) {
+            currentValue = parseInt($input.attr('data-quantity'), 10) || 
+                          parseInt($input.attr('min'), 10) || 1;
+        }
+        
+        const minValue = parseInt($input.attr('min'), 10) || 1;
+        const maxValue = parseInt($input.attr('max'), 10) || 999;
+        
+        // Изменяем значение
+        if ($button.hasClass('qty-minus') && currentValue > minValue) {
+            $input.val(currentValue - 1);
+            updateCartButtonQuantity($input);
+        } else if ($button.hasClass('qty-plus') && currentValue < maxValue) {
+            $input.val(currentValue + 1);
+            updateCartButtonQuantity($input);
+        }
+        
+        return false;
+    });
+    
+    // Перехватываем клик на кнопку "В корзину" ПЕРЕД WooCommerce (но НЕ блокируем!)
+    $(document).on('click', '.add_to_cart_button', function(e) {
+        const $btn = $(this);
+        
+        // НЕ используем preventDefault - пусть WooCommerce обрабатывает клик стандартно
+        
+        // Только для карточек товаров в каталоге
+        const $productCard = $btn.closest('.shop-product-card');
+        if ($productCard.length > 0) {
+            const $input = $productCard.find('input.qty');
+            
+            if ($input.length > 0) {
+                // Получаем quantity из разных источников (приоритет: value > data-quantity > min > 1)
+                let quantity = parseInt($input.val(), 10);
+                
+                if (isNaN(quantity) || quantity < 1) {
+                    quantity = parseInt($input.attr('data-quantity'), 10);
+                }
+                
+                if (isNaN(quantity) || quantity < 1) {
+                    quantity = parseInt($input.attr('min'), 10);
+                }
+                
+                if (isNaN(quantity) || quantity < 1) {
+                    quantity = 1;
+                }
+                
+                // Обновляем все атрибуты
+                $btn.attr('data-quantity', quantity);
+                $input.val(quantity);
+                $input.attr('data-quantity', quantity);
+                
+                // Отключаем встроенную валидацию HTML5 (сбрасываем ошибку)
+                if ($input[0]) {
+                    $input[0].setCustomValidity('');
+                }
+                
+                // Обновляем href если есть
+                const currentHref = $btn.attr('href');
+                if (currentHref) {
+                    try {
+                        const url = new URL(currentHref, window.location.origin);
+                        url.searchParams.set('quantity', quantity);
+                        $btn.attr('href', url.toString());
+                    } catch (err) {
+                        // Игнорируем ошибки парсинга URL
+                    }
+                }
+            } else {
+                // Если input не найден, ставим 1
+                $btn.attr('data-quantity', '1');
+            }
+            
+            // Сохраняем оригинальный текст для восстановления
+            if (!$btn.data('original-text')) {
+                $btn.data('original-text', $btn.text().trim() || 'В корзину');
+            }
+        }
+    });
+    
+    // Обработка состояния кнопок "В корзину" после AJAX запроса WooCommerce
+    $(document.body).on('adding_to_cart', function(e, $button, data) {
+        // WooCommerce добавляет класс loading автоматически
+        const $btn = $($button);
+        
+        if (!$btn || !$btn.length) {
+            // Если кнопка не передана, ищем все кнопки в состоянии loading
+            $('.add_to_cart_button.loading').each(function() {
+                const $btn2 = $(this);
+                const timeoutId = setTimeout(function() {
+                    if ($btn2.hasClass('loading')) {
+                        console.warn('⚠️ Таймаут: принудительно убираем loading с кнопки');
+                        clearLoadingState($btn2);
+                    }
+                }, 5000); // 5 секунд максимум
+                $btn2.data('loading-timeout', timeoutId);
+            });
+            return;
+        }
+        
+        // Устанавливаем таймаут на случай, если событие added_to_cart не сработает
+        const timeoutId = setTimeout(function() {
+            if ($btn.hasClass('loading')) {
+                console.warn('⚠️ Таймаут: принудительно убираем loading с кнопки');
+                clearLoadingState($btn);
+            }
+        }, 5000); // 5 секунд максимум (уменьшили с 10)
+        
+        // Сохраняем ID таймаута в data атрибут
+        $btn.data('loading-timeout', timeoutId);
+    });
+    
+    // Функция очистки состояния загрузки
+    function clearLoadingState($btn) {
+        $btn.removeClass('loading');
+        $btn.prop('disabled', false);
+        
+        // Убираем таймаут если есть
+        const timeoutId = $btn.data('loading-timeout');
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+            $btn.removeData('loading-timeout');
+        }
+    }
+    
+    $(document.body).on('added_to_cart', function(e, fragments, cart_hash, $button) {
+        // Товар успешно добавлен - убираем состояние загрузки
+        let $btn = $($button);
+        
+        // Если кнопка не передана, ищем все кнопки в состоянии loading
+        if (!$btn || !$btn.length) {
+            $('.add_to_cart_button.loading').each(function() {
+                const $btn2 = $(this);
+                clearLoadingState($btn2);
+                
+                const originalText = $btn2.text().trim() || 'В корзину';
+                $btn2.text('Добавлено!').css({
+                    'background-color': '#4CAF50',
+                    'opacity': '1'
+                });
+                
+                setTimeout(function() {
+                    $btn2.text(originalText).css({
+                        'background-color': '',
+                        'opacity': ''
+                    });
+                }, 2000);
+            });
+        } else {
+            // Убираем класс loading
+            clearLoadingState($btn);
+            
+            // Показываем краткое уведомление
+            const originalText = $btn.text().trim() || 'В корзину';
+            $btn.text('Добавлено!').css({
+                'background-color': '#4CAF50',
+                'opacity': '1'
+            });
+            
+            // Возвращаем исходное состояние через 2 секунды
+            setTimeout(function() {
+                $btn.text(originalText).css({
+                    'background-color': '',
+                    'opacity': ''
+                });
+            }, 2000);
+        }
+        
+        // Обновляем счетчик корзины
+        if (typeof updateCartCounter === 'function') {
+            updateCartCounter();
+        }
+        // Также обновляем через сервер для надежности
+        setTimeout(function() {
+            if (typeof fetchCartCountFromServer === 'function') {
+                fetchCartCountFromServer();
+            }
+        }, 200);
+    });
+    
+    // Дополнительная очистка при обновлении фрагментов WooCommerce
+    $(document.body).on('wc_fragments_refreshed updated_wc_div', function(e) {
+        // Обновляем счетчик при обновлении фрагментов
+        if (typeof fetchCartCountFromServer === 'function') {
+            setTimeout(function() {
+                fetchCartCountFromServer();
+            }, 100);
+        }
+        // WooCommerce обновил фрагменты - очищаем все залипшие кнопки
+        setTimeout(function() {
+            $('.add_to_cart_button.loading').each(function() {
+                const $btn = $(this);
+                console.log('🧹 Очистка loading после обновления фрагментов WooCommerce');
+                clearLoadingState($btn);
+                
+                // Восстанавливаем текст если нужно
+                const originalText = $btn.data('original-text') || 'В корзину';
+                if ($btn.text().trim() === '' || $btn.text().trim() === 'Добавление...') {
+                    $btn.text(originalText).css({
+                        'background-color': '',
+                        'opacity': '1'
+                    });
+                }
+            });
+        }, 100);
+    });
+    
+    // Дополнительная очистка при любых AJAX запросах jQuery
+    $(document).ajaxComplete(function(event, xhr, settings) {
+        // Если это AJAX запрос WooCommerce на добавление в корзину
+        if (settings.url && (
+            settings.url.indexOf('wc-ajax') !== -1 || 
+            settings.url.indexOf('add_to_cart') !== -1 ||
+            settings.url.indexOf('admin-ajax.php') !== -1
+        )) {
+            // После завершения AJAX запроса проверяем кнопки
+            setTimeout(function() {
+                $('.add_to_cart_button.loading').each(function() {
+                    const $btn = $(this);
+                    const loadingSince = $btn.data('loading-since') || Date.now();
+                    const loadingTime = Date.now() - loadingSince;
+                    
+                    // Если запрос завершился, но кнопка все еще в loading больше 2 секунд - очищаем
+                    if (loadingTime > 2000) {
+                        console.log('🧹 Очистка loading после завершения AJAX запроса');
+                        clearLoadingState($btn);
+                        
+                        const originalText = $btn.data('original-text') || 'В корзину';
+                        if ($btn.text().trim() === '' || $btn.text().trim() === 'Добавление...') {
+                            $btn.text(originalText).css({
+                                'background-color': '',
+                                'opacity': '1'
+                            });
+                        }
+                    }
+                });
+            }, 500);
+        }
+    });
+    
+    // Обработка ошибок при добавлении
+    $(document.body).on('wc_add_to_cart_error', function(e, $button, data) {
+        const $btn = $($button);
+        
+        // Убираем состояние загрузки
+        clearLoadingState($btn);
+        
+        // Показываем ошибку
+        const originalText = $btn.text().trim() || 'В корзину';
+        $btn.text('Ошибка').css({
+            'background-color': '#dc3545',
+            'opacity': '1'
+        });
+        
+        setTimeout(function() {
+            $btn.text(originalText).css({
+                'background-color': '',
+                'opacity': ''
+            });
+        }, 2000);
+    });
+    
+    // Принудительная очистка всех залипших кнопок при загрузке страницы
+    $(document).ready(function() {
+        $('.add_to_cart_button.loading').each(function() {
+            const $btn = $(this);
+            console.warn('🧹 Найдена залипшая кнопка, очищаем состояние');
+            clearLoadingState($btn);
+        });
+    });
+    
+    // Мониторинг залипших кнопок каждые 2 секунды (fallback) - более агрессивный
+    setInterval(function() {
+        $('.add_to_cart_button.loading').each(function() {
+            const $btn = $(this);
+            const loadingSince = $btn.data('loading-since') || Date.now();
+            const loadingTime = Date.now() - loadingSince;
+            
+            // Если кнопка в состоянии loading больше 6 секунд - принудительно очищаем
+            if (loadingTime > 6000) {
+                console.warn('🧹 Принудительная очистка залипшей кнопки (была в loading ' + Math.round(loadingTime / 1000) + ' секунд)');
+                clearLoadingState($btn);
+                
+                // Восстанавливаем текст кнопки
+                const originalText = $btn.data('original-text') || $btn.text().trim() || 'В корзину';
+                $btn.text(originalText).css({
+                    'background-color': '',
+                    'opacity': '1'
+                });
+            }
+        });
+    }, 2000); // Проверяем каждые 2 секунды
+    
+    // Отслеживаем момент добавления класса loading
+    $(document).on('DOMNodeInserted DOMSubtreeModified', function() {
+        // Используем MutationObserver для более эффективного отслеживания
+    });
+    
+    // MutationObserver для отслеживания изменений класса loading
+    if (typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    const $btn = $(mutation.target);
+                    if ($btn.hasClass('loading') && $btn.hasClass('add_to_cart_button')) {
+                        if (!$btn.data('loading-since')) {
+                            $btn.data('loading-since', Date.now());
+                        }
+                    }
+                }
+            });
+        });
+        
+        // Наблюдаем за всеми кнопками добавления в корзину
+        $(document).ready(function() {
+            $('.add_to_cart_button').each(function() {
+                observer.observe(this, {
+                    attributes: true,
+                    attributeFilter: ['class']
+                });
+            });
+            
+            // Также наблюдаем за динамически добавленными кнопками
+            $(document).on('DOMNodeInserted', '.add_to_cart_button', function() {
+                observer.observe(this, {
+                    attributes: true,
+                    attributeFilter: ['class']
+                });
+            });
+        });
+    }
+    
+        }); // Конец jQuery(document).ready для кнопок +/- и корзины
+    }
+    
+    // Запускаем инициализацию
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initJQueryCode);
+    } else {
+        initJQueryCode();
+    }
+})(); // Конец IIFE
+
+// ===== КНОПКА ЧАТА НА СТРАНИЦЕ ТОВАРА =====
+// Обработчик клика на кнопку чата в карточке товара
+// Проверяем наличие jQuery перед использованием
+if (typeof jQuery !== 'undefined') {
+    jQuery(document).ready(function($) {
+        $(document).on('click', '.product-chat-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (typeof openChatPopup === 'function') {
+                openChatPopup();
+            } else if (typeof window.openChatPopup === 'function') {
+                window.openChatPopup();
+            }
+        });
+    });
 }

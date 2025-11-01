@@ -53,9 +53,8 @@
 }
 
 html {
-  overflow-x: hidden !important;
+  overflow-x: hidden;
   overflow-y: scroll;
-  scrollbar-gutter: stable both-edges;
   width: 100%;
   box-sizing: border-box;
   position: relative;
@@ -68,20 +67,11 @@ body {
   margin: 0;
   padding: 0;
   line-height: 1.6;
-  overflow-x: hidden !important;
+  overflow-x: hidden;
   width: 100%;
   min-height: 100vh;
   box-sizing: border-box;
   position: relative;
-}
-
-/* Просто запрещаем горизонтальный скролл на уровне html/body */
-html {
-  overflow-x: hidden !important;
-}
-
-body {
-  overflow-x: hidden !important;
 }
 
 /* Заголовки */

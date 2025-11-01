@@ -10,13 +10,330 @@
 
 /**
  * Убедиться, что сессия WooCommerce инициализирована
+ * Важно для неавторизованных пользователей (инкогнито)
+ * ВРЕМЕННО ОТКЛЮЧЕНО для диагностики белого экрана
  */
 function asker_ensure_cart_session() {
-    if ( function_exists( 'WC' ) && WC()->session && ! WC()->session->has_session() ) {
-        WC()->session->set_customer_session_cookie( true );
+    if ( ! function_exists( 'WC' ) ) {
+        return;
+    }
+    
+    try {
+        $wc = WC();
+        if ( ! $wc || ! isset( $wc->session ) || ! $wc->session ) {
+            return;
+        }
+        
+        // Инициализируем сессию для всех пользователей, включая неавторизованных
+        if ( ! $wc->session->has_session() ) {
+            $wc->session->set_customer_session_cookie( true );
+        }
+    } catch ( Exception $e ) {
+        // Игнорируем ошибки сессии для предотвращения белого экрана
+        return;
     }
 }
-add_action( 'wp_loaded', 'asker_ensure_cart_session', 5 );
+// ВРЕМЕННО ОТКЛЮЧЕНО для диагностики
+// add_action( 'wp_loaded', 'asker_ensure_cart_session', 5 );
+
+/**
+ * Отключаем режим "Coming Soon" в WooCommerce
+ * Это важно для показа товаров всем пользователям
+ */
+function asker_disable_coming_soon_mode() {
+    // Отключаем рендеринг блока "Coming Soon" через фильтр шаблона
+    add_filter( 'render_block_woocommerce/coming-soon', '__return_empty_string', 999 );
+    
+    // Также отключаем через фильтр блоков - удаляем блок полностью
+    add_filter( 'render_block_data', function( $parsed_block, $source_block, $parent_block ) {
+        if ( isset( $parsed_block['blockName'] ) && $parsed_block['blockName'] === 'woocommerce/coming-soon' ) {
+            return array();
+        }
+        return $parsed_block;
+    }, 999, 3 );
+    
+    // Отключаем рендеринг через фильтр content
+    add_filter( 'the_content', function( $content ) {
+        // Удаляем блок coming-soon из контента (рекурсивно, включая вложенные div)
+        $content = preg_replace( '/<div[^>]*data-block-name=["\']woocommerce\/coming-soon["\'][^>]*>.*?<\/div>/is', '', $content );
+        $content = preg_replace( '/<div[^>]*class=["\'][^"\']*woocommerce-coming-soon[^"\']*["\'][^>]*>.*?<\/div>/is', '', $content );
+        $content = preg_replace( '/<div[^>]*data-block-name=["\']woocommerce\/coming-soon["\'][^>]*>.*?<\/div>/is', '', $content );
+        return $content;
+    }, 999 );
+    
+    // Также фильтруем через блоки темы
+    add_filter( 'render_block', function( $block_content, $block ) {
+        if ( isset( $block['blockName'] ) && $block['blockName'] === 'woocommerce/coming-soon' ) {
+            return '';
+        }
+        return $block_content;
+    }, 999, 2 );
+    
+    // Удаляем мета-тег coming soon из head
+    remove_action( 'wp_head', 'wc_coming_soon_page_meta', 10 );
+}
+add_action( 'init', 'asker_disable_coming_soon_mode', 10 );
+
+/**
+ * Принудительно включаем магазин для всех пользователей
+ * ВАЖНО: Применяется на хуке wp_loaded, когда WooCommerce точно загружен
+ */
+function asker_force_store_available() {
+    // Принудительно включаем магазин только если WooCommerce загружен
+    if ( class_exists( 'WooCommerce' ) ) {
+        // Принудительно отключаем режим Coming Soon через опции
+        update_option( 'woocommerce_coming_soon_page_id', 0 );
+        delete_option( 'woocommerce_coming_soon_page_id' );
+        
+        add_filter( 'woocommerce_is_store_available', '__return_true', 999 );
+        // Принудительно отключаем режим Coming Soon через фильтр
+        add_filter( 'woocommerce_coming_soon_page_id', '__return_zero', 999 );
+        // Отключаем мета-тег coming soon
+        remove_action( 'wp_head', 'wc_coming_soon_page_meta', 10 );
+    }
+}
+add_action( 'wp_loaded', 'asker_force_store_available', 5 );
+
+/**
+ * ОТКЛЮЧАЕМ РЕЖИМ COMING SOON НА РАННЕМ ЭТАПЕ
+ * Это критично - блок рендерится до загрузки страницы
+ */
+function asker_disable_coming_soon_early() {
+    if ( ! class_exists( 'WooCommerce' ) ) {
+        return;
+    }
+    
+    // ПРИНУДИТЕЛЬНО удаляем опцию Coming Soon из БД
+    global $wpdb;
+    $wpdb->delete( 
+        $wpdb->options, 
+        array( 'option_name' => 'woocommerce_coming_soon_page_id' ), 
+        array( '%s' ) 
+    );
+    
+    // Удаляем через стандартные функции WordPress
+    delete_option( 'woocommerce_coming_soon_page_id' );
+    update_option( 'woocommerce_coming_soon_page_id', 0, false );
+    
+    // Отключаем фильтр, который проверяет Coming Soon
+    add_filter( 'woocommerce_is_store_available', '__return_true', 1 );
+    add_filter( 'woocommerce_coming_soon_page_id', '__return_zero', 1 );
+}
+add_action( 'plugins_loaded', 'asker_disable_coming_soon_early', 1 );
+add_action( 'init', 'asker_disable_coming_soon_early', 1 );
+add_action( 'after_setup_theme', 'asker_disable_coming_soon_early', 1 );
+
+/**
+ * ПРИНУДИТЕЛЬНО отключаем блочную тему для главной страницы
+ * КРИТИЧНО: Должно выполняться РАНЬШЕ всех остальных хуков
+ */
+function asker_disable_block_theme_for_home() {
+    if ( ! is_admin() && ( is_front_page() || is_home() ) ) {
+        // Отключаем блочную тему полностью
+        add_filter( 'wp_is_block_theme', '__return_false', 1 );
+        add_filter( 'block_template_can_be_used', '__return_false', 1 );
+        add_filter( 'block_template_part_can_be_used', '__return_false', 1 );
+        
+        // Удаляем только действия, связанные с coming-soon
+        // НЕ удаляем wp_footer - там могут быть наши скрипты!
+        
+        // Перехватываем рендеринг блоков
+        add_filter( 'render_block', function( $block_content, $block ) {
+            if ( isset( $block['blockName'] ) && $block['blockName'] === 'woocommerce/coming-soon' ) {
+                return '';
+            }
+            return $block_content;
+        }, 1, 2 );
+    }
+}
+// Выполняем на САМОМ РАННЕМ этапе
+add_action( 'after_setup_theme', 'asker_disable_block_theme_for_home', 1 );
+add_action( 'init', 'asker_disable_block_theme_for_home', 1 );
+add_action( 'template_redirect', 'asker_disable_block_theme_for_home', 1 );
+
+/**
+ * Перехватываем шаблон для главной страницы
+ * КРИТИЧНО: Должен иметь приоритет ВЫШЕ блочных шаблонов
+ */
+function asker_override_homepage_template( $template ) {
+    // Только для главной страницы (не админка)
+    if ( is_admin() ) {
+        return $template;
+    }
+    
+    // Проверяем главную страницу (более агрессивная проверка)
+    $is_home = is_front_page() || is_home();
+    if ( ! $is_home ) {
+        // Проверяем по URL
+        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+        $request_uri = rtrim( $request_uri, '/' );
+        $is_home = ( $request_uri === '' || $request_uri === '/' || $request_uri === '/index.php' );
+    }
+    
+    if ( $is_home ) {
+        // Если есть front-page.php, используем его ВСЕГДА
+        $front_page_template = get_template_directory() . '/front-page.php';
+        if ( file_exists( $front_page_template ) ) {
+            // КРИТИЧНО: Отключаем блочную тему ПЕРЕД загрузкой шаблона
+            add_filter( 'wp_is_block_theme', '__return_false', 1 );
+            add_filter( 'block_template_can_be_used', '__return_false', 1 );
+            add_filter( 'block_template_part_can_be_used', '__return_false', 1 );
+            
+            // Удаляем только действия, связанные с блочными шаблонами coming-soon
+            // НЕ удаляем все действия, чтобы не сломать другие функции
+            global $wp_filter;
+            if ( isset( $wp_filter['wp_body_open'] ) ) {
+                foreach ( $wp_filter['wp_body_open']->callbacks as $priority => $callbacks ) {
+                    foreach ( $callbacks as $key => $callback ) {
+                        // Удаляем только если это связано с coming-soon
+                        if ( is_array( $callback['function'] ) && 
+                             is_string( $callback['function'][0] ) && 
+                             strpos( $callback['function'][0], 'coming-soon' ) !== false ) {
+                            remove_action( 'wp_body_open', $key, $priority );
+                        }
+                    }
+                }
+            }
+            
+            // Перехватываем только render_block для coming-soon, не удаляем все фильтры
+            
+            return $front_page_template;
+        }
+    }
+    
+    return $template;
+}
+// КРИТИЧНО: Приоритет 1 - раньше всех остальных фильтров
+add_filter( 'template_include', 'asker_override_homepage_template', 1 );
+add_filter( 'home_template', 'asker_override_homepage_template', 1 );
+add_filter( 'frontpage_template', 'asker_override_homepage_template', 1 );
+
+/**
+ * Перехватываем весь вывод страницы и удаляем блок Coming Soon
+ * ВАЖНО: Должен запускаться РАНЬШЕ всех других хуков
+ */
+// ВРЕМЕННО ОТКЛЮЧЕНО output buffering - может блокировать загрузку скриптов
+// Coming Soon уже выключен через админку
+/*
+function asker_buffer_output_start() {
+    if ( ! is_admin() && ( is_front_page() || is_home() ) ) {
+        // Запускаем буферизацию только если её еще нет
+        if ( ! ob_get_level() ) {
+            ob_start( 'asker_remove_coming_soon_from_output' );
+        }
+    }
+}
+add_action( 'template_redirect', 'asker_buffer_output_start', 999 );
+*/
+
+function asker_remove_coming_soon_from_output( $buffer ) {
+    if ( empty( $buffer ) || ! is_string( $buffer ) ) {
+        return $buffer;
+    }
+    
+    // Удаляем только блоки coming-soon и wp-site-blocks, НЕ трогаем остальное
+    
+    // 1. Удаляем мета-тег coming-soon (самое простое и безопасное)
+    $buffer = preg_replace( '/<meta[^>]*name=["\']woo-coming-soon-page["\'][^>]*>/is', '', $buffer );
+    
+    // 2. Удаляем блок coming-soon любой вложенности (рекурсивно)
+    $buffer = preg_replace( '/<div[^>]*data-block-name=["\']woocommerce\/coming-soon["\'][^>]*>[\s\S]*?<\/div>/ims', '', $buffer );
+    
+    // 3. Удаляем по классу coming-soon
+    $buffer = preg_replace( '/<div[^>]*class=["\'][^"\']*woocommerce-coming-soon[^"\']*["\'][^>]*>[\s\S]*?<\/div>/ims', '', $buffer );
+    
+    // 4. Удаляем wp-site-blocks полностью для главной страницы
+    // Это блок перекрывает весь контент, поэтому удаляем его агрессивно
+    // Используем рекурсивное удаление для вложенных div'ов
+    $max_iterations = 10;
+    $iteration = 0;
+    while ( ( strpos( $buffer, 'wp-site-blocks' ) !== false || strpos( $buffer, 'wp-block-woocommerce-coming-soon' ) !== false ) && $iteration < $max_iterations ) {
+        // Удаляем wp-site-blocks с любой вложенностью
+        $buffer = preg_replace( '/<div[^>]*class=["\'][^"\']*wp-site-blocks[^"\']*["\'][^>]*>[\s\S]*?<\/div>/ims', '', $buffer );
+        // Удаляем блок coming-soon
+        $buffer = preg_replace( '/<div[^>]*data-block-name=["\']woocommerce\/coming-soon["\'][^>]*>[\s\S]*?<\/div>/ims', '', $buffer );
+        $buffer = preg_replace( '/<div[^>]*class=["\'][^"\']*woocommerce-coming-soon[^"\']*["\'][^>]*>[\s\S]*?<\/div>/ims', '', $buffer );
+        $buffer = preg_replace( '/<div[^>]*class=["\'][^"\']*wp-block-woocommerce-coming-soon[^"\']*["\'][^>]*>[\s\S]*?<\/div>/ims', '', $buffer );
+        $iteration++;
+    }
+    
+    // Также удаляем через простую замену строк (на случай если regex не сработал)
+    $buffer = str_replace( '<div class="wp-site-blocks">', '', $buffer );
+    $buffer = str_replace( '<div class=\'wp-site-blocks\'>', '', $buffer );
+    
+    // 5. Удаляем только стили связанные С coming-soon
+    $buffer = preg_replace( '/<style[^>]*>.*?coming-soon.*?<\/style>/is', '', $buffer );
+    
+    // 6. Удаляем только скрипты связанные С coming-soon
+    $buffer = preg_replace( '/<script[^>]*>.*?coming-soon.*?<\/script>/is', '', $buffer );
+    
+    return $buffer;
+}
+
+/**
+ * Полностью удаляем wp-site-blocks с Coming Soon блоком через JS
+ */
+function asker_remove_coming_soon_completely() {
+    if ( is_front_page() || is_home() ) {
+        add_action( 'wp_body_open', function() {
+            ?>
+            <script>
+            (function() {
+                // Удаляем весь wp-site-blocks сразу
+                function removeSiteBlocks() {
+                    var siteBlocks = document.querySelector('.wp-site-blocks');
+                    if (siteBlocks) {
+                        var hasComingSoon = siteBlocks.querySelector('[data-block-name="woocommerce/coming-soon"]');
+                        if (hasComingSoon) {
+                            siteBlocks.style.display = 'none';
+                            siteBlocks.remove();
+                        }
+                    }
+                }
+                removeSiteBlocks();
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', removeSiteBlocks);
+                }
+                window.addEventListener('load', removeSiteBlocks);
+                var interval = setInterval(function() {
+                    removeSiteBlocks();
+                }, 100);
+                setTimeout(function() { clearInterval(interval); }, 1000);
+            })();
+            </script>
+            <?php
+        }, 1 );
+    }
+}
+add_action( 'wp', 'asker_remove_coming_soon_completely', 1 );
+
+/**
+ * Убеждаемся, что товары видны всем пользователям (включая неавторизованных)
+ * ВАЖНО: Применяется ТОЛЬКО на страницах WooCommerce
+ * ВРЕМЕННО ОТКЛЮЧЕНО для диагностики белого экрана
+ */
+function asker_ensure_products_visible() {
+    // НЕ применяем на админке или если это не страница WooCommerce
+    if ( is_admin() ) {
+        return;
+    }
+    
+    // Проверяем, что это действительно страница WooCommerce
+    if ( ! function_exists( 'is_woocommerce' ) || ! is_woocommerce() ) {
+        return;
+    }
+    
+    // Для страниц товаров - убираем ограничения видимости
+    if ( is_shop() || is_product_category() || is_product_taxonomy() || is_product() ) {
+        // Убеждаемся, что товары не фильтруются по правам доступа
+        add_filter( 'woocommerce_product_is_visible', '__return_true', 999 );
+        
+        // Убеждаемся, что товары доступны для покупки
+        add_filter( 'woocommerce_is_purchasable', '__return_true', 999 );
+    }
+}
+// ВРЕМЕННО ОТКЛЮЧЕНО для диагностики
+// add_action( 'wp', 'asker_ensure_products_visible', 10 );
 
 /**
  * Создание страниц WooCommerce и контентных страниц при активации темы
@@ -257,12 +574,22 @@ function asker_ajax_remove_cart_item() {
     $cart_item_key = sanitize_text_field( $_POST['cart_item_key'] );
     
     if ( function_exists( 'WC' ) && WC()->cart ) {
-        WC()->cart->remove_cart_item( $cart_item_key );
-        wp_send_json_success( [ 'message' => 'Товар удален' ] );
+        $removed = WC()->cart->remove_cart_item( $cart_item_key );
+        if ( $removed ) {
+            WC()->cart->calculate_totals(); // Пересчитываем после удаления
+            wp_send_json_success( [ 
+                'message' => 'Товар удален',
+                'cart_count' => WC()->cart->get_cart_contents_count()
+            ] );
+        } else {
+            wp_send_json_error( [ 'message' => 'Товар не найден в корзине' ] );
+        }
     }
     
     wp_send_json_error( [ 'message' => 'Ошибка удаления' ] );
 }
+add_action( 'wp_ajax_remove_cart_item', 'asker_ajax_remove_cart_item' );
+add_action( 'wp_ajax_nopriv_remove_cart_item', 'asker_ajax_remove_cart_item' );
 
 /**
  * Переопределяем шаблон карточки товара в цикле
@@ -273,12 +600,241 @@ function asker_custom_product_card_template() {
     remove_action( 'woocommerce_after_shop_loop_item', 'woocommerce_template_loop_product_link_close', 5 );
     remove_action( 'woocommerce_after_shop_loop_item', 'woocommerce_template_loop_add_to_cart', 10 );
     
+    // Убираем стандартный вывод сортинга и счетчика результатов (чтобы не дублировать)
+    remove_action( 'woocommerce_before_shop_loop', 'woocommerce_catalog_ordering', 30 );
+    remove_action( 'woocommerce_before_shop_loop', 'woocommerce_result_count', 20 );
+    
+    // Убираем стандартный заголовок страницы My Account
+    add_filter( 'woocommerce_account_menu_items', '__return_empty_array', 999 );
+    add_filter( 'woocommerce_show_page_title', '__return_false' );
+    
+    // Убираем стандартное сообщение "Great things are on the horizon"
+    remove_action( 'woocommerce_no_products_found', 'wc_no_products_found', 10 );
+    
+    // Добавляем кастомное сообщение об отсутствии товаров
+    add_action( 'woocommerce_no_products_found', 'asker_no_products_found', 10 );
+    
+    // Изменяем текст кнопки "Add to cart" на "В корзину"
+    add_filter( 'woocommerce_product_add_to_cart_text', 'asker_change_add_to_cart_text', 10, 2 );
+    add_filter( 'woocommerce_product_single_add_to_cart_text', 'asker_change_add_to_cart_text', 10, 2 );
+    
     // Добавляем кастомные хуки
     add_action( 'woocommerce_before_shop_loop_item', 'asker_custom_product_link_open', 10 );
     add_action( 'woocommerce_after_shop_loop_item', 'asker_custom_product_link_close', 5 );
-    add_action( 'woocommerce_after_shop_loop_item', 'asker_custom_add_to_cart_button', 10 );
+    // Не добавляем кастомную кнопку - используем встроенную в content-product.php
+    // add_action( 'woocommerce_after_shop_loop_item', 'asker_custom_add_to_cart_button', 10 );
 }
 add_action( 'init', 'asker_custom_product_card_template' );
+
+/**
+ * Кастомное сообщение об отсутствии товаров
+ */
+function asker_no_products_found() {
+    ?>
+    <div class="no-products">
+        <h2>Товары не найдены</h2>
+        <p>К сожалению, в данном разделе пока нет товаров.</p>
+        <p><a href="<?php echo esc_url( wc_get_page_permalink( 'shop' ) ); ?>" class="btn btn--primary">Вернуться в каталог</a></p>
+    </div>
+    <?php
+}
+
+/**
+ * AJAX: Синхронизация избранного (localStorage -> user_meta)
+ */
+function asker_sync_wishlist() {
+    if (!is_user_logged_in()) {
+        wp_send_json_error(['message' => 'Требуется авторизация']);
+        return;
+    }
+    
+    $product_ids = isset($_POST['product_ids']) ? array_map('intval', $_POST['product_ids']) : array();
+    
+    // Сохраняем в user_meta
+    $user_id = get_current_user_id();
+    update_user_meta($user_id, 'asker_wishlist', $product_ids);
+    
+    wp_send_json_success(['message' => 'Избранное синхронизировано', 'count' => count($product_ids)]);
+}
+add_action('wp_ajax_asker_sync_wishlist', 'asker_sync_wishlist');
+
+/**
+ * AJAX: Добавить/удалить товар из избранного
+ */
+function asker_toggle_wishlist() {
+    // Разрешаем работу с избранным для всех пользователей
+    // Для авторизованных - сохраняем в user_meta, для неавторизованных - работаем через localStorage
+    
+    $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
+    $action = isset($_POST['action_type']) ? sanitize_text_field($_POST['action_type']) : 'toggle';
+    
+    if (!$product_id) {
+        wp_send_json_error(['message' => 'Неверный ID товара']);
+        return;
+    }
+    
+    // Для авторизованных пользователей сохраняем в user_meta
+    // Для неавторизованных - просто возвращаем успех (данные в localStorage)
+    if (is_user_logged_in()) {
+        $user_id = get_current_user_id();
+        $wishlist = get_user_meta($user_id, 'asker_wishlist', true);
+        
+        if (empty($wishlist) || !is_array($wishlist)) {
+            $wishlist = array();
+        }
+        
+        if ($action === 'add') {
+            // Добавляем товар, если его еще нет
+            if (!in_array($product_id, $wishlist)) {
+                $wishlist[] = $product_id;
+            }
+        } elseif ($action === 'remove') {
+            // Удаляем товар
+            $wishlist = array_diff($wishlist, array($product_id));
+            $wishlist = array_values($wishlist); // Переиндексация
+        } elseif ($action === 'toggle') {
+            // Переключаем состояние
+            if (!in_array($product_id, $wishlist)) {
+                $wishlist[] = $product_id;
+            } else {
+                $wishlist = array_diff($wishlist, array($product_id));
+                $wishlist = array_values($wishlist); // Переиндексация
+            }
+        }
+        
+        update_user_meta($user_id, 'asker_wishlist', $wishlist);
+        
+        wp_send_json_success([
+            'message' => 'Избранное обновлено',
+            'is_favorite' => in_array($product_id, $wishlist),
+            'count' => count($wishlist)
+        ]);
+    } else {
+        // Для неавторизованных пользователей просто возвращаем успех
+        // Данные управляются через localStorage на клиенте
+        wp_send_json_success([
+            'message' => 'Избранное обновлено (локально)',
+            'is_favorite' => $action === 'add',
+            'count' => 0
+        ]);
+    }
+}
+add_action('wp_ajax_asker_toggle_wishlist', 'asker_toggle_wishlist');
+add_action('wp_ajax_nopriv_asker_toggle_wishlist', 'asker_toggle_wishlist');
+
+/**
+ * AJAX: Получить HTML список товаров из избранного
+ */
+function asker_get_wishlist_products() {
+    // Разрешаем для всех пользователей - для неавторизованных используем переданные product_ids
+    $product_ids = isset($_POST['product_ids']) ? array_map('intval', $_POST['product_ids']) : array();
+    
+    // Для авторизованных - используем user_meta если product_ids пуст
+    if (is_user_logged_in()) {
+        $user_id = get_current_user_id();
+        $wishlist = get_user_meta($user_id, 'asker_wishlist', true);
+        
+        // Используем список из user_meta если передан пустой массив
+        if (empty($product_ids) && !empty($wishlist) && is_array($wishlist)) {
+            $product_ids = $wishlist;
+        }
+    }
+    // Для неавторизованных - используем только переданные product_ids
+    
+    if (empty($product_ids)) {
+        wp_send_json_success(['html' => '<div class="no-products"><p>В вашем избранном пока нет товаров.</p><a href="' . esc_url(home_url('/shop')) . '" class="btn-primary">Перейти в каталог</a></div>']);
+        return;
+    }
+    
+    ob_start();
+    ?>
+    <div class="products-grid">
+        <?php foreach ($product_ids as $product_id) :
+            $product = wc_get_product($product_id);
+            if ($product && $product->is_visible()) :
+                $product_image = wp_get_attachment_image_src(get_post_thumbnail_id($product_id), 'medium');
+                $product_url = get_permalink($product_id);
+                $price = $product->get_price_html();
+                $price = preg_replace('/,00/', '', $price);
+                ?>
+                <div class="product-card">
+                    <button class="product-favorite active favorite-btn" data-product-id="<?php echo esc_attr($product_id); ?>" aria-label="Удалить из избранного">
+                        <img src="<?php echo get_template_directory_uri(); ?>/assets/images/ui/like[active].svg" alt="Избранное" class="favorite-icon favorite-icon--active">
+                        <img src="<?php echo get_template_directory_uri(); ?>/assets/images/ui/like[idle].svg" alt="Добавить в избранное" class="favorite-icon favorite-icon--idle">
+                    </button>
+                    <a href="<?php echo esc_url($product_url); ?>">
+                        <?php if ($product_image) : ?>
+                            <img class="product-image" src="<?php echo esc_url($product_image[0]); ?>" alt="<?php echo esc_attr($product->get_name()); ?>">
+                        <?php else : ?>
+                            <div class="product-placeholder"><?php echo esc_html($product->get_name()); ?></div>
+                        <?php endif; ?>
+                    </a>
+                    <h3 class="product-title">
+                        <a href="<?php echo esc_url($product_url); ?>"><?php echo esc_html($product->get_name()); ?></a>
+                    </h3>
+                    <div class="product-bottom">
+                        <div class="product-price"><?php echo $price; ?></div>
+                        <button class="btn-add-cart add_to_cart_button" data-product-id="<?php echo esc_attr($product_id); ?>">В корзину</button>
+                    </div>
+                </div>
+            <?php
+            endif;
+        endforeach; ?>
+    </div>
+    <?php
+    $html = ob_get_clean();
+    
+    wp_send_json_success(['html' => $html]);
+}
+add_action('wp_ajax_asker_get_wishlist_products', 'asker_get_wishlist_products');
+add_action('wp_ajax_nopriv_asker_get_wishlist_products', 'asker_get_wishlist_products');
+
+/**
+ * Изменяем текст кнопки "Add to cart" на "В корзину"
+ */
+function asker_change_add_to_cart_text( $text, $product ) {
+    return 'В корзину';
+}
+
+/**
+ * Переводим сообщение "has been added to your cart" на русский
+ */
+function asker_translate_add_to_cart_message( $message, $products, $show_qty ) {
+    // Если $products - массив с ID товаров
+    if ( is_array( $products ) && ! empty( $products ) ) {
+        $product_count = count( $products );
+        
+        if ( $product_count > 1 ) {
+            $message = sprintf( 
+                '%d товара добавлены в корзину. <a href="%s" class="button wc-forward">%s</a>',
+                $product_count,
+                esc_url( wc_get_cart_url() ),
+                'Посмотреть корзину'
+            );
+        } else {
+            // Получаем первый товар
+            $product_id = is_array( $products ) ? array_values( $products )[0] : $products;
+            $product = wc_get_product( $product_id );
+            
+            if ( $product ) {
+                $product_name = $product->get_name();
+                $message = sprintf( 
+                    '«%s» добавлен в корзину. <a href="%s" class="button wc-forward">%s</a>',
+                    esc_html( $product_name ),
+                    esc_url( wc_get_cart_url() ),
+                    'Посмотреть корзину'
+                );
+            }
+        }
+    } else {
+        // Если передан уже готовый текст, просто заменяем английские строки на русские
+        $message = str_replace( 'has been added to your cart', 'добавлен в корзину', $message );
+        $message = str_replace( 'View cart', 'Посмотреть корзину', $message );
+    }
+    
+    return $message;
+}
+add_filter( 'wc_add_to_cart_message_html', 'asker_translate_add_to_cart_message', 10, 3 );
 
 /**
  * Кастомное открытие ссылки на товар
@@ -941,24 +1497,52 @@ add_action( 'wp_footer', 'asker_disable_checkout_ajax' );
  * AJAX обработчик для очистки корзины
  */
 function asker_clear_cart_ajax() {
+    if (!function_exists('WC') || !WC() || !WC()->cart) {
+        wp_send_json_error(['message' => 'WooCommerce не доступен']);
+        return;
+    }
     WC()->cart->empty_cart();
-    wp_die();
+    wp_send_json_success(['message' => 'Корзина очищена']);
 }
 add_action( 'wp_ajax_woocommerce_clear_cart', 'asker_clear_cart_ajax' );
 add_action( 'wp_ajax_nopriv_woocommerce_clear_cart', 'asker_clear_cart_ajax' );
 
 /**
- * AJAX обработчик для удаления товара из корзины
+ * AJAX обработчик для удаления товара из корзины (для action woocommerce_remove_cart_item)
  */
 function asker_remove_cart_item_ajax() {
-    $cart_item_key = sanitize_text_field( $_POST['cart_item_key'] );
-    
-    if ( $cart_item_key ) {
-        WC()->cart->remove_cart_item( $cart_item_key );
-        wp_send_json_success();
+    if ( ! isset( $_POST['cart_item_key'] ) ) {
+        wp_send_json_error( [ 'message' => 'Неверные параметры' ] );
     }
     
-    wp_send_json_error();
+    $cart_item_key = sanitize_text_field( $_POST['cart_item_key'] );
+    
+    if ( ! $cart_item_key || ! function_exists( 'WC' ) || ! WC()->cart ) {
+        wp_send_json_error( [ 'message' => 'Ошибка удаления' ] );
+    }
+    
+    // Проверяем, существует ли товар в корзине перед удалением
+    $cart_items = WC()->cart->get_cart();
+    if ( ! isset( $cart_items[ $cart_item_key ] ) ) {
+        // Товар уже удален - это не ошибка, возвращаем успех
+        wp_send_json_success( [ 
+            'message' => 'Товар уже удален',
+            'cart_count' => WC()->cart->get_cart_contents_count()
+        ] );
+        return;
+    }
+    
+    $removed = WC()->cart->remove_cart_item( $cart_item_key );
+    
+    if ( $removed ) {
+        WC()->cart->calculate_totals(); // Пересчитываем после удаления
+        wp_send_json_success( [ 
+            'message' => 'Товар удален',
+            'cart_count' => WC()->cart->get_cart_contents_count()
+        ] );
+    } else {
+        wp_send_json_error( [ 'message' => 'Не удалось удалить товар' ] );
+    }
 }
 add_action( 'wp_ajax_woocommerce_remove_cart_item', 'asker_remove_cart_item_ajax' );
 add_action( 'wp_ajax_nopriv_woocommerce_remove_cart_item', 'asker_remove_cart_item_ajax' );
@@ -1367,225 +1951,115 @@ function asker_fix_svg_media_library($response, $attachment, $meta) {
 }
 
 /**
- * Улучшаем отображение поля thumbnail для категорий товаров в админке
- * WooCommerce уже поддерживает это поле, но мы улучшим интерфейс
+ * WooCommerce уже имеет встроенное поле "Category thumbnail" 
+ * которое автоматически сохраняется в thumbnail_id
+ * Используем только стандартное поле WooCommerce - никаких кастомных полей!
+ * 
+ * При редактировании категории используй стандартное поле WooCommerce "Thumbnail"
+ * Оно синхронизируется с thumbnail_id и работает везде на сайте
  */
-add_action('product_cat_add_form_fields', 'asker_category_icon_field_add');
-add_action('product_cat_edit_form_fields', 'asker_category_icon_field_edit');
-
-function asker_category_icon_field_add() {
-    // Получаем placeholder изображение
-    $placeholder = '';
-    if (function_exists('wc_placeholder_img_src')) {
-        $placeholder = wc_placeholder_img_src();
-    }
-    if (!$placeholder || strpos($placeholder, 'placeholder') === false) {
-        // Если нет placeholder от WooCommerce, используем прозрачный пиксель или дефолтную иконку
-        $placeholder = 'data:image/svg+xml;base64,' . base64_encode('<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="60" fill="#f0f0f0" stroke="#ddd"/></svg>');
-    }
-    ?>
-                <div class="form-field term-thumbnail-wrap">
-        <label><?php esc_html_e('Иконка категории', 'woocommerce'); ?></label>
-        <div id="product_cat_thumbnail" style="float: left; margin-right: 10px;">
-            <img src="<?php echo esc_url($placeholder); ?>" width="60px" height="60px" style="background: #f0f0f0; border: 1px solid #ddd; display: block; object-fit: contain;" alt="Placeholder" />
-        </div>
-        <div style="line-height: 60px;">
-            <input type="hidden" id="product_cat_thumbnail_id" name="product_cat_thumbnail_id" />
-            <button type="button" class="upload_image_button button"><?php esc_html_e('Загрузить/Добавить изображение', 'woocommerce'); ?></button>
-            <button type="button" class="remove_image_button button" style="display:none;"><?php esc_html_e('Удалить изображение', 'woocommerce'); ?></button>
-        </div>
-        <div class="clear"></div>
-        <p class="description"><?php esc_html_e('Загрузите SVG или PNG иконку для этой категории. Рекомендуемый размер: 60x60px. Иконка будет отображаться на главной странице и странице категорий.', 'woocommerce'); ?></p>
-    </div>
-    <?php
-}
-
-function asker_category_icon_field_edit($term) {
-    $thumbnail_id = get_term_meta($term->term_id, 'thumbnail_id', true);
-    
-    // Получаем изображение или placeholder
-    if ($thumbnail_id) {
-        // Проверяем тип файла
-        $mime_type = get_post_mime_type($thumbnail_id);
-        
-        if ($mime_type === 'image/svg+xml') {
-            // Для SVG используем оригинальный URL напрямую
-            $image = wp_get_attachment_url($thumbnail_id);
-        } else {
-            // Для обычных изображений пытаемся получить thumbnail
-            $image = wp_get_attachment_image_url($thumbnail_id, 'thumbnail');
-            if (!$image) {
-                // Если нет thumbnail, используем medium
-                $image = wp_get_attachment_image_url($thumbnail_id, 'medium');
-            }
-            if (!$image) {
-                // Последний вариант - полный размер
-                $image = wp_get_attachment_image_url($thumbnail_id, 'full');
-            }
-            if (!$image) {
-                // Если вообще не получилось, используем прямой URL
-                $image = wp_get_attachment_url($thumbnail_id);
-            }
-        }
-    }
-    
-    // Если нет изображения, используем placeholder
-    if (empty($image)) {
-        if (function_exists('wc_placeholder_img_src')) {
-            $image = wc_placeholder_img_src();
-        }
-        if (!$image || strpos($image, 'placeholder') === false) {
-            // Создаем простой SVG placeholder
-            $image = 'data:image/svg+xml;base64,' . base64_encode('<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="60" fill="#f0f0f0" stroke="#ddd"/></svg>');
-        }
-    }
-    ?>
-    <tr class="form-field term-thumbnail-wrap">
-        <th scope="row" valign="top">
-            <label><?php esc_html_e('Иконка категории', 'woocommerce'); ?></label>
-        </th>
-        <td>
-            <div id="product_cat_thumbnail" style="float: left; margin-right: 10px;">
-                <img src="<?php echo esc_url($image); ?>" width="60px" height="60px" style="background: #f0f0f0; border: 1px solid #ddd; display: block; object-fit: contain;" alt="<?php echo esc_attr($term->name); ?>" onerror="this.src='data:image/svg+xml;base64,<?php echo base64_encode('<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="60" fill="#f0f0f0" stroke="#ddd"/></svg>'); ?>';" />
-            </div>
-            <div style="line-height: 60px;">
-                <input type="hidden" id="product_cat_thumbnail_id" name="product_cat_thumbnail_id" value="<?php echo esc_attr($thumbnail_id ?: ''); ?>" />
-                <button type="button" class="upload_image_button button"><?php esc_html_e('Загрузить/Добавить изображение', 'woocommerce'); ?></button>
-                <button type="button" class="remove_image_button button" <?php echo $thumbnail_id ? '' : 'style="display:none;"'; ?>><?php esc_html_e('Удалить изображение', 'woocommerce'); ?></button>
-            </div>
-            <div class="clear"></div>
-            <p class="description"><?php esc_html_e('Загрузите SVG или PNG иконку для этой категории. Рекомендуемый размер: 60x60px. Иконка будет отображаться на главной странице и странице категорий.', 'woocommerce'); ?></p>
-        </td>
-    </tr>
-    <?php
-}
-
-// Сохраняем иконку
-add_action('created_product_cat', 'asker_save_category_icon');
-add_action('edited_product_cat', 'asker_save_category_icon');
-
-function asker_save_category_icon($term_id) {
-    if (isset($_POST['product_cat_thumbnail_id']) && !empty($_POST['product_cat_thumbnail_id'])) {
-        update_term_meta($term_id, 'thumbnail_id', absint($_POST['product_cat_thumbnail_id']));
-    } else {
-        // Если поле пустое, удаляем иконку
-        delete_term_meta($term_id, 'thumbnail_id');
-    }
-}
-
-// Скрипты для загрузки изображений в админке
-add_action('admin_enqueue_scripts', 'asker_category_icon_admin_scripts');
-
-function asker_category_icon_admin_scripts() {
-    $screen = get_current_screen();
-    if ($screen && ($screen->id === 'edit-product_cat' || $screen->id === 'product_cat')) {
-        wp_enqueue_media();
-        ?>
-        <script>
-        jQuery(document).ready(function($) {
-            // Удаление существующего обработчика WooCommerce, если он есть
-            $('body').off('click', '.upload_image_button');
-            $('body').off('click', '.remove_image_button');
-            
-            // Загрузка изображения
-            $('body').on('click', '.upload_image_button', function(e) {
-                e.preventDefault();
-                
-                var button = $(this);
-                var file_frame = wp.media({
-                    title: 'Выберите иконку категории',
-                    button: {
-                        text: 'Использовать это изображение'
-                    },
-                    multiple: false,
-                    library: {
-                        type: 'image'
-                    }
-                });
-                
-                file_frame.on('select', function() {
-                    var attachment = file_frame.state().get('selection').first().toJSON();
-                    var thumbnail_id = attachment.id;
-                    
-                    // Определяем URL изображения
-                    // Для SVG нет sizes.thumbnail, для обычных изображений используем thumbnail или medium
-                    var image_url = attachment.url;
-                    if (attachment.mime === 'image/svg+xml') {
-                        // Для SVG используем оригинальный URL
-                        image_url = attachment.url;
-                    } else if (attachment.sizes && attachment.sizes.thumbnail) {
-                        image_url = attachment.sizes.thumbnail.url;
-                    } else if (attachment.sizes && attachment.sizes.medium) {
-                        image_url = attachment.sizes.medium.url;
-                    }
-                    
-                    $('#product_cat_thumbnail_id').val(thumbnail_id);
-                    $('#product_cat_thumbnail img').attr('src', image_url);
-                    $('.remove_image_button').show();
-                });
-                
-                file_frame.open();
-            });
-            
-            // Удаление изображения
-            $('body').on('click', '.remove_image_button', function(e) {
-                e.preventDefault();
-                
-                $('#product_cat_thumbnail_id').val('');
-                var placeholder = '<?php 
-                    $placeholder = function_exists("wc_placeholder_img_src") ? wc_placeholder_img_src() : "";
-                    if (!$placeholder) {
-                        $placeholder = 'data:image/svg+xml;base64,' . base64_encode('<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="60" fill="#f0f0f0" stroke="#ddd"/></svg>');
-                    }
-                    echo esc_js($placeholder); 
-                ?>';
-                $('#product_cat_thumbnail img').attr('src', placeholder);
-                $('.remove_image_button').hide();
-            });
-        });
-        </script>
-        <?php
-    }
-}
 
 /**
  * Фильтр товаров по цене (min_price и max_price из GET параметров)
+ * Применяется ТОЛЬКО если есть GET параметры
  */
 function asker_price_filter_query($query) {
-    if (!is_admin() && $query->is_main_query() && (is_shop() || is_product_category() || is_product_taxonomy())) {
-        $min_price = isset($_GET['min_price']) ? floatval($_GET['min_price']) : 0;
-        $max_price = isset($_GET['max_price']) ? floatval($_GET['max_price']) : 0;
+    // Проверяем, что это не админка и основной запрос
+    if (is_admin() || !$query->is_main_query()) {
+        return;
+    }
+    
+    // Применяем только для страниц товаров
+    if (!(is_shop() || is_product_category() || is_product_taxonomy())) {
+        return;
+    }
+    
+    // Убеждаемся, что товары публичные и доступны всем
+    $query->set('post_status', 'publish');
+    $query->set('post_type', 'product');
+    
+    // Фильтр по цене применяется ТОЛЬКО если есть GET параметры
+    $min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? floatval($_GET['min_price']) : 0;
+    $max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? floatval($_GET['max_price']) : 0;
+    
+    // Применяем фильтр только если есть явные параметры в URL
+    if ($min_price > 0 || $max_price > 0) {
+        $meta_query = $query->get('meta_query') ?: [];
         
-        if ($min_price > 0 || $max_price > 0) {
-            $meta_query = $query->get('meta_query') ?: [];
-            
-            if ($min_price > 0 && $max_price > 0) {
-                $meta_query[] = [
-                    'key' => '_price',
-                    'value' => [$min_price, $max_price],
-                    'compare' => 'BETWEEN',
-                    'type' => 'NUMERIC'
-                ];
-            } elseif ($min_price > 0) {
-                $meta_query[] = [
-                    'key' => '_price',
-                    'value' => $min_price,
-                    'compare' => '>=',
-                    'type' => 'NUMERIC'
-                ];
-            } elseif ($max_price > 0) {
-                $meta_query[] = [
-                    'key' => '_price',
-                    'value' => $max_price,
-                    'compare' => '<=',
-                    'type' => 'NUMERIC'
-                ];
+        if ($min_price > 0 && $max_price > 0) {
+            $meta_query[] = [
+                'key' => '_price',
+                'value' => [$min_price, $max_price],
+                'compare' => 'BETWEEN',
+                'type' => 'NUMERIC'
+            ];
+        } elseif ($min_price > 0) {
+            $meta_query[] = [
+                'key' => '_price',
+                'value' => $min_price,
+                'compare' => '>=',
+                'type' => 'NUMERIC'
+            ];
+        } elseif ($max_price > 0) {
+            $meta_query[] = [
+                'key' => '_price',
+                'value' => $max_price,
+                'compare' => '<=',
+                'type' => 'NUMERIC'
+            ];
+        }
+        
+        $query->set('meta_query', $meta_query);
+    }
+}
+add_action('pre_get_posts', 'asker_price_filter_query', 20);
+
+/**
+ * Исправление некорректных запросов: если /product/slug открывается как товар,
+ * но на самом деле это категория - делаем редирект
+ */
+function asker_fix_product_category_requests() {
+    if (!class_exists('WooCommerce')) {
+        return;
+    }
+    
+    // Проверяем только если это 404 или запрос на товар, который не найден
+    if (!is_404() && !is_singular('product')) {
+        return;
+    }
+    
+    // Получаем slug из URL
+    $slug = get_query_var('name') ?: get_query_var('product');
+    
+    if (empty($slug)) {
+        return;
+    }
+    
+    // Проверяем, есть ли категория с таким slug
+    $category = get_term_by('slug', $slug, 'product_cat');
+    
+    if ($category && !is_wp_error($category)) {
+        // Проверяем, есть ли товар с таким slug (чтобы не редиректить если товар существует)
+        $product_query = new WP_Query(array(
+            'name' => $slug,
+            'post_type' => 'product',
+            'post_status' => 'publish',
+            'posts_per_page' => 1,
+        ));
+        
+        $product_exists = $product_query->have_posts();
+        wp_reset_postdata();
+        
+        // Если товара нет, но есть категория - делаем редирект
+        if (!$product_exists) {
+            $category_link = get_term_link($category);
+            if (!is_wp_error($category_link)) {
+                wp_redirect($category_link, 301);
+                exit;
             }
-            
-            $query->set('meta_query', $meta_query);
         }
     }
 }
-add_action('pre_get_posts', 'asker_price_filter_query');
+add_action('template_redirect', 'asker_fix_product_category_requests', 1);
 
 
