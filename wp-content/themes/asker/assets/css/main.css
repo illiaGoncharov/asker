@@ -43,7 +43,7 @@
   margin-right: -50vw;
   width: 100vw;
   height: 100%;
-  background: linear-gradient(to right, rgba(255, 230, 0, 0.5) 0%, #F5F6F8 96%);
+  background: linear-gradient(to right, #F5F6F8 0%, rgba(255, 230, 0, 0.5) 96%);
   z-index: -1;
 }
 
@@ -141,10 +141,14 @@ body { overflow-x: hidden; }
   }
 }
 
-/* Специальное правило для хедера - 1440px */
+/* Специальное правило для хедера - 1440px (приоритет над всеми) */
 .site-header .container,
-.header-main .container {
-  max-width: 1440px;
+.header-main .container,
+.woocommerce-page .site-header .container,
+.woocommerce-page .header-main .container,
+body.woocommerce-page .site-header .container,
+body.woocommerce-page .header-main .container {
+  max-width: 1440px !important;
   margin: 0 auto;
   padding: 0 20px;
   width: 100%;
@@ -153,15 +157,23 @@ body { overflow-x: hidden; }
 /* Адаптивность хедера для больших экранов */
 @media (min-width: 1440px) {
   .site-header .container,
-  .header-main .container {
-    max-width: 1440px;
+  .header-main .container,
+  .woocommerce-page .site-header .container,
+  .woocommerce-page .header-main .container,
+  body.woocommerce-page .site-header .container,
+  body.woocommerce-page .header-main .container {
+    max-width: 1440px !important;
   }
 }
 
 @media (min-width: 1920px) {
   .site-header .container,
-  .header-main .container {
-    max-width: 1440px;
+  .header-main .container,
+  .woocommerce-page .site-header .container,
+  .woocommerce-page .header-main .container,
+  body.woocommerce-page .site-header .container,
+  body.woocommerce-page .header-main .container {
+    max-width: 1440px !important;
   }
 }
 
@@ -755,6 +767,32 @@ input[type="button"] {
   display: none;
 }
 
+/* Сетка категорий для страницы "Все категории" */
+.all-categories-page .categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 32px;
+  justify-items: center;
+  overflow-x: visible;
+  flex-wrap: wrap;
+  padding: 40px 0;
+}
+
+@media (min-width: 768px) {
+  .all-categories-page .categories-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 40px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .all-categories-page .categories-grid {
+    grid-template-columns: repeat(5, 1fr);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+}
+
 .category-item {
   display: flex;
   flex-direction: column;
@@ -953,6 +991,7 @@ input[type="button"] {
   align-items: center;
   gap: 8px;
   padding: 16px 32px;
+  height: 60px;
   border-radius: 50px;
   font-family: var(--font-primary);
   font-weight: 600;
@@ -960,7 +999,28 @@ input[type="button"] {
   line-height: 1;
 }
 
-/* Старые кнопки удалены — используем БЭМ (.btn, .btn--primary, .btn--secondary, .btn--outline) из base.css */
+/* Стили кнопок в hero секции */
+.hero-buttons .btn--secondary {
+  background: var(--icon-color);
+  color: var(--bg-white);
+  border: none;
+}
+
+.hero-buttons .btn--secondary:hover {
+  background: #1a1f2e;
+  color: var(--bg-white);
+}
+
+.hero-buttons .btn--outline {
+  background: transparent;
+  color: var(--icon-color);
+  border: 2px solid var(--icon-color);
+}
+
+.hero-buttons .btn--outline:hover {
+  background: var(--icon-color);
+  color: var(--bg-white);
+}
 
 .hero-image {
   display: flex;
@@ -989,7 +1049,6 @@ input[type="button"] {
   
   .hero-subtitle {
     font-size: 20px;
-    max-width: 700px;
   }
   
   .hero-buttons {
@@ -1019,7 +1078,7 @@ input[type="button"] {
   
   .hero-subtitle {
     font-size: 22px;
-    max-width: 800px;
+
   }
   
   .btn-primary,
@@ -1075,6 +1134,13 @@ input[type="button"] {
   color: var(--text-gray);
   text-align: center;
   margin: 0 0 40px;
+}
+
+/* Центрирование подзаголовка в секции доставки */
+.delivery-section .section-subtitle {
+  text-align: center !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 /* Популярные товары */
@@ -1459,7 +1525,7 @@ button,
 }
 
 .catalog-product-title a:hover {
-  color: var(--primary-yellow);
+  color: #111827;
 }
 
 .catalog-product-price {
@@ -1546,12 +1612,26 @@ button,
   padding: 40px 0 80px;
 }
 
+/* Унифицированные стили для хлебных крошек на всех страницах */
 .breadcrumbs {
-  margin-top: 40px;
+  margin-top: 40px !important;
+  margin-bottom: 24px !important;
+  padding: 0 !important;
   font-size: 14px;
   color: var(--text-gray);
-  margin-bottom: 24px;
   font-family: var(--font-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumbs__separator {
+  color: var(--text-gray);
+  margin: 0 4px;
+}
+
+.breadcrumbs__current {
+  color: var(--primary-black);
 }
 
 .breadcrumbs a {
@@ -1834,7 +1914,7 @@ body.woocommerce ul.products li.product:hover {
 
 .shop-product-title a:hover,
 .woocommerce ul.products li.product .woocommerce-loop-product__title a:hover {
-  color: var(--primary-yellow);
+  color: #111827;
 }
 
 /* Цена товара */
@@ -2690,12 +2770,38 @@ body.woocommerce-account .container .section__title,
   text-decoration: none;
 }
 
+.product-title a:hover {
+  color: #111827 !important;
+}
+
+.product-card:hover .product-title a {
+  color: #111827 !important;
+}
+
 .product-price {
   font-size: 18px;
   font-weight: 700;
   color: #111827;
   margin: 0;
   font-family: var(--font-primary);
+}
+
+/* Убираем желтый цвет у цен товаров */
+.product-price,
+.product-price .amount,
+.product-price .woocommerce-Price-amount,
+.product-price bdi {
+  color: #111827 !important;
+}
+
+/* Убираем желтый цвет при наведении на цену */
+.product-price:hover,
+.product-price:hover .amount,
+.product-price:hover .woocommerce-Price-amount,
+.product-price:hover bdi,
+.product-card:hover .product-price,
+.product-card:hover .product-price .amount {
+  color: #111827 !important;
 }
 
 /* Контейнер для цены и кнопки на главной */
@@ -2747,7 +2853,7 @@ body.woocommerce-account .container .section__title,
 
 .btn-view-all {
   background: var(--primary-yellow);
-  color: #2B2D34;
+  color: var(--icon-color);
   border: none;
   padding: 16px 32px;
   border-radius: 50px;
@@ -3363,6 +3469,44 @@ body.woocommerce-account .container .section__title,
     color: #8b5a00;
 }
 
+/* Стили для формы #wpcf7-f13-o1 */
+#wpcf7-f13-o1 input[type="submit"],
+#wpcf7-f13-o1 .wpcf7-submit {
+    border-radius: 20px !important;
+}
+
+/* Стили для формы #wpcf7-f46-o2 */
+#wpcf7-f46-o2 input[type="submit"],
+#wpcf7-f46-o2 .wpcf7-submit {
+    background: var(--bg-white) !important;
+    color: var(--primary-black) !important;
+    border: 1px solid var(--border-gray) !important;
+    border-radius: 40px !important;
+}
+
+#wpcf7-f46-o2 input[type="submit"]:hover,
+#wpcf7-f46-o2 .wpcf7-submit:hover {
+    background: var(--bg-light) !important;
+}
+
+#wpcf7-f46-o2 input[type="text"],
+#wpcf7-f46-o2 input[type="email"],
+#wpcf7-f46-o2 input[type="tel"],
+#wpcf7-f46-o2 textarea {
+    max-width: 500px;
+    width: 100%;
+}
+
+/* На мобильных можно меньше */
+@media (max-width: 768px) {
+    #wpcf7-f46-o2 input[type="text"],
+    #wpcf7-f46-o2 input[type="email"],
+    #wpcf7-f46-o2 input[type="tel"],
+    #wpcf7-f46-o2 textarea {
+        max-width: 100%;
+    }
+}
+
 /* Адаптив */
 @media (max-width: 768px) {
   .container {
@@ -3611,6 +3755,7 @@ body.woocommerce-account .container .section__title,
 
 .footer__form .wpcf7-form-control:not(.wpcf7-submit):not(.wpcf7-acceptance) {
   width: 100%;
+  max-width: 500px;
   padding: 18px 24px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 50px;
@@ -4033,48 +4178,60 @@ body.woocommerce-account .container .section__title,
   padding: 0 20px;
 }
 
-/* Ограничиваем ширину WooCommerce страниц */
+/* Унифицируем ширину WooCommerce страниц с остальными страницами */
 .woocommerce-page .container,
 .woocommerce-page .site-main,
-.woocommerce-page .content-area {
+.woocommerce-page .content-area,
+body.woocommerce-page .container,
+body.woocommerce-page .site-main,
+body.woocommerce-page .content-area {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
 }
 
-/* Адаптивность WooCommerce страниц для больших экранов */
+/* Адаптивность WooCommerce страниц для больших экранов - единая ширина 1440px */
 @media (min-width: 1440px) {
   .woocommerce-page .container,
   .woocommerce-page .site-main,
-  .woocommerce-page .content-area {
-    max-width: 1400px;
+  .woocommerce-page .content-area,
+  body.woocommerce-page .container,
+  body.woocommerce-page .site-main,
+  body.woocommerce-page .content-area {
+    max-width: 1440px;
   }
 }
 
 @media (min-width: 1920px) {
   .woocommerce-page .container,
   .woocommerce-page .site-main,
-  .woocommerce-page .content-area {
-    max-width: 1600px;
+  .woocommerce-page .content-area,
+  body.woocommerce-page .container,
+  body.woocommerce-page .site-main,
+  body.woocommerce-page .content-area {
+    max-width: 1440px;
   }
 }
 
-/* Убираем растягивание WooCommerce */
-.woocommerce-page .woocommerce {
+/* Убираем растягивание WooCommerce - унифицируем с остальными */
+.woocommerce-page .woocommerce,
+body.woocommerce-page .woocommerce {
   max-width: 1200px;
   margin: 0 auto;
 }
 
-/* Адаптивность WooCommerce контейнера для больших экранов */
+/* Адаптивность WooCommerce контейнера для больших экранов - единая ширина 1440px */
 @media (min-width: 1440px) {
-  .woocommerce-page .woocommerce {
-    max-width: 1400px;
+  .woocommerce-page .woocommerce,
+  body.woocommerce-page .woocommerce {
+    max-width: 1440px;
   }
 }
 
 @media (min-width: 1920px) {
-  .woocommerce-page .woocommerce {
-    max-width: 1600px;
+  .woocommerce-page .woocommerce,
+  body.woocommerce-page .woocommerce {
+    max-width: 1440px;
   }
 }
 
@@ -4162,19 +4319,41 @@ button.btn-login,
   margin: 0 auto;
 }
 
-/* Специфичные стили для WooCommerce */
+/* Специфичные стили для WooCommerce - унифицированы с остальными */
 .woocommerce-page .woocommerce-breadcrumb,
 .woocommerce-page .woocommerce-result-count,
-.woocommerce-page .woocommerce-ordering {
+.woocommerce-page .woocommerce-ordering,
+body.woocommerce-page .woocommerce-breadcrumb,
+body.woocommerce-page .woocommerce-result-count,
+body.woocommerce-page .woocommerce-ordering {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
 }
 
-.woocommerce-page .woocommerce-products-header {
+@media (min-width: 1440px) {
+  .woocommerce-page .woocommerce-breadcrumb,
+  .woocommerce-page .woocommerce-result-count,
+  .woocommerce-page .woocommerce-ordering,
+  body.woocommerce-page .woocommerce-breadcrumb,
+  body.woocommerce-page .woocommerce-result-count,
+  body.woocommerce-page .woocommerce-ordering {
+    max-width: 1440px;
+  }
+}
+
+.woocommerce-page .woocommerce-products-header,
+body.woocommerce-page .woocommerce-products-header {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
+}
+
+@media (min-width: 1440px) {
+  .woocommerce-page .woocommerce-products-header,
+  body.woocommerce-page .woocommerce-products-header {
+    max-width: 1440px;
+  }
 }
 
 .woocommerce-page .woocommerce-loop-product__title {
@@ -5253,7 +5432,8 @@ button.btn-login,
 
 /* ===== СТРАНИЦА ЛИЧНОГО КАБИНЕТА ===== */
 .account-page {
-  padding: 40px 0;
+  padding-top: 44px;
+  padding-bottom: 40px;
   min-height: 80vh;
   position: relative;
 }
@@ -5287,6 +5467,7 @@ button.btn-login,
   align-items: start;
   position: relative;
   padding: 0 20px;
+  margin-top: 44px; /* Убираем возможные отступы сверху */
 }
 
 /* Адаптивность для больших экранов */

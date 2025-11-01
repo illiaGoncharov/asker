@@ -13,42 +13,8 @@ get_header();
 ?>
 
 <?php
-// Определяем URL страницы со всеми категориями
-$asker_categories_url = home_url('/categories');
-
-// Безопасное получение URL страницы категорий с проверками
-if (function_exists('get_page_by_path') && function_exists('home_url')) {
-    // 1. Сначала ищем страницу по слагу 'categories'
-    $asker_categories_page = get_page_by_path('categories');
-    if ($asker_categories_page && isset($asker_categories_page->post_status) && $asker_categories_page->post_status === 'publish') {
-        $permalink = get_permalink($asker_categories_page->ID);
-        if ($permalink && !is_wp_error($permalink)) {
-            $asker_categories_url = $permalink;
-        }
-    } else {
-        // 2. Ищем страницу по шаблону 'page-categories.php'
-        if (function_exists('get_pages')) {
-            $pages_with_template = get_pages(array(
-                'meta_key'   => '_wp_page_template',
-                'meta_value' => 'page-categories.php',
-                'number'     => 1,
-                'post_status' => 'publish'
-            ));
-            if (!empty($pages_with_template) && is_array($pages_with_template) && isset($pages_with_template[0])) {
-                $permalink = get_permalink($pages_with_template[0]->ID);
-                if ($permalink && !is_wp_error($permalink)) {
-                    $asker_categories_url = $permalink;
-                }
-            } else {
-                // 3. Фолбэк на каталог
-                $asker_categories_url = home_url('/shop');
-            }
-        } else {
-            // 3. Фолбэк на каталог
-            $asker_categories_url = home_url('/shop');
-        }
-    }
-}
+// Определяем URL страницы со всеми категориями - всегда используем /all-categories
+$asker_categories_url = home_url('/all-categories');
 ?>
 
 <!-- Навигация по категориям -->

@@ -28,6 +28,18 @@ add_action('wp_enqueue_scripts', function () {
                 $main_css_version
             );
         }
+        
+        // pages.css для стилей страниц (вход, регистрация, контакты и т.д.)
+        $pages_css_path = get_template_directory() . '/assets/css/pages.css';
+        if (file_exists($pages_css_path) && is_readable($pages_css_path)) {
+            $pages_css_version = filemtime($pages_css_path) ?: time();
+            wp_enqueue_style(
+                'asker-pages',
+                get_template_directory_uri() . '/assets/css/pages.css',
+                ['asker-main'], // Зависит от main.css
+                $pages_css_version
+            );
+        }
 
         // Основной скрипт темы (зависит от jQuery)
         $main_js_path = get_template_directory() . '/assets/js/main.js';

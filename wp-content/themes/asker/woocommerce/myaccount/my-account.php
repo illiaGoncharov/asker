@@ -30,13 +30,6 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
 
 <div class="account-page container">
     <?php if (is_user_logged_in()): ?>
-        <!-- Хлебные крошки и заголовок -->
-        <nav class="breadcrumbs">
-            <a href="<?php echo esc_url(home_url('/')); ?>">Главная</a>
-            <span class="breadcrumbs__separator">/</span>
-            <span class="breadcrumbs__current">Мой аккаунт</span>
-        </nav>
-        
         <div class="account-layout">
                 <!-- Сайдбар -->
                 <aside class="account-sidebar">
@@ -540,39 +533,11 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
             });
             </script>
     <?php else: ?>
-        <div class="auth-page">
-                <div class="auth-container">
-                    <h1 class="auth-title">Вход в личный кабинет</h1>
-                    <p class="auth-subtitle">Для доступа к личному кабинету необходимо войти в систему.</p>
-                    
-                    <form method="post" action="<?php echo esc_url(site_url('wp-login.php', 'login_post')); ?>" class="auth-form">
-                        <div class="form-group">
-                            <label for="user_login">Имя пользователя или Email</label>
-                            <input type="text" name="log" id="user_login" class="form-control" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="user_pass">Пароль</label>
-                            <input type="password" name="pwd" id="user_pass" class="form-control" required>
-                        </div>
-                        
-                        <div class="form-group form-group--checkbox">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="rememberme" value="forever">
-                                <span>Запомнить меня</span>
-                            </label>
-                        </div>
-                        
-                        <input type="hidden" name="redirect_to" value="<?php echo esc_url(get_permalink()); ?>">
-                        
-                        <button type="submit" class="btn btn--secondary btn--full">Войти</button>
-                    </form>
-                    
-                    <div class="auth-links">
-                        <a href="<?php echo wp_lostpassword_url(); ?>" class="auth-link">Забыли пароль?</a>
-                    </div>
-            </div>
-        </div>
+        <?php
+        // Используем стандартный шаблон WooCommerce для формы входа
+        // Он автоматически использует наш переопределенный form-login.php
+        wc_get_template('myaccount/form-login.php');
+        ?>
     <?php endif; ?>
 </div>
 

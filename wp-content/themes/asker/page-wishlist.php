@@ -6,140 +6,118 @@
 get_header(); ?>
 
 <div class="container">
+    <!-- Хлебные крошки -->
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="<?php echo esc_url(home_url('/')); ?>">Главная</a>
+        <span class="breadcrumbs__separator">/</span>
+        <span class="breadcrumbs__current">Избранное</span>
+    </nav>
+    
     <div class="wishlist-page">
-        <h1>Избранное</h1>
+        <h1 class="page-title">Избранное</h1>
         
-        <div id="wishlist-content">
+        <div class="wishlist-products">
             <div class="wishlist-loading">Загрузка избранного...</div>
         </div>
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const wishlistContent = document.getElementById('wishlist-content');
+jQuery(document).ready(function($) {
+    const $wishlistContainer = $('.wishlist-products');
     
-    function renderWishlist() {
-        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-        console.log('Rendering wishlist:', favorites);
-        
-        if (favorites.length === 0) {
-            wishlistContent.innerHTML = '<div class="empty-wishlist">Избранное пусто</div>';
+    // Функция загрузки избранного с сервера
+    function loadWishlistFromServer() {
+        if (typeof asker_ajax === 'undefined') {
+            renderWishlistFromLocalStorage();
             return;
         }
         
-        let html = '<div class="wishlist-items">';
+        // Получаем список ID из localStorage
+        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+        const productIds = favorites.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
         
-        favorites.forEach(productId => {
-            html += `
-                <div class="wishlist-item" data-product-id="${productId}">
-                    <div class="wishlist-item-info">
-                        <h3>Товар ID: ${productId}</h3>
-                        <p>Товар добавлен в избранное</p>
-                    </div>
-                    <div class="wishlist-item-actions">
-                        <button class="btn-remove-favorite" data-product-id="${productId}">Удалить из избранного</button>
-                    </div>
-                </div>
-            `;
-        });
-        
-        html += '</div>';
-        
-        wishlistContent.innerHTML = html;
-        
-        // Добавляем обработчики для кнопок удаления
-        document.querySelectorAll('.btn-remove-favorite').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const productId = this.getAttribute('data-product-id');
-                removeFromWishlist(productId);
-            });
+        // Используем AJAX endpoint для получения HTML
+        $.ajax({
+            url: asker_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'asker_get_wishlist_products',
+                product_ids: productIds
+            },
+            success: function(response) {
+                if (response.success && response.data && response.data.html) {
+                    $wishlistContainer.html(response.data.html);
+                    
+                    // Обновляем состояние кнопок лайков после загрузки
+                    setTimeout(function() {
+                        $('.favorite-btn').each(function() {
+                            const productId = parseInt($(this).attr('data-product-id'));
+                            if (productIds.includes(productId)) {
+                                $(this).addClass('active');
+                            }
+                        });
+                    }, 100);
+                } else {
+                    renderWishlistFromLocalStorage();
+                }
+            },
+            error: function() {
+                renderWishlistFromLocalStorage();
+            }
         });
     }
     
-    function removeFromWishlist(productId) {
-        const productIdNum = parseInt(productId, 10);
-        if (isNaN(productIdNum)) {
+    // Функция рендеринга избранного из localStorage (fallback)
+    function renderWishlistFromLocalStorage() {
+        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+        
+        if (favorites.length === 0) {
+            $wishlistContainer.html('<div class="no-products"><p>В вашем избранном пока нет товаров.</p><a href="' + (window.location.origin || '') + '/shop" class="btn-primary">Перейти в каталог</a></div>');
             return;
         }
         
-        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-        // Приводим все ID к числам для корректного сравнения
-        const newFavorites = favorites
-            .map(id => parseInt(id, 10))
-            .filter(id => !isNaN(id) && id !== productIdNum);
+        // Пробуем загрузить через AJAX
+        const productIds = favorites.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
         
-        localStorage.setItem('favorites', JSON.stringify(newFavorites));
-        
-        // Обновляем счетчик в хедере
-        if (window.updateWishlistCounter) {
-            window.updateWishlistCounter();
-        }
-        
-        // Синхронизируем с сервером если пользователь залогинен
-        if (typeof jQuery !== 'undefined' && typeof asker_ajax !== 'undefined') {
-            jQuery.ajax({
+        if (productIds.length > 0 && typeof asker_ajax !== 'undefined') {
+            $.ajax({
                 url: asker_ajax.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'asker_toggle_wishlist',
-                    product_id: productIdNum,
-                    action_type: 'remove'
+                    action: 'asker_get_wishlist_products',
+                    product_ids: productIds
+                },
+                success: function(response) {
+                    if (response.success && response.data && response.data.html) {
+                        $wishlistContainer.html(response.data.html);
+                    } else {
+                        showEmptyMessage();
+                    }
+                },
+                error: function() {
+                    showEmptyMessage();
                 }
             });
+        } else {
+            showEmptyMessage();
         }
-        
-        // Перерендериваем список
-        renderWishlist();
     }
     
-    // Рендерим избранное при загрузке
-    renderWishlist();
+    function showEmptyMessage() {
+        $wishlistContainer.html('<div class="no-products"><p>В вашем избранном пока нет товаров.</p><a href="' + (window.location.origin || '') + '/shop" class="btn-primary">Перейти в каталог</a></div>');
+    }
+    
+    // Загружаем избранное при загрузке страницы
+    loadWishlistFromServer();
+    
+    // Слушаем изменения localStorage для автообновления
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'favorites') {
+            loadWishlistFromServer();
+        }
+    });
 });
 </script>
-
-<style>
-.wishlist-page {
-    padding: 40px 0;
-}
-
-.wishlist-loading, .empty-wishlist {
-    text-align: center;
-    padding: 40px;
-    color: #666;
-}
-
-.wishlist-items {
-    margin: 20px 0;
-}
-
-.wishlist-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
-
-.wishlist-item-info h3 {
-    margin: 0 0 10px 0;
-}
-
-.wishlist-item-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.btn-remove-favorite {
-    background: #ff4757;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-</style>
 
 <?php get_footer(); ?>

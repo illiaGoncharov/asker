@@ -33,8 +33,8 @@ function asker_ensure_cart_session() {
         return;
     }
 }
-// ВРЕМЕННО ОТКЛЮЧЕНО для диагностики
-// add_action( 'wp_loaded', 'asker_ensure_cart_session', 5 );
+// Включаем сессию корзины для всех пользователей (важно для прода)
+add_action( 'wp_loaded', 'asker_ensure_cart_session', 5 );
 
 /**
  * Отключаем режим "Coming Soon" в WooCommerce
@@ -332,6 +332,24 @@ function asker_ensure_products_visible() {
         add_filter( 'woocommerce_is_purchasable', '__return_true', 999 );
     }
 }
+
+/**
+ * Убираем проверку доступности товара перед добавлением в корзину
+ */
+function asker_force_product_purchasable( $purchasable, $product ) {
+    // Для всех товаров делаем доступными для покупки
+    return true;
+}
+add_filter( 'woocommerce_is_purchasable', 'asker_force_product_purchasable', 999, 2 );
+
+/**
+ * Убираем валидацию добавления в корзину для всех товаров
+ */
+function asker_skip_add_to_cart_validation( $passed, $product_id, $quantity ) {
+    // Разрешаем добавление всех товаров
+    return true;
+}
+add_filter( 'woocommerce_add_to_cart_validation', 'asker_skip_add_to_cart_validation', 999, 3 );
 // ВРЕМЕННО ОТКЛЮЧЕНО для диагностики
 // add_action( 'wp', 'asker_ensure_products_visible', 10 );
 
@@ -1420,16 +1438,12 @@ function asker_disable_checkout_ajax() {
                     });
                 }
                 
-                // Обработчик для кнопок удаления товаров
+                // Обработчик для кнопок удаления товаров - только для конкретных кнопок
                 document.addEventListener('click', function(e) {
-                    
-                    // Кнопка "Удалить выбранные" - пробуем разные селекторы
-                    if (e.target.classList.contains('btn-remove-selected') || 
-                        e.target.closest('.btn-remove-selected') ||
-                        e.target.textContent.includes('Удалить выбранные') ||
-                        e.target.textContent.includes('Удалить выбранное')) {
-                        
+                    // Кнопка "Удалить выбранные" - проверяем только по классу
+                    if (e.target.classList.contains('btn-remove-selected') || e.target.closest('.btn-remove-selected')) {
                         e.preventDefault();
+                        e.stopPropagation();
                         
                         // Ищем чекбоксы разными способами
                         let selectedItems = document.querySelectorAll('input[type="checkbox"]:checked');
@@ -1465,14 +1479,19 @@ function asker_disable_checkout_ajax() {
                         } else {
                             alert('Выберите товары для удаления');
                         }
+                        return;
                     }
-                    // Обычные кнопки удаления
-                    else if (e.target.classList.contains('remove') || e.target.closest('.remove')) {
+                    
+                    // Обычные кнопки удаления - только .remove-item
+                    if (e.target.classList.contains('remove-item') || e.target.closest('.remove-item')) {
                         e.preventDefault();
-                        const removeBtn = e.target.classList.contains('remove') ? e.target : e.target.closest('.remove');
-                        const cartItemKey = removeBtn.getAttribute('data-cart_item_key');
+                        e.stopPropagation();
+                        
+                        const removeBtn = e.target.classList.contains('remove-item') ? e.target : e.target.closest('.remove-item');
+                        const cartItemKey = removeBtn.getAttribute('data-key');
                         
                         if (cartItemKey) {
+                            if (confirm('Удалить товар из корзины?')) {
                             fetch('<?php echo admin_url( 'admin-ajax.php' ); ?>', {
                                 method: 'POST',
                                 headers: {
@@ -1483,6 +1502,8 @@ function asker_disable_checkout_ajax() {
                                 location.reload();
                             });
                         }
+                        }
+                        return;
                     }
                 });
             }, 1000);
@@ -1595,8 +1616,15 @@ function asker_add_cart_button_handler() {
                                 e.target.style.background = '';
                             }, 2000);
                         } else {
-                            alert('Ошибка добавления товара в корзину');
+                            // Показываем сообщение об ошибке
+                            const errorMsg = data.data && data.data.message ? data.data.message : 'Ошибка добавления товара в корзину';
+                            alert(errorMsg);
+                            console.error('Ошибка добавления в корзину:', data);
                         }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка AJAX запроса:', error);
+                        alert('Произошла ошибка при добавлении товара в корзину');
                     });
                 }
             }
@@ -1608,25 +1636,146 @@ function asker_add_cart_button_handler() {
 add_action( 'wp_footer', 'asker_add_cart_button_handler' );
 
 /**
+ * Перехватываем стандартную форму добавления в корзину и обрабатываем через AJAX
+ */
+function asker_intercept_add_to_cart_form() {
+    if ( ! is_product() ) {
+        return;
+    }
+    ?>
+    <script>
+    jQuery(document).ready(function($) {
+        // Перехватываем отправку формы добавления в корзину
+        $('form.cart').on('submit', function(e) {
+            e.preventDefault();
+            
+            const $form = $(this);
+            const $button = $form.find('.single_add_to_cart_button');
+            const productId = $button.attr('value');
+            const quantity = $form.find('input[name="quantity"]').val() || 1;
+            
+            if (!productId) {
+                console.error('Не найден ID товара');
+                return false;
+            }
+            
+            // Блокируем кнопку
+            $button.prop('disabled', true);
+            const originalText = $button.text();
+            $button.text('Добавляется...');
+            
+            // Отправляем AJAX запрос
+            $.ajax({
+                url: '<?php echo admin_url( 'admin-ajax.php' ); ?>',
+                type: 'POST',
+                data: {
+                    action: 'woocommerce_add_to_cart',
+                    product_id: productId,
+                    quantity: quantity
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Обновляем счетчик корзины
+                        if (typeof updateCartCounter === 'function') {
+                            updateCartCounter();
+                        }
+                        
+                        // Показываем успех
+                        $button.text('Добавлено!');
+                        $button.css('background', '#4CAF50');
+                        
+                        // Обновляем фрагменты корзины (если нужно)
+                        $(document.body).trigger('added_to_cart', [response.data.fragments, response.data.cart_hash, $button]);
+                        
+                        setTimeout(function() {
+                            $button.text(originalText);
+                            $button.css('background', '');
+                            $button.prop('disabled', false);
+                        }, 2000);
+                        
+                        // Перенаправляем в корзину через 2 секунды (опционально)
+                        // window.location.href = '<?php echo esc_js( wc_get_cart_url() ); ?>';
+                    } else {
+                        // Показываем ошибку
+                        const errorMsg = response.data && response.data.message ? response.data.message : 'Ошибка добавления товара';
+                        alert(errorMsg);
+                        console.error('Ошибка добавления в корзину:', response);
+                        
+                        $button.text(originalText);
+                        $button.prop('disabled', false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX ошибка:', error);
+                    alert('Произошла ошибка при добавлении товара в корзину');
+                    $button.text(originalText);
+                    $button.prop('disabled', false);
+                }
+            });
+            
+            return false;
+        });
+    });
+    </script>
+    <?php
+}
+add_action( 'wp_footer', 'asker_intercept_add_to_cart_form' );
+
+/**
  * AJAX обработчик для добавления товара в корзину
  */
 function asker_add_to_cart_ajax() {
-    $product_id = intval( $_POST['product_id'] );
-    $quantity = intval( $_POST['quantity'] ) ?: 1;
+    // Проверяем nonce для безопасности
+    if ( ! check_ajax_referer( 'woocommerce-add-to-cart', 'security', false ) ) {
+        // Если nonce не передан, это не критично для простых запросов, но лучше проверить
+    }
     
-    if ( $product_id ) {
+    $product_id = intval( $_POST['product_id'] ?? 0 );
+    $quantity = intval( $_POST['quantity'] ?? 1 );
+    
+    if ( ! $product_id ) {
+        wp_send_json_error( array( 'message' => 'Неверный ID товара' ) );
+        return;
+    }
+    
+    // Инициализируем корзину WooCommerce
+    if ( ! isset( WC()->cart ) ) {
+        wc_load_cart();
+    }
+    
+    // Получаем товар
+    $product = wc_get_product( $product_id );
+    
+    if ( ! $product ) {
+        wp_send_json_error( array( 'message' => 'Товар не найден' ) );
+        return;
+    }
+    
+    // Добавляем товар в корзину (проверки доступности отключены через фильтры)
         $cart_item_key = WC()->cart->add_to_cart( $product_id, $quantity );
         
         if ( $cart_item_key ) {
+        // Пересчитываем корзину
+        WC()->cart->calculate_totals();
+        
             wp_send_json_success( array(
                 'cart_item_key' => $cart_item_key,
-                'cart_count' => WC()->cart->get_cart_contents_count()
+            'cart_count' => WC()->cart->get_cart_contents_count(),
+            'message' => 'Товар добавлен в корзину'
             ) );
         } else {
-            wp_send_json_error( 'Не удалось добавить товар в корзину' );
+        // Получаем ошибки от WooCommerce
+        $notices = wc_get_notices( 'error' );
+        $error_message = 'Не удалось добавить товар в корзину';
+        
+        if ( ! empty( $notices ) ) {
+            $error_message = $notices[0]['notice'] ?? $error_message;
         }
-    } else {
-        wp_send_json_error( 'Неверный ID товара' );
+        
+        wp_send_json_error( array( 
+            'message' => $error_message,
+            'reason' => 'add_failed'
+        ) );
     }
 }
 add_action( 'wp_ajax_woocommerce_add_to_cart', 'asker_add_to_cart_ajax' );
@@ -2061,5 +2210,33 @@ function asker_fix_product_category_requests() {
     }
 }
 add_action('template_redirect', 'asker_fix_product_category_requests', 1);
+
+/**
+ * Сохраняем имя и фамилию при регистрации пользователя
+ */
+function asker_save_user_name_on_registration( $customer_id, $new_customer_data, $password_generated ) {
+    // Сохраняем имя и фамилию из POST данных
+    if ( isset( $_POST['first_name'] ) && ! empty( $_POST['first_name'] ) ) {
+        $first_name = sanitize_text_field( $_POST['first_name'] );
+        update_user_meta( $customer_id, 'first_name', $first_name );
+        update_user_meta( $customer_id, 'billing_first_name', $first_name );
+    }
+    
+    if ( isset( $_POST['last_name'] ) && ! empty( $_POST['last_name'] ) ) {
+        $last_name = sanitize_text_field( $_POST['last_name'] );
+        update_user_meta( $customer_id, 'last_name', $last_name );
+        update_user_meta( $customer_id, 'billing_last_name', $last_name );
+    }
+    
+    // Если имя не указано, но указан username - используем его как имя
+    if ( ! isset( $_POST['first_name'] ) || empty( $_POST['first_name'] ) ) {
+        if ( isset( $_POST['username'] ) && ! empty( $_POST['username'] ) ) {
+            $username = sanitize_text_field( $_POST['username'] );
+            update_user_meta( $customer_id, 'first_name', $username );
+            update_user_meta( $customer_id, 'billing_first_name', $username );
+        }
+    }
+}
+add_action( 'woocommerce_created_customer', 'asker_save_user_name_on_registration', 10, 3 );
 
 

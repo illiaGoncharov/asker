@@ -164,20 +164,7 @@ get_header(); ?>
     margin: 24px 0;
 }
 
-.breadcrumbs {
-    font-size: 14px;
-    color: #6B7280;
-    margin: 16px 0;
-}
-
-.breadcrumbs a {
-    color: #6B7280;
-    text-decoration: none;
-}
-
-.breadcrumbs a:hover {
-    color: #111827;
-}
+/* Стили breadcrumbs унифицированы в main.css */
 
 .cart-layout {
     display: grid;

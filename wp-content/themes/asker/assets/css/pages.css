@@ -25,33 +25,8 @@
 
 /* ========================================
    BREADCRUMBS - Хлебные крошки
+   Стили унифицированы в main.css
    ======================================== */
-
-.breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 0;
-  font-size: 14px;
-  color: #6c757d;
-}
-
-.breadcrumbs a {
-  color: #6c757d;
-  text-decoration: none;
-}
-
-.breadcrumbs a:hover {
-  color: #1a1a1a;
-}
-
-.breadcrumbs__separator {
-  color: #e5e7eb;
-}
-
-.breadcrumbs__current {
-  color: #1a1a1a;
-}
 
 /* ========================================
    CONTENT PAGES - Унифицированные стили
@@ -586,33 +561,7 @@
    CONTACT PAGE STYLES
    ======================================== */
 
-/* Хлебные крошки */
-.breadcrumbs {
-    font-size: 14px;
-    color: #6B7280;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.breadcrumbs a {
-    color: #6B7280;
-    text-decoration: none;
-    transition: color 0.2s;
-}
-
-.breadcrumbs a:hover {
-    color: var(--primary-black);
-}
-
-.breadcrumbs__separator {
-    color: #9CA3AF;
-}
-
-.breadcrumbs__current {
-    color: var(--primary-black);
-}
+/* Хлебные крошки - стили унифицированы в main.css */
 
 /* Layout страницы контактов */
 .contact-page__layout {
@@ -866,16 +815,18 @@
   align-items: center;
   justify-content: center;
   padding: 60px 0;
+  width: 100%;
 }
 
-.auth-container {
+.auth-page .auth-container {
   max-width: 480px;
   width: 100%;
   margin: 0 auto;
-  padding: 40px;
+  padding: 0;
   background: var(--bg-white);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
 .auth-title {
@@ -895,47 +846,82 @@
   font-family: var(--font-secondary);
 }
 
-.auth-form {
+.auth-page .auth-container .auth-form {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.auth-form .form-group {
+.auth-page .auth-container .auth-form .form-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.auth-form label {
+/* Поля имени и фамилии в две колонки */
+.auth-page .auth-container .auth-form .form-group--two-columns {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.auth-page .auth-container .auth-form .form-group--two-columns > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-page .auth-container .auth-form .form-group--two-columns label {
   font-size: 14px;
   font-weight: 500;
   color: var(--primary-black);
   font-family: var(--font-primary);
 }
 
-.auth-form .form-control {
+@media (max-width: 768px) {
+  .auth-page .auth-container .auth-form .form-group--two-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.auth-page .auth-container .auth-form label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--primary-black);
+  font-family: var(--font-primary);
+}
+
+.auth-page .auth-container .auth-form .form-control,
+.auth-page .auth-container .auth-form input[type="text"],
+.auth-page .auth-container .auth-form input[type="email"],
+.auth-page .auth-container .auth-form input[type="password"] {
   padding: 12px 16px;
   border: 1px solid var(--border-gray);
   border-radius: 8px;
   font-size: 14px;
   font-family: var(--font-secondary);
   transition: border-color 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.auth-form .form-control:focus {
+.auth-page .auth-container .auth-form .form-control:focus,
+.auth-page .auth-container .auth-form input[type="text"]:focus,
+.auth-page .auth-container .auth-form input[type="email"]:focus,
+.auth-page .auth-container .auth-form input[type="password"]:focus {
   outline: none;
   border-color: var(--primary-yellow);
   box-shadow: 0 0 0 2px rgba(255, 231, 6, 0.2);
 }
 
-.auth-form .form-group--checkbox {
+.auth-page .auth-container .auth-form .form-group--checkbox {
   flex-direction: row;
   align-items: center;
   gap: 8px;
 }
 
-.auth-form .checkbox-label {
+.auth-page .auth-container .auth-form .checkbox-label,
+.auth-page .auth-container .auth-form .woocommerce-form__label {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -945,23 +931,42 @@
   font-family: var(--font-secondary);
 }
 
-.auth-form .checkbox-label input[type="checkbox"] {
+.auth-page .auth-container .auth-form .checkbox-label input[type="checkbox"],
+.auth-page .auth-container .auth-form .woocommerce-form__input-checkbox {
   width: 18px;
   height: 18px;
   cursor: pointer;
 }
 
-.auth-form .btn--full {
+.auth-page .auth-container .auth-form .btn--full,
+.auth-page .auth-container .auth-form .auth-submit,
+.auth-page .auth-container .auth-form .woocommerce-button {
   width: 100%;
   margin-top: 8px;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: var(--primary-black);
+  color: var(--bg-white);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.auth-links {
+.auth-page .auth-container .auth-form .btn--full:hover,
+.auth-page .auth-container .auth-form .auth-submit:hover,
+.auth-page .auth-container .auth-form .woocommerce-button:hover {
+  background: #333;
+  transform: translateY(-1px);
+}
+
+.auth-page .auth-container .auth-links {
   margin-top: 20px;
   text-align: center;
 }
 
-.auth-link {
+.auth-page .auth-container .auth-link {
   font-size: 14px;
   color: var(--primary-black);
   text-decoration: none;
@@ -969,8 +974,211 @@
   transition: color 0.2s ease;
 }
 
-.auth-link:hover {
+.auth-page .auth-container .auth-link:hover {
   color: var(--primary-yellow);
+}
+
+/* Вкладки Вход/Регистрация */
+.auth-page .auth-container .auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-gray);
+  background: var(--bg-white);
+}
+
+.auth-page .auth-container .auth-tab {
+  flex: 1;
+  padding: 16px 24px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-gray);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-primary);
+  text-align: center;
+}
+
+.auth-page .auth-container .auth-tab:hover {
+  color: var(--primary-black);
+  /* background: rgba(255, 231, 6, 0.05); */
+}
+
+.auth-page .auth-container .auth-tab.auth-tab--active {
+  color: var(--primary-black);
+  /* border-bottom-color: var(--primary-black); */
+  font-weight: 600;
+}
+
+/* Обертки форм */
+.auth-page .auth-container .auth-form-wrapper {
+  display: none;
+  padding: 40px;
+}
+
+.auth-page .auth-container .auth-form-wrapper.active {
+  display: block;
+}
+
+/* Поле пароля с кнопкой показа/скрытия */
+.auth-page .auth-container .form-group--password {
+  position: relative;
+}
+
+.password-input {
+  width: 100%;
+}
+
+.show-password-input {
+  display: none;
+}
+
+.auth-page .auth-container .password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-page .auth-container .password-input-wrapper .form-control,
+.auth-page .auth-container .password-input-wrapper input[type="password"],
+.auth-page .auth-container .password-input-wrapper input[type="text"] {
+  padding-right: 48px;
+}
+
+.auth-page .auth-container .password-toggle {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-gray);
+  transition: color 0.2s ease;
+  z-index: 1;
+}
+
+.auth-page .auth-container .password-toggle:hover {
+  color: var(--primary-black);
+}
+
+.auth-page .auth-container .password-toggle__icon {
+  width: 20px;
+  height: 20px;
+}
+
+.auth-page .auth-container .password-toggle__icon--eye-off {
+  display: none;
+}
+
+/* Согласие на обработку данных */
+.auth-page .auth-container .auth-consent {
+  margin-top: 16px;
+  margin-bottom: 0;
+}
+
+.auth-page .auth-container .auth-consent .checkbox-label {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-gray);
+}
+
+.auth-page .auth-container .auth-consent__link {
+  color: var(--primary-black);
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.auth-page .auth-container .auth-consent__link:hover {
+  color: var(--primary-yellow);
+}
+
+/* Ссылка "Забыли пароль?" */
+.auth-page .auth-container .auth-links {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-gray);
+}
+
+/* Переопределяем стандартные стили WooCommerce для формы входа */
+.auth-page .woocommerce-form-login,
+.auth-page .woocommerce-form-register {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.auth-page .woocommerce-form-login .form-row,
+.auth-page .woocommerce-form-register .form-row {
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+}
+
+.auth-page .woocommerce-form-login .form-row label,
+.auth-page .woocommerce-form-register .form-row label {
+  margin-bottom: 8px !important;
+}
+
+.auth-page .woocommerce-Input {
+  width: 100% !important;
+  padding: 12px 16px !important;
+  border: 1px solid var(--border-gray) !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-family: var(--font-secondary) !important;
+}
+
+.auth-page .woocommerce-Input:focus {
+  outline: none !important;
+  border-color: var(--primary-yellow) !important;
+  box-shadow: 0 0 0 2px rgba(255, 231, 6, 0.2) !important;
+}
+
+.auth-page .woocommerce-form-login__rememberme {
+  margin-bottom: 0 !important;
+}
+
+.auth-page .woocommerce-button {
+  width: 100% !important;
+  background: var(--primary-black) !important;
+  color: var(--bg-white) !important;
+  border: none !important;
+  padding: 14px 24px !important;
+  border-radius: 8px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.auth-page .woocommerce-button:hover {
+  background: #333 !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Скрываем стандартные сообщения WooCommerce если они дублируются */
+.auth-page .woocommerce-error,
+.auth-page .woocommerce-message,
+.auth-page .woocommerce-info {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+}
+
+.auth-page .woocommerce-error {
+  background: #FEE2E2;
+  color: #991B1B;
+  border-left: 4px solid #DC2626;
+}
+
+.auth-page .woocommerce-message {
+  background: #D1FAE5;
+  color: #065F46;
+  border-left: 4px solid #10B981;
 }
 
 /* ========================================
@@ -1001,5 +1209,18 @@
   .simple-login {
     margin: 0 20px;
     padding: 30px 20px;
+  }
+  
+  .auth-page .auth-container {
+    margin: 0 20px;
+  }
+  
+  .auth-page .auth-container .auth-form-wrapper {
+    padding: 32px 24px;
+  }
+  
+  .auth-page .auth-container .auth-tab {
+    padding: 14px 16px;
+    font-size: 14px;
   }
 }

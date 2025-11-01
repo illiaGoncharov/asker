@@ -110,7 +110,7 @@
             </div>
             
             <!-- Кнопка Каталог -->
-            <a href="<?php echo esc_url(home_url('/shop')); ?>" class="btn-catalog">
+            <a href="<?php echo esc_url(home_url('/all-categories')); ?>" class="btn-catalog">
                 Каталог
             </a>
             <div class="search-bar">
@@ -175,7 +175,7 @@
             </form>
         </div>
         <nav class="mobile-menu-nav">
-            <a href="<?php echo esc_url(home_url('/shop')); ?>" class="mobile-menu-link">
+            <a href="<?php echo esc_url(home_url('/all-categories')); ?>" class="mobile-menu-link">
                 <span class="mobile-link-text">
                     <svg class="mobile-menu-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="3" y="3" width="8" height="8" rx="2" stroke="currentColor" stroke-width="2"/>
