@@ -414,33 +414,131 @@ document.addEventListener('DOMContentLoaded', function() {
             updateCartCounter();
         }, 10000);
         
-        // Функционал кнопок "В корзину"
-        const addToCartButtons = document.querySelectorAll('.btn-add-cart');
-        addToCartButtons.forEach(button => {
-            button.addEventListener('click', function(e) {
+        // Функционал кнопок "В корзину" - используем делегирование событий
+        // Обработка через addEventListener с делегированием для динамически добавляемых кнопок
+        document.addEventListener('click', function(e) {
+            // Проверяем .btn-add-cart или .add_to_cart_button
+            const button = e.target.closest('.btn-add-cart, .add_to_cart_button');
+            if (!button) return;
+            
+            // Защита от двойных кликов
+            if (button.hasAttribute('data-processing') || button.classList.contains('loading')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+                
+            const productId = button.getAttribute('data-product-id');
+                if (!productId) return;
+                
+            // Для .btn-add-cart используем наш AJAX
+            if (button.classList.contains('btn-add-cart')) {
                 e.preventDefault();
                 e.stopPropagation();
                 
-                const productId = this.getAttribute('data-product-id');
-                if (!productId) return;
+                // Помечаем как обрабатываемый
+                button.setAttribute('data-processing', 'true');
+                button.disabled = true;
+                const originalText = button.textContent || button.innerText;
+                button.textContent = 'Добавляется...';
                 
-                // Добавляем товар в корзину (localStorage)
-                const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-                const existingItem = cart.find(item => item.id === productId);
+                // Используем правильный AJAX endpoint
+                const ajaxUrl = (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) 
+                    ? asker_ajax.ajax_url 
+                    : '/wp-admin/admin-ajax.php';
                 
-                if (existingItem) {
-                    existingItem.quantity += 1;
-                } else {
-                    cart.push({ id: productId, quantity: 1 });
-                }
-                
-                localStorage.setItem('cart', JSON.stringify(cart));
-                updateCartCounter();
-                
-                // Показываем уведомление
-                showNotification('Товар добавлен в корзину!');
-            });
-        });
+                fetch(ajaxUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'woocommerce_add_to_cart',
+                        product_id: productId,
+                        quantity: 1
+                    })
+                })
+                .then(response => {
+                    // Проверяем Content-Type перед парсингом JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        // Если не JSON, читаем как текст для отладки
+                        return response.text().then(text => {
+                            console.error('Ожидался JSON, получен:', text.substring(0, 200));
+                            throw new Error('Ответ не в формате JSON');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // WooCommerce может вернуть два формата:
+                    // 1. {success: true, data: {fragments: {...}, cart_hash: '...'}}
+                    // 2. {fragments: {...}, cart_hash: '...'} (прямой формат фрагментов)
+                    
+                    // Проверяем успех по наличию fragments или success
+                    const isSuccess = data.success === true || data.fragments !== undefined || (data.data && data.data.fragments);
+                    
+                    if (isSuccess) {
+                        // Получаем fragments и cart_hash из разных мест ответа
+                        const fragments = data.data?.fragments || data.fragments || {};
+                        const cartHash = data.data?.cart_hash || data.cart_hash || '';
+                        
+                        // Сразу обновляем счетчик локально (быстрое обновление UI)
+                        const cartCountEl = document.querySelector('.cart-count, .cart-counter');
+                        if (cartCountEl) {
+                            const currentCount = parseInt(cartCountEl.textContent || cartCountEl.getAttribute('data-count') || '0');
+                            cartCountEl.textContent = currentCount + 1;
+                            cartCountEl.setAttribute('data-count', currentCount + 1);
+                            if (cartCountEl.style.display === 'none') {
+                                cartCountEl.style.display = 'flex';
+                            }
+                        }
+                        
+                        // Обновляем через WooCommerce события - передаем jQuery объект, а не нативный DOM
+                        if (typeof jQuery !== 'undefined') {
+                            try {
+                                // Конвертируем button в jQuery объект для WooCommerce
+                                const $button = jQuery(button);
+                                // Триггерим событие с правильными параметрами
+                                jQuery(document.body).trigger('added_to_cart', [fragments, cartHash, $button]);
+                            } catch (e) {
+                                // Игнорируем ошибки WooCommerce скриптов
+                                console.warn('Ошибка в WooCommerce событии (игнорируем):', e);
+                            }
+                        }
+                        
+                        // Обновляем через updateCartCounter для надежности
+                        if (typeof updateCartCounter === 'function') {
+                            setTimeout(() => updateCartCounter(), 500);
+                        }
+                        
+                        // Показываем успех
+                        button.textContent = 'Добавлено!';
+                        button.style.background = '#4CAF50';
+                        
+                        setTimeout(() => {
+                            button.textContent = originalText;
+                            button.style.background = '';
+                            button.removeAttribute('data-processing');
+                            button.disabled = false;
+                        }, 2000);
+                    } else {
+                        // Обрабатываем разные форматы ошибок от сервера
+                        const errorMessage = data.data?.message || data.data || data.message || 'Ошибка добавления товара в корзину';
+                        throw new Error(errorMessage);
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка AJAX запроса:', error);
+                    const errorMsg = error.message || 'Ошибка при добавлении товара в корзину';
+                    alert(errorMsg);
+                    button.textContent = originalText;
+                    button.removeAttribute('data-processing');
+                    button.disabled = false;
+                });
+            }
+            // Для .add_to_cart_button - WooCommerce обработает сам, но мы тоже можем добавить защиту
+        }, true); // Используем capture фазу для раннего перехвата
     });
     
     // Функция для обновления счетчика избранного (глобальная)
@@ -1091,6 +1189,13 @@ if (document.readyState === 'loading') {
     }
     
     $(document.body).on('added_to_cart', function(e, fragments, cart_hash, $button) {
+        // Предотвращаем появление кнопки "View cart" в карточках товаров
+        // Удаляем все появившиеся элементы .added_to_cart или .wc-forward
+        setTimeout(function() {
+            $('.shop-product-card .added_to_cart, .shop-product-card .wc-forward, .product-card .added_to_cart, .product-card .wc-forward').remove();
+            $('.add_to_cart_button.added').removeClass('added').text('В корзину');
+        }, 100);
+        
         // Товар успешно добавлен - убираем состояние загрузки
         let $btn = $($button);
         

@@ -114,12 +114,24 @@ function asker_get_wishlist_count() {
 }
 
 // Обновление счетчиков при изменении корзины
+// НЕ используем для AJAX запросов, чтобы не портить JSON ответ
 add_action('woocommerce_add_to_cart', 'asker_update_cart_count_ajax');
 add_action('woocommerce_cart_item_removed', 'asker_update_cart_count_ajax');
 add_action('woocommerce_cart_item_quantity_updated', 'asker_update_cart_count_ajax');
 
 function asker_update_cart_count_ajax() {
-    // Отправляем обновление счетчика через JavaScript
+    // Не выводим скрипт в AJAX контексте (admin-ajax.php)
+    // Это предотвращает вывод <script> перед JSON ответом
+    if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
+        return;
+    }
+    
+    // Также проверяем по запросу
+    if ( isset( $_SERVER['REQUEST_URI'] ) && strpos( $_SERVER['REQUEST_URI'], 'admin-ajax.php' ) !== false ) {
+        return;
+    }
+    
+    // Отправляем обновление счетчика через JavaScript только для обычных запросов
     ?>
     <script>
         if (typeof updateCartCount === 'function') {

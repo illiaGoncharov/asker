@@ -1439,47 +1439,12 @@ function asker_disable_checkout_ajax() {
                 }
                 
                 // Обработчик для кнопок удаления товаров - только для конкретных кнопок
+                // УБРАНО: обработчик для .btn-remove-selected - он теперь в page-cart.php
+                // чтобы не было конфликта
                 document.addEventListener('click', function(e) {
-                    // Кнопка "Удалить выбранные" - проверяем только по классу
+                    // Пропускаем .btn-remove-selected - обрабатывается в page-cart.php
                     if (e.target.classList.contains('btn-remove-selected') || e.target.closest('.btn-remove-selected')) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        // Ищем чекбоксы разными способами
-                        let selectedItems = document.querySelectorAll('input[type="checkbox"]:checked');
-                        
-                        // Если не найдены, пробуем другие селекторы
-                        if (selectedItems.length === 0) {
-                            selectedItems = document.querySelectorAll('.cart-item-checkbox:checked');
-                        }
-                        if (selectedItems.length === 0) {
-                            selectedItems = document.querySelectorAll('[name*="cart_item_key"]:checked');
-                        }
-                        if (selectedItems.length === 0) {
-                            selectedItems = document.querySelectorAll('input[name*="cart"]:checked');
-                        }
-                        
-                        const cartItemKeys = Array.from(selectedItems).map(item => item.value);
-                        
-                        if (cartItemKeys.length > 0) {
-                            // Удаляем все выбранные товары
-                            Promise.all(cartItemKeys.map(key => {
-                                return fetch('<?php echo admin_url( 'admin-ajax.php' ); ?>', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/x-www-form-urlencoded',
-                                    },
-                                    body: 'action=woocommerce_remove_cart_item&cart_item_key=' + key
-                                }).then(response => response.json());
-                            })).then(() => {
-                                location.reload();
-                            }).catch(error => {
-                                alert('Ошибка при удалении товаров');
-                            });
-                        } else {
-                            alert('Выберите товары для удаления');
-                        }
-                        return;
+                        return; // Позволяем обработчику из page-cart.php обработать клик
                     }
                     
                     // Обычные кнопки удаления - только .remove-item
@@ -1488,20 +1453,53 @@ function asker_disable_checkout_ajax() {
                         e.stopPropagation();
                         
                         const removeBtn = e.target.classList.contains('remove-item') ? e.target : e.target.closest('.remove-item');
+                        
+                        // Защита от двойных кликов
+                        if (removeBtn.hasAttribute('data-processing')) {
+                            return;
+                        }
+                        removeBtn.setAttribute('data-processing', 'true');
+                        removeBtn.style.opacity = '0.6';
+                        removeBtn.style.pointerEvents = 'none';
+                        
                         const cartItemKey = removeBtn.getAttribute('data-key');
                         
                         if (cartItemKey) {
-                            if (confirm('Удалить товар из корзины?')) {
+                            // Убираем confirm для быстрого удаления, можно вернуть по желанию
+                            // if (confirm('Удалить товар из корзины?')) {
                             fetch('<?php echo admin_url( 'admin-ajax.php' ); ?>', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/x-www-form-urlencoded',
                                 },
                                 body: 'action=woocommerce_remove_cart_item&cart_item_key=' + cartItemKey
-                            }).then(() => {
+                                })
+                                .then(response => {
+                                    if (!response.ok) {
+                                        throw new Error('Network response was not ok');
+                                    }
+                                    return response.json();
+                                })
+                                .then(data => {
+                                    // Небольшая задержка для визуальной обратной связи
+                                    setTimeout(() => {
                                 location.reload();
-                            });
-                        }
+                                    }, 300);
+                                })
+                                .catch(error => {
+                                    console.error('Ошибка удаления:', error);
+                                    alert('Ошибка при удалении товара. Попробуйте еще раз.');
+                                    // Восстанавливаем кнопку при ошибке
+                                    removeBtn.removeAttribute('data-processing');
+                                    removeBtn.style.opacity = '1';
+                                    removeBtn.style.pointerEvents = 'auto';
+                                });
+                            // } else {
+                            //     // Если пользователь отменил, снимаем блокировку
+                            //     removeBtn.removeAttribute('data-processing');
+                            //     removeBtn.style.opacity = '1';
+                            //     removeBtn.style.pointerEvents = 'auto';
+                            // }
                         }
                         return;
                     }
@@ -1532,18 +1530,34 @@ add_action( 'wp_ajax_nopriv_woocommerce_clear_cart', 'asker_clear_cart_ajax' );
  * AJAX обработчик для удаления товара из корзины (для action woocommerce_remove_cart_item)
  */
 function asker_remove_cart_item_ajax() {
-    if ( ! isset( $_POST['cart_item_key'] ) ) {
+    // Останавливаем любые буферы вывода
+    while ( ob_get_level() > 0 ) {
+        ob_end_clean();
+    }
+    
+    // Устанавливаем правильные заголовки для JSON
+    if ( ! headers_sent() ) {
+        header( 'Content-Type: application/json; charset=utf-8' );
+    }
+    
+    // Быстрая проверка параметров
+    if ( ! isset( $_POST['cart_item_key'] ) || empty( $_POST['cart_item_key'] ) ) {
         wp_send_json_error( [ 'message' => 'Неверные параметры' ] );
+        return;
+    }
+    
+    // Проверяем WooCommerce доступность
+    if ( ! function_exists( 'WC' ) || ! WC() || ! WC()->cart ) {
+        wp_send_json_error( [ 'message' => 'Корзина недоступна' ] );
+        return;
     }
     
     $cart_item_key = sanitize_text_field( $_POST['cart_item_key'] );
     
-    if ( ! $cart_item_key || ! function_exists( 'WC' ) || ! WC()->cart ) {
-        wp_send_json_error( [ 'message' => 'Ошибка удаления' ] );
-    }
-    
     // Проверяем, существует ли товар в корзине перед удалением
+    // Используем прямой доступ для быстроты
     $cart_items = WC()->cart->get_cart();
+    
     if ( ! isset( $cart_items[ $cart_item_key ] ) ) {
         // Товар уже удален - это не ошибка, возвращаем успех
         wp_send_json_success( [ 
@@ -1553,16 +1567,45 @@ function asker_remove_cart_item_ajax() {
         return;
     }
     
+    // Удаляем товар
     $removed = WC()->cart->remove_cart_item( $cart_item_key );
     
     if ( $removed ) {
-        WC()->cart->calculate_totals(); // Пересчитываем после удаления
+        // Быстрый пересчет только если нужно
+        WC()->cart->calculate_totals();
+        
+        // Останавливаем все буферы перед отправкой JSON
+        while ( ob_get_level() > 0 ) {
+            ob_end_clean();
+        }
+        
+        // Возвращаем успех сразу
         wp_send_json_success( [ 
             'message' => 'Товар удален',
             'cart_count' => WC()->cart->get_cart_contents_count()
         ] );
     } else {
-        wp_send_json_error( [ 'message' => 'Не удалось удалить товар' ] );
+        // Если remove_cart_item вернул false, проверяем еще раз
+        $cart_items_after = WC()->cart->get_cart();
+        if ( ! isset( $cart_items_after[ $cart_item_key ] ) ) {
+            // Товар все же удален
+            // Останавливаем все буферы перед отправкой JSON
+            while ( ob_get_level() > 0 ) {
+                ob_end_clean();
+            }
+            
+            wp_send_json_success( [ 
+                'message' => 'Товар удален',
+                'cart_count' => WC()->cart->get_cart_contents_count()
+            ] );
+        } else {
+            // Останавливаем все буферы перед отправкой JSON
+            while ( ob_get_level() > 0 ) {
+                ob_end_clean();
+            }
+            
+            wp_send_json_error( [ 'message' => 'Не удалось удалить товар' ] );
+        }
     }
 }
 add_action( 'wp_ajax_woocommerce_remove_cart_item', 'asker_remove_cart_item_ajax' );
@@ -1668,13 +1711,18 @@ function asker_intercept_add_to_cart_form() {
             $.ajax({
                 url: '<?php echo admin_url( 'admin-ajax.php' ); ?>',
                 type: 'POST',
+                dataType: 'json', // Явно указываем, что ожидаем JSON
                 data: {
                     action: 'woocommerce_add_to_cart',
                     product_id: productId,
                     quantity: quantity
                 },
                 success: function(response) {
-                    if (response.success) {
+                    // WooCommerce может вернуть либо {success: true, data: {...}}, либо просто {fragments: {...}, cart_hash: '...'}
+                    // Проверяем оба варианта
+                    const isSuccess = response.success || (response.fragments !== undefined);
+                    
+                    if (isSuccess) {
                         // Обновляем счетчик корзины
                         if (typeof updateCartCounter === 'function') {
                             updateCartCounter();
@@ -1684,20 +1732,25 @@ function asker_intercept_add_to_cart_form() {
                         $button.text('Добавлено!');
                         $button.css('background', '#4CAF50');
                         
-                        // Обновляем фрагменты корзины (если нужно)
-                        $(document.body).trigger('added_to_cart', [response.data.fragments, response.data.cart_hash, $button]);
+                        // Обновляем фрагменты корзины
+                        const fragments = response.data?.fragments || response.fragments || {};
+                        const cartHash = response.data?.cart_hash || response.cart_hash || '';
+                        
+                        // Триггерим событие added_to_cart (обработчик в main.js скроет view cart кнопку)
+                        if (fragments && Object.keys(fragments).length > 0) {
+                            $(document.body).trigger('added_to_cart', [fragments, cartHash, $button]);
+                        } else {
+                            $(document.body).trigger('added_to_cart', [{}, cartHash, $button]);
+                        }
                         
                         setTimeout(function() {
                             $button.text(originalText);
                             $button.css('background', '');
                             $button.prop('disabled', false);
                         }, 2000);
-                        
-                        // Перенаправляем в корзину через 2 секунды (опционально)
-                        // window.location.href = '<?php echo esc_js( wc_get_cart_url() ); ?>';
                     } else {
                         // Показываем ошибку
-                        const errorMsg = response.data && response.data.message ? response.data.message : 'Ошибка добавления товара';
+                        const errorMsg = (response.data && response.data.message) ? response.data.message : 'Ошибка добавления товара';
                         alert(errorMsg);
                         console.error('Ошибка добавления в корзину:', response);
                         
@@ -1706,8 +1759,16 @@ function asker_intercept_add_to_cart_form() {
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('AJAX ошибка:', error);
-                    alert('Произошла ошибка при добавлении товара в корзину');
+                    console.error('AJAX ошибка:', error, 'Status:', status);
+                    
+                    // Проверяем, возможно сервер вернул HTML вместо JSON
+                    if (xhr.responseText && xhr.responseText.trim().startsWith('<')) {
+                        console.error('Сервер вернул HTML вместо JSON:', xhr.responseText.substring(0, 200));
+                        alert('Ошибка: сервер вернул некорректный ответ. Проверьте консоль для подробностей.');
+                    } else {
+                        alert('Произошла ошибка при добавлении товара в корзину');
+                    }
+                    
                     $button.text(originalText);
                     $button.prop('disabled', false);
                 }
@@ -1725,9 +1786,26 @@ add_action( 'wp_footer', 'asker_intercept_add_to_cart_form' );
  * AJAX обработчик для добавления товара в корзину
  */
 function asker_add_to_cart_ajax() {
-    // Проверяем nonce для безопасности
-    if ( ! check_ajax_referer( 'woocommerce-add-to-cart', 'security', false ) ) {
-        // Если nonce не передан, это не критично для простых запросов, но лучше проверить
+    // Останавливаем любые буферы вывода
+    while ( ob_get_level() > 0 ) {
+        ob_end_clean();
+    }
+    
+    // Устанавливаем правильные заголовки для JSON
+    if ( ! headers_sent() ) {
+        header( 'Content-Type: application/json; charset=utf-8' );
+    }
+    
+    // ВРЕМЕННО отключаем хук, который выводит скрипт в AJAX ответе
+    // Это предотвращает вывод <script> перед JSON
+    remove_action( 'woocommerce_add_to_cart', 'asker_update_cart_count_ajax' );
+    
+    // Проверяем nonce для безопасности (но не блокируем если нет)
+    if ( isset( $_POST['security'] ) ) {
+        if ( ! check_ajax_referer( 'woocommerce-add-to-cart', 'security', false ) ) {
+            wp_send_json_error( array( 'message' => 'Ошибка безопасности' ) );
+            return;
+        }
     }
     
     $product_id = intval( $_POST['product_id'] ?? 0 );
@@ -1751,17 +1829,34 @@ function asker_add_to_cart_ajax() {
         return;
     }
     
-    // Добавляем товар в корзину (проверки доступности отключены через фильтры)
+    // Очищаем все уведомления WooCommerce перед добавлением
+    wc_clear_notices();
+    
+    // Добавляем товар в корзину (проверки доступности отключены через фильтры woocommerce_is_purchasable и woocommerce_add_to_cart_validation)
         $cart_item_key = WC()->cart->add_to_cart( $product_id, $quantity );
         
         if ( $cart_item_key ) {
         // Пересчитываем корзину
         WC()->cart->calculate_totals();
         
+        // Останавливаем все буферы перед отправкой JSON
+        while ( ob_get_level() > 0 ) {
+            ob_end_clean();
+        }
+        
+        // Восстанавливаем хук обратно после добавления
+        add_action( 'woocommerce_add_to_cart', 'asker_update_cart_count_ajax' );
+        
+        // Формируем ответ в формате WooCommerce (fragments + cart_hash) для совместимости
+        $fragments = apply_filters( 'woocommerce_add_to_cart_fragments', array() );
+        $cart_hash = WC()->cart->get_cart_hash();
+        
             wp_send_json_success( array(
                 'cart_item_key' => $cart_item_key,
             'cart_count' => WC()->cart->get_cart_contents_count(),
-            'message' => 'Товар добавлен в корзину'
+            'message' => 'Товар добавлен в корзину',
+            'fragments' => $fragments,
+            'cart_hash' => $cart_hash
             ) );
         } else {
         // Получаем ошибки от WooCommerce
@@ -1769,12 +1864,34 @@ function asker_add_to_cart_ajax() {
         $error_message = 'Не удалось добавить товар в корзину';
         
         if ( ! empty( $notices ) ) {
-            $error_message = $notices[0]['notice'] ?? $error_message;
+            // Берем первую ошибку
+            $error_message = is_array( $notices[0] ) ? ( $notices[0]['notice'] ?? $error_message ) : $notices[0];
         }
+        
+        // Если ошибок нет, но товар не добавился - проверяем дополнительные причины
+        if ( empty( $notices ) ) {
+            // Проверяем, может товар уже в корзине
+            $cart_contents = WC()->cart->get_cart();
+            foreach ( $cart_contents as $cart_item ) {
+                if ( $cart_item['product_id'] == $product_id || $cart_item['variation_id'] == $product_id ) {
+                    $error_message = 'Товар уже в корзине';
+                    break;
+                }
+            }
+        }
+        
+        // Останавливаем все буферы перед отправкой JSON
+        while ( ob_get_level() > 0 ) {
+            ob_end_clean();
+        }
+        
+        // Восстанавливаем хук перед отправкой ошибки
+        add_action( 'woocommerce_add_to_cart', 'asker_update_cart_count_ajax' );
         
         wp_send_json_error( array( 
             'message' => $error_message,
-            'reason' => 'add_failed'
+            'reason' => 'add_failed',
+            'product_id' => $product_id
         ) );
     }
 }
@@ -1805,10 +1922,13 @@ function asker_create_order_ajax() {
             $order->add_product( $product, $quantity );
         }
         
-        // Устанавливаем адрес доставки (если есть данные пользователя)
+        // Устанавливаем адрес доставки и привязываем к пользователю
         if ( is_user_logged_in() ) {
             $user_id = get_current_user_id();
             $billing_data = get_user_meta( $user_id );
+            
+            // ВАЖНО: Привязываем заказ к пользователю
+            $order->set_customer_id( $user_id );
             
             $order->set_billing_first_name( $billing_data['billing_first_name'][0] ?? 'Админ' );
             $order->set_billing_last_name( $billing_data['billing_last_name'][0] ?? 'Пользователь' );
@@ -1818,12 +1938,23 @@ function asker_create_order_ajax() {
             $order->set_billing_address_1( $billing_data['billing_address_1'][0] ?? 'ул. Тестовая, д. 1' );
         } else {
             // Для неавторизованных пользователей
-            $order->set_billing_first_name( 'Гость' );
-            $order->set_billing_last_name( 'Пользователь' );
-            $order->set_billing_email( 'guest@example.com' );
-            $order->set_billing_phone( '+7 (999) 123-45-67' );
-            $order->set_billing_city( 'Москва' );
-            $order->set_billing_address_1( 'ул. Тестовая, д. 1' );
+            // Пытаемся найти пользователя по email из формы
+            $guest_email = isset( $_POST['billing_email'] ) ? sanitize_email( $_POST['billing_email'] ) : '';
+            
+            if ( $guest_email && email_exists( $guest_email ) ) {
+                // Если есть пользователь с таким email - привязываем к нему
+                $user = get_user_by( 'email', $guest_email );
+                if ( $user ) {
+                    $order->set_customer_id( $user->ID );
+                }
+            }
+            
+            $order->set_billing_first_name( isset( $_POST['billing_first_name'] ) ? sanitize_text_field( $_POST['billing_first_name'] ) : 'Гость' );
+            $order->set_billing_last_name( isset( $_POST['billing_last_name'] ) ? sanitize_text_field( $_POST['billing_last_name'] ) : 'Пользователь' );
+            $order->set_billing_email( $guest_email ?: 'guest@example.com' );
+            $order->set_billing_phone( isset( $_POST['billing_phone'] ) ? sanitize_text_field( $_POST['billing_phone'] ) : '+7 (999) 123-45-67' );
+            $order->set_billing_city( isset( $_POST['billing_city'] ) ? sanitize_text_field( $_POST['billing_city'] ) : 'Москва' );
+            $order->set_billing_address_1( isset( $_POST['billing_address_1'] ) ? sanitize_text_field( $_POST['billing_address_1'] ) : 'ул. Тестовая, д. 1' );
         }
         
         // Устанавливаем способ оплаты

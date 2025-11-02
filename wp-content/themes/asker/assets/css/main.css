@@ -3407,6 +3407,19 @@ body.woocommerce-account .container .section__title,
 
 /* Старые стили footer удалены — используем БЭМ (.footer__*) */
 
+/* Скрываем кнопку "View cart" после добавления в корзину */
+.shop-product-card .added_to_cart,
+.shop-product-card .wc-forward,
+.product-card .added_to_cart,
+.product-card .wc-forward,
+.added_to_cart.wc-forward {
+    display: none !important;
+}
+
+.add_to_cart_button.added {
+    display: none !important;
+}
+
 /* Contact Form 7 стили */
 .wpcf7 form { display: grid; gap: 16px; }
 .wpcf7 input[type="text"],
@@ -3469,40 +3482,40 @@ body.woocommerce-account .container .section__title,
     color: #8b5a00;
 }
 
-/* Стили для формы #wpcf7-f13-o1 */
-#wpcf7-f13-o1 input[type="submit"],
-#wpcf7-f13-o1 .wpcf7-submit {
+/* Стили для формы на главной (.wholesale-form) */
+.wholesale-form input[type="submit"],
+.wholesale-form .wpcf7-submit {
     border-radius: 20px !important;
 }
 
-/* Стили для формы #wpcf7-f46-o2 */
-#wpcf7-f46-o2 input[type="submit"],
-#wpcf7-f46-o2 .wpcf7-submit {
+/* Стили для формы в футере (.footer__form) - уже определены выше, но дублируем для надежности */
+.footer__form input[type="submit"],
+.footer__form .wpcf7-submit {
     background: var(--bg-white) !important;
     color: var(--primary-black) !important;
     border: 1px solid var(--border-gray) !important;
     border-radius: 40px !important;
 }
 
-#wpcf7-f46-o2 input[type="submit"]:hover,
-#wpcf7-f46-o2 .wpcf7-submit:hover {
+.footer__form input[type="submit"]:hover,
+.footer__form .wpcf7-submit:hover {
     background: var(--bg-light) !important;
 }
 
-#wpcf7-f46-o2 input[type="text"],
-#wpcf7-f46-o2 input[type="email"],
-#wpcf7-f46-o2 input[type="tel"],
-#wpcf7-f46-o2 textarea {
+.footer__form input[type="text"],
+.footer__form input[type="email"],
+.footer__form input[type="tel"],
+.footer__form textarea {
     max-width: 500px;
     width: 100%;
 }
 
 /* На мобильных можно меньше */
 @media (max-width: 768px) {
-    #wpcf7-f46-o2 input[type="text"],
-    #wpcf7-f46-o2 input[type="email"],
-    #wpcf7-f46-o2 input[type="tel"],
-    #wpcf7-f46-o2 textarea {
+    .footer__form input[type="text"],
+    .footer__form input[type="email"],
+    .footer__form input[type="tel"],
+    .footer__form textarea {
         max-width: 100%;
     }
 }
@@ -3677,8 +3690,9 @@ body.woocommerce-account .container .section__title,
 
 .footer__logo-img {
   height: 50px;
-  width: auto;
-  max-width: 200px;
+  width: 180px;
+  max-width: 180px;
+  object-fit: contain;
 }
 
 .footer__description {
@@ -3822,6 +3836,19 @@ body.woocommerce-account .container .section__title,
 .footer__form .wpcf7-submit:hover {
   background: var(--primary-yellow);
   transform: scale(1.02);
+}
+
+/* Убираем disabled для кнопки в футере */
+.footer__form .wpcf7-submit:not(:disabled),
+.footer__form input[type="submit"]:not(:disabled) {
+  opacity: 1;
+  cursor: pointer;
+}
+
+.footer__form .wpcf7-submit:disabled,
+.footer__form input[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Сообщения об ошибках */

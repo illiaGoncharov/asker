@@ -153,7 +153,7 @@ get_header(); ?>
             </div>
 
         <?php endif; ?>
-</div>
+    </div>
 
 <style>
 /* Основные стили корзины */
@@ -558,17 +558,41 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Удалить выбранные
-    document.querySelector('.btn-remove-selected')?.addEventListener('click', function() {
+    // Удалить выбранные - через делегирование событий
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-remove-selected');
+        if (!btn) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
         const selected = document.querySelectorAll('.cart-item-checkbox:checked');
+        
         if (selected.length === 0) {
             alert('Выберите товары для удаления');
             return;
         }
-        if (confirm(`Удалить выбранные товары (${selected.length})?`)) {
-            const keys = Array.from(selected).map(cb => cb.value);
-            removeItemsSequentially(keys);
+        
+        // Собираем ключи
+        const keys = Array.from(selected).map(cb => cb.value).filter(Boolean);
+        
+        if (keys.length === 0) {
+            alert('Не удалось определить товары для удаления');
+            return;
         }
+        
+        // Визуальная обратная связь
+        const originalText = btn.textContent;
+        btn.textContent = 'Удаление...';
+        btn.disabled = true;
+        
+        // Удаляем товары
+        removeItemsSequentially(keys).finally(() => {
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }, 2000);
+        });
     });
     
     function updateCart(key, qty) {
@@ -589,50 +613,227 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Защита от двойных кликов - храним обрабатываемые ключи
+    const processingKeys = new Set();
+    
     function removeItem(key, reload = true) {
+        // Проверяем, не обрабатывается ли уже этот товар
+        if (processingKeys.has(key)) {
+            return Promise.resolve({ success: false, message: 'Уже обрабатывается' });
+        }
+        
+        // Помечаем как обрабатываемый
+        processingKeys.add(key);
+        
         const formData = new FormData();
         formData.append('action', 'woocommerce_remove_cart_item');
         formData.append('cart_item_key', key);
         
-        return fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+        // Создаем таймаут для предотвращения зависания
+        const timeoutPromise = new Promise((resolve) => {
+            setTimeout(() => {
+                resolve({ success: false, message: 'Таймаут запроса' });
+            }, 10000); // 10 секунд максимум
+        });
+        
+        // Создаем AbortController для таймаута (fallback для старых браузеров)
+        let abortController;
+        let timeoutId;
+        
+        if (typeof AbortController !== 'undefined') {
+            abortController = new AbortController();
+            
+            // Используем AbortSignal.timeout если доступен, иначе создаем свой таймаут
+            if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+                abortController.signal = AbortSignal.timeout(8000);
+            } else {
+                timeoutId = setTimeout(() => {
+                    abortController.abort();
+                }, 8000);
+            }
+        }
+        
+        const fetchPromise = fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
             method: 'POST',
-            body: formData
+            body: formData,
+            signal: abortController ? abortController.signal : undefined
         })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) {
+                throw new Error(`HTTP error! status: ${r.status}`);
+            }
+            return r.json();
+        })
         .then(data => {
+            // Очищаем таймаут если он был установлен
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+            
+            // Убираем из обрабатываемых после успеха
+            processingKeys.delete(key);
+            
             if (data.success && reload) {
+                // Небольшая задержка перед перезагрузкой, чтобы пользователь видел реакцию
+                setTimeout(() => {
                 location.reload();
+                }, 300);
             }
             return data;
         })
         .catch(error => {
-            console.error('Ошибка удаления товара:', error);
-            return { success: false, error: error };
+            // Очищаем таймаут если он был установлен
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+            
+            // Убираем из обрабатываемых при ошибке
+            processingKeys.delete(key);
+            
+            // Игнорируем ошибки от AbortController (таймаут)
+            if (error.name === 'AbortError') {
+                return { success: false, error: 'Таймаут запроса' };
+            }
+            
+            return { success: false, error: error.message || error };
         });
+        
+        // Используем Promise.race для таймаута (fallback)
+        return Promise.race([fetchPromise, timeoutPromise]);
     }
     
     // Удаление нескольких товаров последовательно
     async function removeItemsSequentially(keys) {
-        const errors = [];
+        if (!keys || keys.length === 0) {
+            return Promise.resolve({ successes: [], errors: [] });
+        }
         
-        for (const key of keys) {
+        const errors = [];
+        const successes = [];
+        
+        // Собираем все строки ДО начала удаления, чтобы не потерять их
+        const rowsToRemove = [];
+        
+        keys.forEach((key) => {
+            if (!key || key === 'undefined' || key === 'null') {
+                return;
+            }
+            
+            // Ищем чекбокс разными способами
+            let checkbox = document.querySelector(`input[value="${key}"].cart-item-checkbox`);
+            
+            if (!checkbox) {
+                checkbox = document.querySelector(`input[data-key="${key}"].cart-item-checkbox`);
+            }
+            
+            if (!checkbox) {
+                const rowWithKey = document.querySelector(`tr[data-key="${key}"]`);
+                if (rowWithKey) {
+                    checkbox = rowWithKey.querySelector('.cart-item-checkbox');
+                }
+            }
+            
+            if (checkbox) {
+                const row = checkbox.closest('tr');
+                if (row && !row.dataset.markedForRemoval) {
+                    rowsToRemove.push({ key, row, checkbox });
+                    row.dataset.markedForRemoval = 'true';
+                    row.dataset.originalKey = key;
+                }
+            }
+        });
+        
+        if (rowsToRemove.length === 0) {
+            return Promise.resolve({ successes: [], errors: ['Не найдено строк'] });
+        }
+        
+        // Удаляем товары последовательно
+        for (let i = 0; i < rowsToRemove.length; i++) {
+            const { key, row } = rowsToRemove[i];
+            
+            if (!row || !row.parentNode || row.dataset.removed === 'true') {
+                continue;
+            }
+            
             try {
+                if (i > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+                
                 const result = await removeItem(key, false);
-                if (!result || !result.success) {
+                
+                if (result && result.success) {
+                    successes.push(key);
+                    if (row && row.parentNode) {
+                        row.dataset.removed = 'true';
+                    }
+                } else if (result && result.data && result.data.message === 'Товар уже удален') {
+                    successes.push(key);
+                    if (row && row.parentNode) {
+                        row.dataset.removed = 'true';
+                    }
+                } else {
                     errors.push(key);
                 }
             } catch (error) {
-                console.error('Ошибка при удалении товара:', key, error);
                 errors.push(key);
             }
         }
         
-        if (errors.length > 0) {
-            alert('Ошибка при удалении ' + errors.length + ' товаров из ' + keys.length);
+        // Только ПОСЛЕ завершения всех запросов удаляем элементы из DOM
+        rowsToRemove.forEach(({ row }) => {
+            if (row && row.parentNode && row.dataset.removed === 'true') {
+                // Анимация исчезновения
+                row.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(-20px)';
+                
+                setTimeout(() => {
+                    if (row.parentNode) {
+                        row.remove();
+                    }
+                }, 300);
+            }
+        });
+        
+        // Показываем ошибку только если есть реальные ошибки
+        // И игнорируем случаи, когда товар уже был удален
+        if (errors.length > 0 && errors.length === keys.length) {
+            // Все попытки провалились
+            alert('Ошибка при удалении товаров');
+            return Promise.reject(new Error('Все удаления провалились'));
         }
         
-        // Обновляем страницу после всех удалений
-        location.reload();
+        // После всех удалений ждем завершения анимаций и обновляем корзину
+        setTimeout(() => {
+            // Проверяем, остались ли еще товары в корзине
+            const remainingRows = document.querySelectorAll('.cart-table tbody tr');
+            const visibleRows = Array.from(remainingRows).filter(row => 
+                row.offsetParent !== null && 
+                !row.classList.contains('cart-empty-row') &&
+                !row.dataset.markedForRemoval &&
+                !row.dataset.removed &&
+                row.querySelector('.cart-item-checkbox')
+            );
+            
+            if (visibleRows.length === 0) {
+                // Корзина пуста - показываем сообщение
+                const cartTable = document.querySelector('.cart-table-wrapper');
+                const cartLayout = document.querySelector('.cart-layout');
+                if (cartTable) {
+                    cartTable.innerHTML = '<div class="cart-empty"><p>Корзина пуста</p><a href="/shop" class="btn-primary">Перейти в каталог</a></div>';
+                } else if (cartLayout) {
+                    cartLayout.innerHTML = '<div class="cart-empty"><p>Корзина пуста</p><a href="/shop" class="btn-primary">Перейти в каталог</a></div>';
+                } else {
+                    location.reload();
+                }
+            } else {
+                // Есть еще товары - перезагружаем страницу для обновления итогов и актуальных ключей
+                location.reload();
+            }
+        }, 1000); // Увеличиваем задержку, чтобы все анимации завершились
+        
+        return Promise.resolve({ successes, errors });
     }
 });
 </script>

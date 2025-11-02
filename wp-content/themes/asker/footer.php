@@ -142,5 +142,65 @@
     </div>
 
     <?php wp_footer(); ?>
+    
+    <!-- Скрипт для предотвращения disabled кнопки в футере -->
+    <script>
+    (function() {
+        // Убираем disabled атрибут с кнопки отправки в футере
+        function enableFooterSubmitButton() {
+            const footerForm = document.querySelector('.footer__form');
+            if (!footerForm) return;
+            
+            const submitButtons = footerForm.querySelectorAll('.wpcf7-submit, input[type="submit"]');
+            submitButtons.forEach(function(btn) {
+                // Убираем disabled если он есть
+                if (btn.hasAttribute('disabled')) {
+                    btn.removeAttribute('disabled');
+                }
+                
+                // Убираем aria-disabled
+                if (btn.hasAttribute('aria-disabled')) {
+                    btn.removeAttribute('aria-disabled');
+                }
+                
+                // Убираем класс disabled если есть
+                btn.classList.remove('disabled');
+            });
+        }
+        
+        // Выполняем сразу
+        enableFooterSubmitButton();
+        
+        // Выполняем после загрузки DOM
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', enableFooterSubmitButton);
+        }
+        
+        // Отслеживаем изменения формы (Contact Form 7 может добавлять disabled динамически)
+        const footerForm = document.querySelector('.footer__form');
+        if (footerForm) {
+            // Используем MutationObserver для отслеживания изменений
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'disabled') {
+                        enableFooterSubmitButton();
+                    }
+                });
+            });
+            
+            // Наблюдаем за изменениями атрибутов
+            const submitButtons = footerForm.querySelectorAll('.wpcf7-submit, input[type="submit"]');
+            submitButtons.forEach(function(btn) {
+                observer.observe(btn, {
+                    attributes: true,
+                    attributeFilter: ['disabled', 'aria-disabled']
+                });
+            });
+            
+            // Также отслеживаем изменения через интервал (fallback)
+            setInterval(enableFooterSubmitButton, 500);
+        }
+    })();
+    </script>
 </body>
 </html>
