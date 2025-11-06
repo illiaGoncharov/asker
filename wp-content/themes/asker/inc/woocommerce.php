@@ -2370,4 +2370,138 @@ function asker_save_user_name_on_registration( $customer_id, $new_customer_data,
 }
 add_action( 'woocommerce_created_customer', 'asker_save_user_name_on_registration', 10, 3 );
 
+/**
+ * ========================================
+ * БЕЗОПАСНОСТЬ
+ * ========================================
+ */
+
+/**
+ * Скрываем версию WordPress из HEAD
+ * Защита от автоматических атак на известные уязвимости
+ */
+function asker_remove_wp_version() {
+    return '';
+}
+add_filter( 'the_generator', 'asker_remove_wp_version' );
+remove_action( 'wp_head', 'wp_generator' );
+
+/**
+ * Скрываем версию WooCommerce из скриптов
+ */
+function asker_remove_wc_version( $src ) {
+    if ( strpos( $src, 'ver=' ) ) {
+        $src = remove_query_arg( 'ver', $src );
+    }
+    return $src;
+}
+add_filter( 'script_loader_src', 'asker_remove_wc_version', 15, 1 );
+add_filter( 'style_loader_src', 'asker_remove_wc_version', 15, 1 );
+
+/**
+ * Отключаем XML-RPC (частая цель атак)
+ * Если нужен для мобильных приложений - закомментировать
+ */
+add_filter( 'xmlrpc_enabled', '__return_false' );
+
+/**
+ * Добавляем security headers
+ */
+function asker_add_security_headers() {
+    // Защита от clickjacking
+    header( 'X-Frame-Options: SAMEORIGIN' );
+    
+    // Защита от MIME-sniffing
+    header( 'X-Content-Type-Options: nosniff' );
+    
+    // Включаем XSS защиту браузера
+    header( 'X-XSS-Protection: 1; mode=block' );
+    
+    // Referrer Policy
+    header( 'Referrer-Policy: strict-origin-when-cross-origin' );
+}
+add_action( 'send_headers', 'asker_add_security_headers' );
+
+/**
+ * Отключаем file editing через админку
+ * Если нужно редактировать файлы через админку - закомментировать
+ */
+if ( ! defined( 'DISALLOW_FILE_EDIT' ) ) {
+    define( 'DISALLOW_FILE_EDIT', true );
+}
+
+/**
+ * Ограничиваем количество попыток входа (базовая защита от брутфорса)
+ * Для production лучше использовать Wordfence или подобный плагин
+ */
+function asker_check_login_attempts( $user, $username, $password ) {
+    // Получаем IP пользователя
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    
+    if ( empty( $ip ) ) {
+        return $user;
+    }
+    
+    // Ключ для transient
+    $transient_key = 'asker_login_attempts_' . md5( $ip );
+    
+    // Получаем количество попыток
+    $attempts = get_transient( $transient_key );
+    
+    // Если больше 5 попыток за 15 минут - блокируем
+    if ( $attempts && $attempts >= 5 ) {
+        return new WP_Error(
+            'too_many_attempts',
+            sprintf(
+                'Слишком много попыток входа. Попробуйте через %d минут.',
+                ceil( ( 900 - ( time() - get_option( $transient_key . '_time', time() ) ) ) / 60 )
+            )
+        );
+    }
+    
+    return $user;
+}
+add_filter( 'authenticate', 'asker_check_login_attempts', 30, 3 );
+
+/**
+ * Увеличиваем счетчик неудачных попыток входа
+ */
+function asker_failed_login_attempts( $username ) {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    
+    if ( empty( $ip ) ) {
+        return;
+    }
+    
+    $transient_key = 'asker_login_attempts_' . md5( $ip );
+    $attempts = get_transient( $transient_key );
+    
+    if ( ! $attempts ) {
+        $attempts = 1;
+        update_option( $transient_key . '_time', time() );
+    } else {
+        $attempts++;
+    }
+    
+    // Блокируем на 15 минут
+    set_transient( $transient_key, $attempts, 900 );
+}
+add_action( 'wp_login_failed', 'asker_failed_login_attempts' );
+
+/**
+ * Сбрасываем счетчик при успешном входе
+ */
+function asker_reset_login_attempts( $user_login, $user ) {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    
+    if ( empty( $ip ) ) {
+        return;
+    }
+    
+    $transient_key = 'asker_login_attempts_' . md5( $ip );
+    delete_transient( $transient_key );
+    delete_option( $transient_key . '_time' );
+}
+add_action( 'wp_login', 'asker_reset_login_attempts', 10, 2 );
+
 

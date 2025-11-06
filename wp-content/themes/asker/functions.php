@@ -19,6 +19,8 @@ require_once get_template_directory() . '/inc/acf.php';
 require_once get_template_directory() . '/inc/woocommerce.php';
 require_once get_template_directory() . '/inc/helpers.php';
 require_once get_template_directory() . '/inc/create-pages-helper.php';
+require_once get_template_directory() . '/inc/customer-levels.php';
+require_once get_template_directory() . '/inc/managers.php';
 
 /**
  * КРИТИЧНО: Принудительно загружаем front-page.php для главной

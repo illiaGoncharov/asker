@@ -101,10 +101,14 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                         </a>
                     </nav>
                     
+                    <?php
+                    // Получаем уровень клиента
+                    $level_data = asker_get_customer_level( get_current_user_id() );
+                    ?>
                     <div class="user-level">
                         <div class="level-info">
                             <span class="level-label">Ваш уровень:</span>
-                            <span class="level-name"><?php echo get_user_meta(get_current_user_id(), 'user_level', true) ?: 'Базовый'; ?></span>
+                            <span class="level-name"><?php echo esc_html( $level_data['level'] ); ?></span>
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                 <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="2"/>
                                 <path d="M8 5V8L10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -112,27 +116,89 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                         </div>
                         <div class="discount-info">
                             <span class="discount-label">Ваша скидка:</span>
-                            <span class="discount-value"><?php echo get_user_meta(get_current_user_id(), 'user_discount', true) ?: '10%'; ?></span>
+                            <span class="discount-value"><?php echo esc_html( $level_data['discount'] ); ?>%</span>
                         </div>
+                        
+                        <?php if ( $level_data['next_level'] ) : 
+                            $next_level_min = floatval( $level_data['next_level']['level_min'] );
+                            $remaining = $next_level_min - $level_data['total_spent'];
+                            $progress = ( $level_data['total_spent'] - $level_data['level_min'] ) / ( $next_level_min - $level_data['level_min'] ) * 100;
+                            $progress = max( 0, min( 100, $progress ) );
+                        ?>
+                        <div class="level-progress" style="margin-top: 16px; padding: 12px; background: #F5F6F8; border-radius: 8px;">
+                            <p style="font-size: 12px; color: #6B7280; margin: 0 0 8px;">
+                                До уровня "<?php echo esc_html( $level_data['next_level']['level_name'] ); ?>": 
+                                <strong><?php echo wc_price( $remaining ); ?></strong>
+                            </p>
+                            <div style="background: #E5E7EB; height: 6px; border-radius: 3px; overflow: hidden;">
+                                <div style="background: #FFD600; height: 100%; width: <?php echo round( $progress ); ?>%;"></div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
                     </div>
+                    
+                    <?php
+                    // Получаем данные менеджера
+                    $manager_id = get_user_meta( get_current_user_id(), 'assigned_manager_id', true );
+                    
+                    if ( $manager_id ) {
+                        $manager = get_post( $manager_id );
+                        $manager_phone = get_field( 'manager_phone', $manager_id );
+                        $manager_email = get_field( 'manager_email', $manager_id );
+                        $manager_telegram = get_field( 'manager_telegram', $manager_id );
+                        $manager_whatsapp = get_field( 'manager_whatsapp', $manager_id );
+                        $manager_photo = get_the_post_thumbnail_url( $manager_id, 'thumbnail' );
+                    } else {
+                        // Fallback если менеджер не назначен
+                        $manager = null;
+                        $manager_phone = '+7 (812) 123-12-23';
+                        $manager_email = 'opt@asker-corp.ru';
+                        $manager_telegram = null;
+                        $manager_whatsapp = null;
+                        $manager_photo = null;
+                    }
+                    ?>
                     
                     <div class="personal-manager">
                         <h3>Ваш персональный менеджер</h3>
                         <div class="manager-card">
                             <div class="manager-avatar">
-                                <img src="<?php echo get_template_directory_uri(); ?>/assets/images/manager-placeholder.jpg" alt="Менеджер" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                <div class="avatar-placeholder" style="display: none;">
+                                <?php if ( $manager_photo ) : ?>
+                                    <img src="<?php echo esc_url( $manager_photo ); ?>" alt="<?php echo esc_attr( $manager ? $manager->post_title : 'Менеджер' ); ?>" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+                                <?php else : ?>
+                                <div class="avatar-placeholder" style="display: flex;">
                                     <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
                                         <circle cx="20" cy="20" r="20" fill="#E5E7EB"/>
                                         <path d="M20 12C22.7614 12 25 14.2386 25 17C25 19.7614 22.7614 22 20 22C17.2386 22 15 19.7614 15 17C15 14.2386 17.2386 12 20 12Z" fill="#9CA3AF"/>
                                         <path d="M20 24C14.4772 24 10 28.4772 10 34H30C30 28.4772 25.5228 24 20 24Z" fill="#9CA3AF"/>
                                     </svg>
                                 </div>
+                                <?php endif; ?>
                             </div>
                             <div class="manager-info">
-                                <h4><?php echo get_user_meta(get_current_user_id(), 'manager_name', true) ?: 'Владимир Курдов'; ?></h4>
-                                <p class="manager-phone"><?php echo get_user_meta(get_current_user_id(), 'manager_phone', true) ?: '+7 (812) 123-12-23'; ?></p>
-                                <p class="manager-email"><?php echo get_user_meta(get_current_user_id(), 'manager_email', true) ?: 'opt@asker-corp.ru'; ?></p>
+                                <h4><?php echo $manager ? esc_html( $manager->post_title ) : 'Владимир Курдов'; ?></h4>
+                                <p class="manager-phone">
+                                    <a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9+]/', '', $manager_phone ) ); ?>">
+                                        <?php echo esc_html( $manager_phone ); ?>
+                                    </a>
+                                </p>
+                                <p class="manager-email">
+                                    <a href="mailto:<?php echo esc_attr( $manager_email ); ?>">
+                                        <?php echo esc_html( $manager_email ); ?>
+                                    </a>
+                                </p>
+                                
+                                <?php if ( $manager_telegram ) : ?>
+                                <a href="https://t.me/<?php echo esc_attr( $manager_telegram ); ?>" target="_blank" class="btn-telegram" style="display: inline-block; margin-top: 8px; padding: 6px 12px; background: #0088cc; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">
+                                    💬 Telegram
+                                </a>
+                                <?php endif; ?>
+                                
+                                <?php if ( $manager_whatsapp ) : ?>
+                                <a href="https://wa.me/<?php echo esc_attr( preg_replace( '/[^0-9]/', '', $manager_whatsapp ) ); ?>" target="_blank" class="btn-whatsapp" style="display: inline-block; margin-top: 8px; padding: 6px 12px; background: #25D366; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">
+                                    📱 WhatsApp
+                                </a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -333,12 +399,28 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                             <h2>Все мои заказы</h2>
                             <div class="orders-table">
                                 <?php
-                                // Получаем все заказы пользователя
+                                // Пагинация заказов
                                 if (class_exists('WooCommerce')) {
-                                    $all_orders = wc_get_orders(array(
+                                    $paged = isset( $_GET['orders_page'] ) ? max( 1, intval( $_GET['orders_page'] ) ) : 1;
+                                    $per_page = 15;
+                                    
+                                    // Получаем все заказы для подсчета
+                                    $total_orders_ids = wc_get_orders(array(
                                         'customer_id' => get_current_user_id(),
                                         'status' => array('wc-pending', 'wc-processing', 'wc-on-hold', 'wc-completed', 'wc-cancelled', 'wc-refunded', 'wc-failed'),
                                         'limit' => -1,
+                                        'return' => 'ids'
+                                    ));
+                                    
+                                    $total_orders = is_array($total_orders_ids) ? count($total_orders_ids) : 0;
+                                    $total_pages = ceil( $total_orders / $per_page );
+                                    
+                                    // Получаем заказы для текущей страницы
+                                    $all_orders = wc_get_orders(array(
+                                        'customer_id' => get_current_user_id(),
+                                        'status' => array('wc-pending', 'wc-processing', 'wc-on-hold', 'wc-completed', 'wc-cancelled', 'wc-refunded', 'wc-failed'),
+                                        'limit' => $per_page,
+                                        'offset' => ( $paged - 1 ) * $per_page,
                                         'orderby' => 'date',
                                         'order' => 'DESC'
                                     ));
@@ -413,6 +495,50 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                                                 <?php endforeach; ?>
                                             </tbody>
                                         </table>
+                                        
+                                        <?php if ( $total_pages > 1 ) : ?>
+                                        <div class="pagination" style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 24px;">
+                                            <?php if ( $paged > 1 ) : ?>
+                                                <a href="?orders_page=<?php echo $paged - 1; ?>#orders" class="pagination-btn" style="padding: 8px 16px; background: #fff; border: 1px solid #E5E7EB; border-radius: 6px; text-decoration: none; color: #111827;">
+                                                    ← Предыдущая
+                                                </a>
+                                            <?php endif; ?>
+                                            
+                                            <div class="pagination-numbers" style="display: flex; gap: 4px;">
+                                                <?php
+                                                // Показываем максимум 7 страниц
+                                                $range = 3; // Сколько страниц показывать по бокам от текущей
+                                                $start = max( 1, $paged - $range );
+                                                $end = min( $total_pages, $paged + $range );
+                                                
+                                                if ( $start > 1 ) {
+                                                    echo '<a href="?orders_page=1#orders" style="padding: 8px 12px; background: #fff; border: 1px solid #E5E7EB; border-radius: 6px; text-decoration: none; color: #111827;">1</a>';
+                                                    if ( $start > 2 ) echo '<span style="padding: 8px 12px;">...</span>';
+                                                }
+                                                
+                                                for ( $i = $start; $i <= $end; $i++ ) :
+                                                    if ( $i === $paged ) : ?>
+                                                        <span class="page-number active" style="padding: 8px 12px; background: #FFD600; border: 1px solid #FFD600; border-radius: 6px; font-weight: 600; color: #111827;"><?php echo $i; ?></span>
+                                                    <?php else : ?>
+                                                        <a href="?orders_page=<?php echo $i; ?>#orders" style="padding: 8px 12px; background: #fff; border: 1px solid #E5E7EB; border-radius: 6px; text-decoration: none; color: #111827;"><?php echo $i; ?></a>
+                                                    <?php endif; ?>
+                                                <?php endfor;
+                                                
+                                                if ( $end < $total_pages ) {
+                                                    if ( $end < $total_pages - 1 ) echo '<span style="padding: 8px 12px;">...</span>';
+                                                    echo '<a href="?orders_page=' . $total_pages . '#orders" style="padding: 8px 12px; background: #fff; border: 1px solid #E5E7EB; border-radius: 6px; text-decoration: none; color: #111827;">' . $total_pages . '</a>';
+                                                }
+                                                ?>
+                                            </div>
+                                            
+                                            <?php if ( $paged < $total_pages ) : ?>
+                                                <a href="?orders_page=<?php echo $paged + 1; ?>#orders" class="pagination-btn" style="padding: 8px 16px; background: #fff; border: 1px solid #E5E7EB; border-radius: 6px; text-decoration: none; color: #111827;">
+                                                    Следующая →
+                                                </a>
+                                            <?php endif; ?>
+                                        </div>
+                                        <?php endif; ?>
+                                        
                                         <?php
                                     } else {
                                         ?>
