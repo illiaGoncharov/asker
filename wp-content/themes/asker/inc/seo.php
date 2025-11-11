@@ -125,7 +125,11 @@ function asker_add_seo_meta_tags() {
     
     // Если нет URL - используем текущий
     if ( ! $og_url ) {
-        $og_url = ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+        $og_url = home_url( add_query_arg( array(), $GLOBALS['wp']->request ) );
+        // Если все еще пусто, используем текущий запрос
+        if ( ! $og_url ) {
+            $og_url = ( is_ssl() ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? esc_url_raw( $_SERVER['HTTP_HOST'] ) : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( $_SERVER['REQUEST_URI'] ) : '' );
+        }
     }
     
     // Выводим Open Graph теги

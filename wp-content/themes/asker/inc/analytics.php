@@ -35,32 +35,46 @@ function asker_add_ga4_code() {
 add_action( 'wp_head', 'asker_add_ga4_code', 10 );
 
 /**
- * Отслеживание добавления товара в корзину
+ * Отслеживание добавления товара в корзину через JavaScript событие
+ * Используем событие added_to_cart, которое триггерится WooCommerce
  */
-function asker_track_add_to_cart( $cart_item_key, $product_id, $quantity ) {
-    if ( ! is_admin() ) {
-        $product = wc_get_product( $product_id );
-        if ( $product ) {
-            ?>
-            <script>
-            if (typeof gtag !== 'undefined') {
-                gtag('event', 'add_to_cart', {
-                    'currency': 'RUB',
-                    'value': <?php echo esc_js( $product->get_price() * $quantity ); ?>,
-                    'items': [{
-                        'item_id': '<?php echo esc_js( $product_id ); ?>',
-                        'item_name': '<?php echo esc_js( $product->get_name() ); ?>',
-                        'price': <?php echo esc_js( $product->get_price() ); ?>,
-                        'quantity': <?php echo esc_js( $quantity ); ?>
-                    }]
-                });
-            }
-            </script>
-            <?php
-        }
+function asker_add_cart_tracking_script() {
+    if ( is_admin() ) {
+        return;
     }
+    ?>
+    <script>
+    (function() {
+        // Отслеживание добавления в корзину через событие WooCommerce
+        document.body.addEventListener('added_to_cart', function(event, fragments, cartHash, $button) {
+            if (typeof gtag === 'undefined') return;
+            
+            // Получаем данные из кнопки или из события
+            const button = $button && $button.length ? $button[0] : (event.target || null);
+            if (!button) return;
+            
+            const productId = button.getAttribute('data-product-id') || button.closest('[data-product-id]')?.getAttribute('data-product-id');
+            if (!productId) return;
+            
+            // Получаем quantity из кнопки или из формы
+            let quantity = parseInt(button.getAttribute('data-quantity') || button.closest('form')?.querySelector('input.qty')?.value || 1, 10);
+            if (isNaN(quantity) || quantity < 1) quantity = 1;
+            
+            // Отправляем событие в GA4
+            // Примечание: точную цену и название можно получить через AJAX, но для простоты используем базовые данные
+            gtag('event', 'add_to_cart', {
+                'currency': 'RUB',
+                'items': [{
+                    'item_id': productId.toString(),
+                    'quantity': quantity
+                }]
+            });
+        });
+    })();
+    </script>
+    <?php
 }
-add_action( 'woocommerce_add_to_cart', 'asker_track_add_to_cart', 10, 3 );
+add_action( 'wp_footer', 'asker_add_cart_tracking_script' );
 
 /**
  * Отслеживание покупки (на странице благодарности)

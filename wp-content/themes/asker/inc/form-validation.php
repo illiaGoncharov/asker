@@ -108,38 +108,17 @@ function asker_add_checkout_field_attributes( $fields, $country ) {
 add_filter( 'woocommerce_checkout_fields', 'asker_add_checkout_field_attributes', 10, 2 );
 
 /**
- * Улучшенные сообщения об ошибках валидации
- */
-function asker_improve_validation_messages( $message, $field ) {
-    // Кастомные сообщения для разных типов ошибок
-    $custom_messages = array(
-        'billing_phone' => array(
-            'required' => 'Пожалуйста, укажите номер телефона.',
-            'invalid' => 'Номер телефона указан некорректно.',
-        ),
-        'billing_email' => array(
-            'required' => 'Пожалуйста, укажите email адрес.',
-            'invalid' => 'Email адрес указан некорректно.',
-        ),
-        'billing_first_name' => array(
-            'required' => 'Пожалуйста, укажите ваше имя.',
-        ),
-    );
-    
-    if ( isset( $custom_messages[ $field ] ) ) {
-        // Можно добавить логику для разных типов ошибок
-    }
-    
-    return $message;
-}
-add_filter( 'woocommerce_checkout_fields', 'asker_improve_validation_messages' );
-
-/**
  * Валидация Contact Form 7 (если используется)
  */
 function asker_validate_cf7_form( $result, $tag ) {
+    // Проверяем, что Contact Form 7 активен
+    if ( ! class_exists( 'WPCF7_Validation' ) ) {
+        return $result;
+    }
+    
     $name = $tag->name;
-    $value = isset( $_POST[ $name ] ) ? trim( $_POST[ $name ] ) : '';
+    // Используем безопасное получение данных через WPCF7
+    $value = isset( $_POST[ $name ] ) ? sanitize_text_field( trim( $_POST[ $name ] ) ) : '';
     
     // Валидация телефона в CF7
     if ( $tag->basetype === 'tel' || strpos( $name, 'phone' ) !== false ) {
@@ -158,8 +137,11 @@ function asker_validate_cf7_form( $result, $tag ) {
     
     return $result;
 }
-add_filter( 'wpcf7_validate_tel', 'asker_validate_cf7_form', 10, 2 );
-add_filter( 'wpcf7_validate_tel*', 'asker_validate_cf7_form', 10, 2 );
-add_filter( 'wpcf7_validate_email', 'asker_validate_cf7_form', 10, 2 );
-add_filter( 'wpcf7_validate_email*', 'asker_validate_cf7_form', 10, 2 );
+// Добавляем фильтры только если Contact Form 7 активен
+if ( class_exists( 'WPCF7_ContactForm' ) ) {
+    add_filter( 'wpcf7_validate_tel', 'asker_validate_cf7_form', 10, 2 );
+    add_filter( 'wpcf7_validate_tel*', 'asker_validate_cf7_form', 10, 2 );
+    add_filter( 'wpcf7_validate_email', 'asker_validate_cf7_form', 10, 2 );
+    add_filter( 'wpcf7_validate_email*', 'asker_validate_cf7_form', 10, 2 );
+}
 
