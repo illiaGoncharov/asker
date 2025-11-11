@@ -1,0 +1,1226 @@
+/* ========================================
+   PAGES STYLES - Asker Theme
+   ======================================== */
+
+/* Базовые стили для всех страниц */
+.page-header {
+  background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-white) 100%);
+  padding: 60px 0 40px;
+  border-bottom: 1px solid var(--border-gray);
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--primary-black);
+  margin: 16px 0 32px 0;
+  font-family: var(--font-manrope);
+  text-align: left;
+}
+
+.page-content {
+  padding: 60px 0;
+  min-height: 60vh;
+}
+
+/* ========================================
+   BREADCRUMBS - Хлебные крошки
+   Стили унифицированы в main.css
+   ======================================== */
+
+/* ========================================
+   CONTENT PAGES - Унифицированные стили
+   ======================================== */
+
+/* Общий контейнер для контентных страниц */
+.content-page {
+  max-width: 900px;
+  /* margin: 0 auto; */
+  padding: 32px 20px 64px;
+  line-height: 1.7;
+  color: #1a1a1a;
+}
+
+.content-page h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 32px 0 16px;
+  color: #1a1a1a;
+}
+
+.content-page h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 24px 0 12px;
+  color: #1a1a1a;
+}
+
+.content-page p {
+  margin-bottom: 16px;
+  font-size: 16px;
+}
+
+.content-page ul,
+.content-page ol {
+  margin: 16px 0;
+  padding-left: 32px;
+}
+
+.content-page li {
+  margin-bottom: 8px;
+}
+
+.content-page a {
+  color: #1a1a1a;
+  text-decoration: underline;
+}
+
+.content-page a:hover {
+  color: #6c757d;
+}
+
+/* Блоки с фичами */
+.content-page__features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-md);
+  margin: var(--space-xl) 0;
+}
+
+.content-page__feature {
+  padding: var(--space-md);
+  background: var(--bg-light);
+  border-radius: 12px;
+}
+
+.content-page__feature h3 {
+  margin-top: 0;
+}
+
+/* Контакты - двухколоночный layout */
+.content-page--contacts {
+  max-width: inherit;
+  display: flex;
+  justify-content: space-between;
+}
+
+.contact-page__left, 
+.contact-page__right {
+  width: calc(50% - 16px);
+}
+
+@media (max-width: 768px) {
+  .content-page {
+    padding: var(--space-md) var(--space-sm) var(--space-xl);
+  }
+
+  .content-page--contacts {
+    grid-template-columns: 1fr;
+  }
+
+  .content-page__features {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========================================
+   SHOP PAGE STYLES
+   ======================================== */
+
+.shop-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.shop-page h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--primary-black);
+  margin-bottom: 30px;
+  text-align: center;
+  font-family: var(--font-primary);
+}
+
+/* Уведомления WooCommerce */
+.woocommerce-notice {
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  font-family: var(--font-secondary);
+}
+
+.woocommerce-notice.success {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.woocommerce-notice.warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+}
+
+.woocommerce-notice h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-family: var(--font-primary);
+  font-size: 24px;
+}
+
+.woocommerce-notice h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-family: var(--font-primary);
+  font-size: 18px;
+}
+
+.woocommerce-notice ol {
+  margin: 15px 0;
+  padding-left: 20px;
+}
+
+.woocommerce-notice li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+/* Сетка товаров */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 30px;
+  margin-top: 40px;
+}
+
+.product-card {
+  background: var(--bg-white);
+  border: 1px solid var(--border-gray);
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: none; /* Убираем тень по умолчанию, чтобы избежать дублирования */
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1); /* Только одна тень при hover */
+}
+
+.product-image {
+  width: 100%;
+  height: 200px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.product-card:hover .product-image img {
+  transform: scale(1.05);
+}
+
+.product-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--primary-black);
+  font-family: var(--font-primary);
+  line-height: 1.3;
+}
+
+.product-price {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary-yellow);
+  margin-bottom: 16px;
+  font-family: var(--font-manrope);
+}
+
+.product-description {
+  color: var(--text-gray);
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+  font-family: var(--font-secondary);
+}
+
+.product-button {
+  background-color: var(--primary-yellow);
+  color: var(--primary-black);
+  border: none;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  font-family: var(--font-manrope);
+  font-size: 14px;
+}
+
+.product-button:hover {
+  background-color: #e6d005;
+  transform: translateY(-1px);
+}
+
+/* Сообщение об отсутствии товаров */
+.no-products {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--bg-light);
+  border-radius: 12px;
+  margin-top: 40px;
+}
+
+.no-products h2 {
+  font-size: 24px;
+  color: var(--primary-black);
+  margin-bottom: 20px;
+  font-family: var(--font-primary);
+}
+
+.no-products p {
+  color: var(--text-gray);
+  margin-bottom: 20px;
+  font-family: var(--font-secondary);
+}
+
+.no-products ol {
+  text-align: left;
+  max-width: 400px;
+  margin: 0 auto;
+  font-family: var(--font-secondary);
+}
+
+.no-products li {
+  margin-bottom: 8px;
+  color: var(--text-gray);
+}
+
+/* Тестовые товары */
+.test-products {
+  margin-top: 40px;
+}
+
+.test-products h3 {
+  margin-bottom: 20px;
+  font-family: var(--font-primary);
+  color: var(--primary-black);
+}
+
+/* ========================================
+   ACCOUNT PAGE STYLES
+   ======================================== */
+
+/* Стили .account-page перенесены в main.css */
+
+.account-content h2 {
+  font-size: 24px;
+  color: var(--primary-black);
+  margin-bottom: 20px;
+  font-family: var(--font-primary);
+}
+
+.account-menu {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.account-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 15px 20px;
+  background: var(--bg-white);
+  border: 1px solid var(--border-gray);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--primary-black);
+  font-weight: 500;
+  transition: all 0.2s ease;
+  font-family: var(--font-secondary);
+}
+
+.account-link:hover {
+  background-color: var(--primary-yellow);
+  border-color: var(--primary-yellow);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(255, 231, 6, 0.3);
+}
+
+/* Форма входа */
+.login-form {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 40px;
+  background: var(--bg-white);
+  border: 1px solid var(--border-gray);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.login-form h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  font-family: var(--font-primary);
+  color: var(--primary-black);
+}
+
+.login-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.login-form label {
+  font-weight: 500;
+  color: var(--primary-black);
+  font-family: var(--font-secondary);
+}
+
+.login-form input[type="text"],
+.login-form input[type="password"] {
+  padding: 12px 16px;
+  border: 1px solid var(--border-gray);
+  border-radius: 50px;
+  font-size: 14px;
+  font-family: var(--font-secondary);
+  transition: border-color 0.2s ease;
+}
+
+.login-form input[type="text"]:focus,
+.login-form input[type="password"]:focus {
+  outline: none;
+  border-color: var(--primary-yellow);
+  box-shadow: 0 0 0 2px rgba(255, 231, 6, 0.2);
+}
+
+.login-form input[type="submit"] {
+  background-color: var(--primary-yellow);
+  color: var(--primary-black);
+  border: none;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-manrope);
+}
+
+.login-form input[type="submit"]:hover {
+  background-color: #e6d005;
+  transform: translateY(-1px);
+}
+
+.login-form p {
+  text-align: center;
+  margin-top: 20px;
+  font-family: var(--font-secondary);
+  color: var(--text-gray);
+}
+
+.login-form a {
+  color: var(--primary-yellow);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.login-form a:hover {
+  text-decoration: underline;
+}
+
+/* Простой аккаунт */
+.simple-account {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 40px;
+  background: var(--bg-white);
+  border: 1px solid var(--border-gray);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.simple-account h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  font-family: var(--font-primary);
+  color: var(--primary-black);
+}
+
+.simple-account p {
+  text-align: center;
+  margin-bottom: 30px;
+  color: var(--text-gray);
+  font-family: var(--font-secondary);
+}
+
+.account-info {
+  background: var(--bg-light);
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+}
+
+.account-info h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-family: var(--font-primary);
+  color: var(--primary-black);
+}
+
+.account-info ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.account-info li {
+  margin-bottom: 8px;
+  font-family: var(--font-secondary);
+  color: var(--text-gray);
+}
+
+.account-info strong {
+  color: var(--primary-black);
+}
+
+.simple-account .btn {
+  display: inline-block;
+  background-color: var(--primary-yellow);
+  color: var(--primary-black);
+  padding: 12px 24px;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  font-family: var(--font-manrope);
+}
+
+.simple-account .btn:hover {
+  background-color: #e6d005;
+  transform: translateY(-1px);
+}
+
+/* Простая форма входа */
+.simple-login {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 40px;
+  background: var(--bg-white);
+  border: 1px solid var(--border-gray);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.simple-login h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  font-family: var(--font-primary);
+  color: var(--primary-black);
+}
+
+/* Инструкции по установке */
+.installation-steps {
+  background: var(--bg-light);
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.installation-steps h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-family: var(--font-primary);
+  color: var(--primary-black);
+}
+
+.installation-steps ol {
+  margin: 0;
+  padding-left: 20px;
+  font-family: var(--font-secondary);
+}
+
+.installation-steps li {
+  margin-bottom: 8px;
+  color: var(--text-gray);
+  line-height: 1.5;
+}
+
+/* ========================================
+   CONTACT PAGE STYLES
+   ======================================== */
+
+/* Хлебные крошки - стили унифицированы в main.css */
+
+/* Layout страницы контактов */
+.contact-page__layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 40px;
+}
+
+@media (max-width: 1024px) {
+    .contact-page__layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Карточка контактов */
+.contact-card {
+    background: var(--bg-white);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 32px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.contact-card__title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary-black);
+    margin-bottom: 24px;
+    font-family: var(--font-primary);
+}
+
+.contact-card__info {
+    margin-bottom: 24px;
+}
+
+.contact-info__item {
+    margin-bottom: 20px;
+}
+
+.contact-info__item strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6B7280;
+    margin-bottom: 8px;
+    font-family: var(--font-primary);
+}
+
+.contact-info__item p {
+    margin: 0;
+    font-size: 16px;
+    color: var(--primary-black);
+    font-family: var(--font-secondary);
+}
+
+.contact-info__item a {
+    color: var(--primary-black);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.contact-info__item a:hover {
+    color: var(--primary-yellow);
+}
+
+.contact-card__button {
+    display: inline-block;
+    padding: 14px 28px;
+    background: transparent;
+    border: 2px solid var(--primary-yellow);
+    border-radius: 50px;
+    color: var(--primary-black);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all 0.2s;
+    font-family: var(--font-primary);
+    cursor: pointer;
+}
+
+.contact-card__button:hover {
+    background: var(--primary-yellow);
+    color: var(--primary-black);
+}
+
+/* Форма обратной связи */
+.contact-form-card {
+    background: var(--bg-white);
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.contact-form-card__title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary-black);
+    margin-bottom: 24px;
+    font-family: var(--font-primary);
+}
+
+.contact-form .form-group {
+    margin-bottom: 20px;
+}
+
+.contact-form label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary-black);
+    margin-bottom: 8px;
+    font-family: var(--font-primary);
+}
+
+.contact-form input[type="text"],
+.contact-form input[type="tel"],
+.contact-form textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: var(--font-secondary);
+    transition: border-color 0.2s;
+}
+
+.contact-form input[type="text"]:focus,
+.contact-form input[type="tel"]:focus,
+.contact-form textarea:focus {
+    outline: none;
+    border-color: var(--primary-yellow);
+}
+
+.contact-form textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-group--checkbox {
+    margin-bottom: 24px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #6B7280;
+    font-family: var(--font-secondary);
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin-top: 2px;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.checkbox-label a {
+    color: var(--primary-black);
+    text-decoration: underline;
+}
+
+.checkbox-label a:hover {
+    color: var(--primary-yellow);
+}
+
+.btn--submit {
+    width: 100%;
+    padding: 16px;
+    background: var(--primary-black);
+    color: var(--bg-white);
+    border: none;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--font-primary);
+}
+
+.btn--submit:hover {
+    background: var(--primary-yellow);
+    color: var(--primary-black);
+}
+
+.contact-form__success {
+    background: #D1FAE5;
+    color: #065F46;
+    padding: 16px;
+    border-radius: 8px;
+    margin-top: 20px;
+    font-family: var(--font-secondary);
+}
+
+.contact-form__error {
+    background: #FEE2E2;
+    color: #991B1B;
+    padding: 16px;
+    border-radius: 8px;
+    margin-top: 20px;
+    font-family: var(--font-secondary);
+}
+
+/* Карта Яндекс */
+.contact-page__right {
+    position: sticky;
+    top: 20px;
+    height: fit-content;
+}
+
+.contact-map {
+    width: 100%;
+    height: 600px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 1024px) {
+    .contact-page__right {
+        position: static;
+    }
+    
+    .contact-map {
+        height: 400px;
+    }
+}
+
+@media (max-width: 768px) {
+    .contact-card,
+    .contact-form-card {
+        padding: 24px;
+    }
+    
+    .contact-map {
+        height: 300px;
+    }
+}
+
+/* ========================================
+   AUTH PAGE STYLES (Вход/Регистрация)
+   ======================================== */
+
+.auth-page {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+  width: 100%;
+}
+
+.auth-page .auth-container {
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0;
+  background: var(--bg-white);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.auth-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary-black);
+  margin: 0 0 12px 0;
+  text-align: center;
+  font-family: var(--font-primary);
+}
+
+.auth-subtitle {
+  font-size: 14px;
+  color: var(--text-gray);
+  margin: 0 0 32px 0;
+  text-align: center;
+  font-family: var(--font-secondary);
+}
+
+.auth-page .auth-container .auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.auth-page .auth-container .auth-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Поля имени и фамилии в две колонки */
+.auth-page .auth-container .auth-form .form-group--two-columns {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.auth-page .auth-container .auth-form .form-group--two-columns > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-page .auth-container .auth-form .form-group--two-columns label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--primary-black);
+  font-family: var(--font-primary);
+}
+
+@media (max-width: 768px) {
+  .auth-page .auth-container .auth-form .form-group--two-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.auth-page .auth-container .auth-form label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--primary-black);
+  font-family: var(--font-primary);
+}
+
+.auth-page .auth-container .auth-form .form-control,
+.auth-page .auth-container .auth-form input[type="text"],
+.auth-page .auth-container .auth-form input[type="email"],
+.auth-page .auth-container .auth-form input[type="password"] {
+  padding: 12px 16px;
+  border: 1px solid var(--border-gray);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: var(--font-secondary);
+  transition: border-color 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.auth-page .auth-container .auth-form .form-control:focus,
+.auth-page .auth-container .auth-form input[type="text"]:focus,
+.auth-page .auth-container .auth-form input[type="email"]:focus,
+.auth-page .auth-container .auth-form input[type="password"]:focus {
+  outline: none;
+  border-color: var(--primary-yellow);
+  box-shadow: 0 0 0 2px rgba(255, 231, 6, 0.2);
+}
+
+.auth-page .auth-container .auth-form .form-group--checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-page .auth-container .auth-form .checkbox-label,
+.auth-page .auth-container .auth-form .woocommerce-form__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-gray);
+  font-family: var(--font-secondary);
+}
+
+.auth-page .auth-container .auth-form .checkbox-label input[type="checkbox"],
+.auth-page .auth-container .auth-form .woocommerce-form__input-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.auth-page .auth-container .auth-form .btn--full,
+.auth-page .auth-container .auth-form .auth-submit,
+.auth-page .auth-container .auth-form .woocommerce-button {
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: var(--primary-black);
+  color: var(--bg-white);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-page .auth-container .auth-form .btn--full:hover,
+.auth-page .auth-container .auth-form .auth-submit:hover,
+.auth-page .auth-container .auth-form .woocommerce-button:hover {
+  background: #333;
+  transform: translateY(-1px);
+}
+
+.auth-page .auth-container .auth-links {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.auth-page .auth-container .auth-link {
+  font-size: 14px;
+  color: var(--primary-black);
+  text-decoration: none;
+  font-family: var(--font-secondary);
+  transition: color 0.2s ease;
+}
+
+.auth-page .auth-container .auth-link:hover {
+  color: var(--primary-yellow);
+}
+
+/* Вкладки Вход/Регистрация */
+.auth-page .auth-container .auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-gray);
+  background: var(--bg-white);
+}
+
+.auth-page .auth-container .auth-tab {
+  flex: 1;
+  padding: 16px 24px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-gray);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-primary);
+  text-align: center;
+}
+
+.auth-page .auth-container .auth-tab:hover {
+  color: var(--primary-black);
+  /* background: rgba(255, 231, 6, 0.05); */
+}
+
+.auth-page .auth-container .auth-tab.auth-tab--active {
+  color: var(--primary-black);
+  /* border-bottom-color: var(--primary-black); */
+  font-weight: 600;
+}
+
+/* Обертки форм */
+.auth-page .auth-container .auth-form-wrapper {
+  display: none;
+  padding: 40px;
+}
+
+.auth-page .auth-container .auth-form-wrapper.active {
+  display: block;
+}
+
+/* Поле пароля с кнопкой показа/скрытия */
+.auth-page .auth-container .form-group--password {
+  position: relative;
+}
+
+.password-input {
+  width: 100%;
+}
+
+.show-password-input {
+  display: none;
+}
+
+.auth-page .auth-container .password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-page .auth-container .password-input-wrapper .form-control,
+.auth-page .auth-container .password-input-wrapper input[type="password"],
+.auth-page .auth-container .password-input-wrapper input[type="text"] {
+  padding-right: 48px;
+}
+
+.auth-page .auth-container .password-toggle {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-gray);
+  transition: color 0.2s ease;
+  z-index: 1;
+}
+
+.auth-page .auth-container .password-toggle:hover {
+  color: var(--primary-black);
+}
+
+.auth-page .auth-container .password-toggle__icon {
+  width: 20px;
+  height: 20px;
+}
+
+.auth-page .auth-container .password-toggle__icon--eye-off {
+  display: none;
+}
+
+/* Согласие на обработку данных */
+.auth-page .auth-container .auth-consent {
+  margin-top: 16px;
+  margin-bottom: 0;
+}
+
+.auth-page .auth-container .auth-consent .checkbox-label {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-gray);
+}
+
+.auth-page .auth-container .auth-consent__link {
+  color: var(--primary-black);
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.auth-page .auth-container .auth-consent__link:hover {
+  color: var(--primary-yellow);
+}
+
+/* Ссылка "Забыли пароль?" */
+.auth-page .auth-container .auth-links {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-gray);
+}
+
+/* Переопределяем стандартные стили WooCommerce для формы входа */
+.auth-page .woocommerce-form-login,
+.auth-page .woocommerce-form-register {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.auth-page .woocommerce-form-login .form-row,
+.auth-page .woocommerce-form-register .form-row {
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+}
+
+.auth-page .woocommerce-form-login .form-row label,
+.auth-page .woocommerce-form-register .form-row label {
+  margin-bottom: 8px !important;
+}
+
+.auth-page .woocommerce-Input {
+  width: 100% !important;
+  padding: 12px 16px !important;
+  border: 1px solid var(--border-gray) !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-family: var(--font-secondary) !important;
+}
+
+.auth-page .woocommerce-Input:focus {
+  outline: none !important;
+  border-color: var(--primary-yellow) !important;
+  box-shadow: 0 0 0 2px rgba(255, 231, 6, 0.2) !important;
+}
+
+.auth-page .woocommerce-form-login__rememberme {
+  margin-bottom: 0 !important;
+}
+
+.auth-page .woocommerce-button {
+  width: 100% !important;
+  background: var(--primary-black) !important;
+  color: var(--bg-white) !important;
+  border: none !important;
+  padding: 14px 24px !important;
+  border-radius: 8px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.auth-page .woocommerce-button:hover {
+  background: #333 !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Скрываем стандартные сообщения WooCommerce если они дублируются */
+.auth-page .woocommerce-error,
+.auth-page .woocommerce-message,
+.auth-page .woocommerce-info {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+}
+
+.auth-page .woocommerce-error {
+  background: #FEE2E2;
+  color: #991B1B;
+  border-left: 4px solid #DC2626;
+}
+
+.auth-page .woocommerce-message {
+  background: #D1FAE5;
+  color: #065F46;
+  border-left: 4px solid #10B981;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 28px;
+  }
+  
+  .shop-page h1,
+  .account-page h1 {
+    font-size: 24px;
+  }
+  
+  .products-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .account-menu {
+    grid-template-columns: 1fr;
+  }
+  
+  .login-form,
+  .simple-account,
+  .simple-login {
+    margin: 0 20px;
+    padding: 30px 20px;
+  }
+  
+  .auth-page .auth-container {
+    margin: 0 20px;
+  }
+  
+  .auth-page .auth-container .auth-form-wrapper {
+    padding: 32px 24px;
+  }
+  
+  .auth-page .auth-container .auth-tab {
+    padding: 14px 16px;
+    font-size: 14px;
+  }
+}

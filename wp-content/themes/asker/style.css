@@ -1,0 +1,69 @@
+/*
+Theme Name: Asker
+Theme URI: https://askerspb.ru
+Author: Asker Team
+Description: Классическая тема-магазин на WooCommerce + ACF + CF7
+Version: 0.1.0
+Text Domain: asker
+Requires at least: 6.0
+Tested up to: 6.4
+Requires PHP: 8.0
+WC requires at least: 8.0
+WC tested up to: 9.0
+*/
+
+/* Базовые стили темы. Минимум, чтобы страница была читабельной. */
+html { box-sizing: border-box; }
+*, *:before, *:after { box-sizing: inherit; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.5; color: #111; }
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; height: auto; display: block; }
+
+/* Контейнер и сетка */
+.container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+
+/* Хедер должен растягиваться на весь экран */
+.site-header {
+  width: 100vw;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+}
+
+.site-header .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+.grid { display: grid; gap: 16px; }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* Hero секция */
+.hero { padding: 64px 0; background: #f6f7f9; }
+.hero__inner { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; align-items: center; }
+.hero__title { font-size: 40px; font-weight: 700; margin: 0 0 12px; }
+.hero__subtitle { font-size: 18px; color: #444; margin: 0 0 20px; }
+.hero__cta { display: inline-block; background: #0d6efd; color: #fff; padding: 12px 18px; border-radius: 8px; }
+
+/* Карточки категорий */
+.cat-card { display: block; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; background: #fff; transition: box-shadow .2s ease; }
+.cat-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,.08); }
+.cat-card__title { margin: 8px 0 0; font-weight: 600; }
+
+/* Разделы */
+.section { padding: 40px 0; }
+.section__title { font-size: 24px; font-weight: 700; margin: 0 0 20px; }
+
+/* Cookie bar */
+#cookie-bar { position: fixed; left: 16px; right: 16px; bottom: 16px; background: #111; color: #fff; padding: 16px; border-radius: 10px; display: flex; gap: 12px; align-items: center; z-index: 9999; }
+#cookie-bar__text { flex: 1; opacity: .9; }
+#cookie-bar__accept { background: #0d6efd; color: #fff; border: 0; padding: 10px 14px; border-radius: 8px; cursor: pointer; }
+
+
+
+

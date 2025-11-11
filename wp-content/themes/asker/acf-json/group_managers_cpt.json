@@ -1,0 +1,61 @@
+{
+  "key": "group_managers_cpt",
+  "title": "Данные менеджера",
+  "fields": [
+    {
+      "key": "field_manager_phone",
+      "label": "Телефон",
+      "name": "manager_phone",
+      "type": "text",
+      "required": 1,
+      "placeholder": "+7 (812) 123-45-67"
+    },
+    {
+      "key": "field_manager_email",
+      "label": "Email",
+      "name": "manager_email",
+      "type": "email",
+      "required": 1
+    },
+    {
+      "key": "field_manager_telegram",
+      "label": "Telegram",
+      "name": "manager_telegram",
+      "type": "text",
+      "required": 0,
+      "placeholder": "username (без @)",
+      "instructions": "Только username, без @"
+    },
+    {
+      "key": "field_manager_whatsapp",
+      "label": "WhatsApp",
+      "name": "manager_whatsapp",
+      "type": "text",
+      "required": 0,
+      "placeholder": "+79991234567"
+    },
+    {
+      "key": "field_manager_bio",
+      "label": "О менеджере",
+      "name": "manager_bio",
+      "type": "textarea",
+      "rows": 3,
+      "required": 0
+    }
+  ],
+  "location": [
+    [
+      {
+        "param": "post_type",
+        "operator": "==",
+        "value": "manager"
+      }
+    ]
+  ],
+  "menu_order": 0,
+  "position": "normal",
+  "style": "default",
+  "label_placement": "top",
+  "instruction_placement": "label",
+  "active": true
+}

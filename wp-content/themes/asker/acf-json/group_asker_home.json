@@ -1,0 +1,182 @@
+{
+  "key": "group_asker_home",
+  "title": "Главная",
+  "fields": [
+    {
+      "key": "field_hero_title",
+      "label": "Заголовок Hero",
+      "name": "hero_title",
+      "type": "text",
+      "instructions": "Короткий и ёмкий заголовок на первой экране",
+      "required": 0
+    },
+    {
+      "key": "field_hero_subtitle",
+      "label": "Подзаголовок Hero",
+      "name": "hero_subtitle",
+      "type": "textarea",
+      "rows": 3,
+      "required": 0
+    },
+    {
+      "key": "field_hero_cta_text",
+      "label": "Текст кнопки",
+      "name": "hero_cta_text",
+      "type": "text",
+      "required": 0
+    },
+    {
+      "key": "field_hero_cta_link",
+      "label": "Ссылка кнопки",
+      "name": "hero_cta_link",
+      "type": "url",
+      "required": 0
+    },
+    {
+      "key": "field_hero_cta2_text",
+      "label": "Текст второй кнопки",
+      "name": "hero_cta2_text",
+      "type": "text",
+      "required": 0
+    },
+    {
+      "key": "field_hero_cta2_link",
+      "label": "Ссылка второй кнопки",
+      "name": "hero_cta2_link",
+      "type": "url",
+      "required": 0
+    },
+    {
+      "key": "field_hero_image",
+      "label": "Изображение Hero",
+      "name": "hero_image",
+      "type": "image",
+      "return_format": "array",
+      "preview_size": "medium",
+      "library": "all",
+      "required": 0
+    },
+    {
+      "key": "field_featured_categories",
+      "label": "Популярные категории",
+      "name": "featured_categories",
+      "type": "taxonomy",
+      "taxonomy": "product_cat",
+      "field_type": "multi_select",
+      "allow_null": 1,
+      "add_term": 0,
+      "save_terms": 0,
+      "load_terms": 0,
+      "return_format": "object",
+      "required": 0
+    },
+    {
+      "key": "field_featured_products",
+      "label": "Рекомендуемые товары",
+      "name": "featured_products",
+      "type": "post_object",
+      "post_type": ["product"],
+      "allow_null": 1,
+      "multiple": 1,
+      "return_format": "id"
+    },
+    {
+      "key": "field_about_title",
+      "label": "Заголовок секции О компании",
+      "name": "about_title",
+      "type": "text",
+      "default_value": "О нашей компании",
+      "required": 0
+    },
+    {
+      "key": "field_about_text",
+      "label": "Текст О компании",
+      "name": "about_text",
+      "type": "wysiwyg",
+      "tabs": "all",
+      "toolbar": "basic",
+      "media_upload": 0,
+      "required": 0
+    },
+    {
+      "key": "field_about_image",
+      "label": "Изображение О компании",
+      "name": "about_image",
+      "type": "image",
+      "return_format": "array",
+      "preview_size": "medium",
+      "library": "all",
+      "required": 0
+    },
+    {
+      "key": "field_wholesale_title",
+      "label": "Заголовок секции Для оптовых",
+      "name": "wholesale_title",
+      "type": "text",
+      "default_value": "Для оптовых клиентов",
+      "required": 0
+    },
+    {
+      "key": "field_wholesale_text",
+      "label": "Текст Для оптовых",
+      "name": "wholesale_text",
+      "type": "textarea",
+      "rows": 3,
+      "required": 0
+    },
+    {
+      "key": "field_wholesale_benefits",
+      "label": "Преимущества для оптовых",
+      "name": "wholesale_benefits",
+      "type": "repeater",
+      "layout": "table",
+      "button_label": "Добавить преимущество",
+      "sub_fields": [
+        {
+          "key": "field_benefit_text",
+          "label": "Текст",
+          "name": "text",
+          "type": "textarea",
+          "rows": 2,
+          "required": 0
+        }
+      ],
+      "required": 0
+    },
+    {
+      "key": "field_contact_form_shortcode",
+      "label": "Шорткод контактной формы",
+      "name": "contact_form_shortcode",
+      "type": "text",
+      "instructions": "Вставьте сюда шорткод формы Contact Form 7, например: [contact-form-7 id=\"123\"]",
+      "required": 0
+    },
+    {
+      "key": "field_seo_title",
+      "label": "SEO Title",
+      "name": "seo_title",
+      "type": "text",
+      "required": 0
+    },
+    {
+      "key": "field_seo_description",
+      "label": "SEO Description",
+      "name": "seo_description",
+      "type": "textarea",
+      "rows": 3,
+      "required": 0
+    }
+  ],
+  "location": [
+    [
+      {"param": "page_type", "operator": "==", "value": "front_page"}
+    ]
+  ],
+  "position": "normal",
+  "style": "default",
+  "label_placement": "top",
+  "instruction_placement": "label",
+  "active": true,
+  "description": "Поля главной страницы магазина Asker",
+  "modified": 1729423200
+}

@@ -1,0 +1,274 @@
+/* ========================================
+   BASE STYLES - Asker Theme
+   ======================================== */
+
+/* CSS переменные */
+:root {
+  --primary-yellow: #FFE706;
+  --primary-black: #1a1a1a;
+  --bg-light: #f8f9fa;
+  --bg-white: #ffffff;
+  --bg-site: #F5F6F8;
+  --text-gray: #6c757d;
+  --border-gray: #e5e7eb;
+  --icon-color: #2B2D34;
+  
+  /* Шрифты */
+  --font-primary: 'Montserrat', sans-serif;
+  --font-secondary: 'Poppins', sans-serif;
+  --font-manrope: 'Manrope', sans-serif;
+  
+  /* Контейнеры */
+  --container-max: 1200px;
+  --container-max-lg: 1440px;
+
+  /* Шкала отступов (8pt) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+  --space-10: 64px;
+
+  /* Типографика (базовые размеры) */
+  --fs-h1: 36px;
+  --fs-h2: 28px;
+  --fs-h3: 22px;
+  --fs-body: 16px;
+  
+  /* Реальная ширина viewport без скроллбара */
+  --full-width: 100vw;
+}
+
+/* Шрифты Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap');
+
+/* Базовые стили */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden;
+  overflow-y: scroll;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+}
+
+body { 
+  font-family: var(--font-primary);
+  color: var(--primary-black);
+  background: var(--bg-site);
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+  overflow-x: hidden;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* Заголовки */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-primary);
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0 0 1rem 0;
+}
+
+/* Ссылки */
+a {
+  color: var(--primary-black);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover:not(.btn):not(.btn-catalog):not(.btn-login):not(.nav-item):not(.nav-menu-item) {
+  color: var(--primary-yellow);
+}
+
+/* Контейнер */
+.container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Кнопки и инпуты - общие стили */
+button, input, select, textarea {
+  border-radius: 50px;
+  font-family: var(--font-secondary);
+}
+
+/* Специфичные стили для основных элементов */
+.header-main button,
+.header-main input,
+.search-input,
+.btn-catalog,
+.btn-login {
+  border-radius: 50px;
+}
+
+/* Переопределение для WooCommerce и других плагинов */
+.woocommerce button,
+.woocommerce input,
+.woocommerce select,
+.woocommerce textarea,
+.wpcf7 button,
+.wpcf7 input,
+.wpcf7 select,
+.wpcf7 textarea {
+  border-radius: 50px;
+}
+
+/* Дополнительные селекторы для максимального скругления */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="number"],
+textarea,
+select,
+button:not(.btn-catalog):not(.btn-login) {
+  border-radius: 50px;
+}
+
+/* Специальные случаи для кнопок */
+button[type="submit"],
+button[type="button"],
+input[type="submit"],
+input[type="button"] {
+  border-radius: 50px;
+}
+
+/* Основной контент */
+.site-main {
+  min-height: 60vh;
+}
+
+/* Секции */
+.section { 
+  padding: 60px 0; 
+}
+
+.section-title { 
+  font-size: var(--fs-h1);
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 20px;
+  color: var(--primary-black);
+  font-family: var(--font-primary);
+}
+
+.section-subtitle {
+  font-size: 18px;
+  color: var(--text-gray);
+  text-align: center;
+  margin-bottom: 50px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  font-family: var(--font-secondary);
+}
+
+/* Кнопки по БЭМ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 50px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--primary-black);
+  text-decoration: none;
+  font-weight: 600;
+  font-family: var(--font-manrope);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 231, 6, 0.2);
+}
+
+.btn--primary {
+  background: var(--primary-yellow);
+  color: var(--primary-black);
+}
+
+.btn--primary:hover {
+  background: #e6d005;
+  transform: translateY(-1px);
+}
+
+.btn--secondary {
+  background: var(--primary-black);
+  color: var(--bg-white);
+}
+
+.btn--secondary:hover {
+  background: #333333;
+  transform: translateY(-1px);
+}
+
+.btn--outline {
+  background: transparent;
+  border-color: var(--primary-yellow);
+  color: var(--primary-black);
+}
+
+.btn--outline:hover {
+  background: var(--primary-yellow);
+  color: var(--primary-black);
+}
+
+@media (max-width: 768px) {
+  .btn {
+    width: 100%;
+    padding: 14px 20px;
+    min-height: 44px; /* доступность: размер тач-таргета */
+  }
+}
+
+/* Утилиты */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: 1rem; }
+.mb-2 { margin-bottom: 2rem; }
+.mb-3 { margin-bottom: 3rem; }
+
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: 1rem; }
+.mt-2 { margin-top: 2rem; }
+.mt-3 { margin-top: 3rem; }
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 15px;
+  }
+  
+  .section {
+    padding: 40px 0;
+  }
+  
+  .section-title {
+    font-size: 28px;
+  }
+}

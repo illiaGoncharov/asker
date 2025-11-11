@@ -1,0 +1,68 @@
+{
+  "key": "group_customer_levels",
+  "title": "Уровни клиентов",
+  "fields": [
+    {
+      "key": "field_levels_config",
+      "label": "Настройка уровней",
+      "name": "levels_config",
+      "type": "repeater",
+      "instructions": "Настройте уровни клиентов и скидки",
+      "required": 1,
+      "layout": "table",
+      "button_label": "Добавить уровень",
+      "sub_fields": [
+        {
+          "key": "field_level_name",
+          "label": "Название уровня",
+          "name": "level_name",
+          "type": "text",
+          "required": 1,
+          "default_value": "Базовый"
+        },
+        {
+          "key": "field_level_min",
+          "label": "Минимальная сумма покупок (₽)",
+          "name": "level_min",
+          "type": "number",
+          "required": 1,
+          "default_value": 0
+        },
+        {
+          "key": "field_level_max",
+          "label": "Максимальная сумма покупок (₽)",
+          "name": "level_max",
+          "type": "number",
+          "required": 0,
+          "default_value": 50000,
+          "instructions": "Оставьте пустым для безлимита"
+        },
+        {
+          "key": "field_level_discount",
+          "label": "Скидка (%)",
+          "name": "level_discount",
+          "type": "number",
+          "required": 1,
+          "default_value": 5,
+          "min": 0,
+          "max": 100
+        }
+      ]
+    }
+  ],
+  "location": [
+    [
+      {
+        "param": "options_page",
+        "operator": "==",
+        "value": "asker-settings"
+      }
+    ]
+  ],
+  "menu_order": 0,
+  "position": "normal",
+  "style": "default",
+  "label_placement": "top",
+  "instruction_placement": "label",
+  "active": true
+}
