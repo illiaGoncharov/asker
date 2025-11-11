@@ -7213,6 +7213,151 @@ body.thankyou-modal-open {
   font-family: var(--font-manrope);
 }
 
+/* Статусы заказа */
+.thankyou__status-badge--pending {
+  background: #FFF3CD;
+  color: #856404;
+}
+
+.thankyou__status-badge--processing {
+  background: #D1ECF1;
+  color: #0C5460;
+}
+
+.thankyou__status-badge--on-hold {
+  background: #F8D7DA;
+  color: #721C24;
+}
+
+.thankyou__status-badge--completed {
+  background: #D4EDDA;
+  color: #155724;
+}
+
+.thankyou__status-badge--cancelled,
+.thankyou__status-badge--refunded,
+.thankyou__status-badge--failed {
+  background: #F8D7DA;
+  color: #721C24;
+}
+
+/* Сумма заказа */
+.thankyou__detail-value--total {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2C3E50;
+}
+
+/* Список товаров */
+.thankyou__order-items {
+  margin-bottom: 40px;
+  padding-top: 40px;
+  border-top: 1px solid #E9ECEF;
+}
+
+.thankyou__items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.thankyou__item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #F8F9FA;
+  border-radius: 12px;
+  border: 1px solid #E9ECEF;
+}
+
+.thankyou__item-image {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #FFFFFF;
+}
+
+.thankyou__item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thankyou__item-details {
+  flex: 1;
+}
+
+.thankyou__item-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2C3E50;
+  margin-bottom: 8px;
+  font-family: var(--font-manrope);
+}
+
+.thankyou__item-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.thankyou__item-quantity {
+  font-size: 14px;
+  color: #666666;
+  font-family: var(--font-manrope);
+}
+
+.thankyou__item-price {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2C3E50;
+  font-family: var(--font-manrope);
+}
+
+/* Контактная информация - мета */
+.thankyou__contact-meta {
+  font-size: 13px;
+  color: #666666;
+  margin-top: 4px;
+  font-family: var(--font-manrope);
+}
+
+.thankyou__contact-details a {
+  color: #1976D2;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.thankyou__contact-details a:hover {
+  color: #0D47A1;
+  text-decoration: underline;
+}
+
+/* Адаптивность для списка товаров */
+@media (max-width: 768px) {
+  .thankyou__item {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .thankyou__item-meta {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .thankyou__contact-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .thankyou__actions {
+    flex-direction: column;
+  }
+}
+
 /* Шаги */
 .thankyou__steps {
   display: flex;

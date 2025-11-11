@@ -18,6 +18,38 @@ if ( ! $order ) {
     exit;
 }
 
+// Получаем данные менеджера
+$user_id = $order->get_user_id();
+$manager_id = $user_id ? get_user_meta( $user_id, 'assigned_manager_id', true ) : null;
+$manager_name = '';
+$manager_phone = '';
+$manager_email = '';
+
+if ( $manager_id ) {
+    $manager_name = get_field( 'manager_name', $manager_id );
+    $manager_phone = get_field( 'manager_phone', $manager_id );
+    $manager_email = get_field( 'manager_email', $manager_id );
+}
+
+// Получаем статус заказа
+$order_status = $order->get_status();
+$status_labels = array(
+    'pending' => 'Ожидает оплаты',
+    'processing' => 'В обработке',
+    'on-hold' => 'На удержании',
+    'completed' => 'Завершен',
+    'cancelled' => 'Отменен',
+    'refunded' => 'Возвращен',
+    'failed' => 'Ошибка',
+);
+$status_label = isset( $status_labels[ $order_status ] ) ? $status_labels[ $order_status ] : ucfirst( $order_status );
+
+// Получаем способ оплаты
+$payment_method_title = $order->get_payment_method_title();
+if ( ! $payment_method_title ) {
+    $payment_method_title = 'По счету';
+}
+
 get_header();
 ?>
 
@@ -58,18 +90,23 @@ get_header();
                     
                     <div class="thankyou__detail-row">
                         <span class="thankyou__detail-label">Статус:</span>
-                        <span class="thankyou__status-badge">
+                        <span class="thankyou__status-badge thankyou__status-badge--<?php echo esc_attr( $order_status ); ?>">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                 <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
                                 <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                             </svg>
-                            Ожидает оплаты
+                            <?php echo esc_html( $status_label ); ?>
                         </span>
                     </div>
                     
                     <div class="thankyou__detail-row">
                         <span class="thankyou__detail-label">Способ оплаты:</span>
-                        <span class="thankyou__detail-value">По счету</span>
+                        <span class="thankyou__detail-value"><?php echo esc_html( $payment_method_title ); ?></span>
+                    </div>
+                    
+                    <div class="thankyou__detail-row">
+                        <span class="thankyou__detail-label">Сумма заказа:</span>
+                        <span class="thankyou__detail-value thankyou__detail-value--total"><?php echo $order->get_formatted_order_total(); ?></span>
                     </div>
                 </div>
                 
@@ -106,11 +143,41 @@ get_header();
                 
             </div>
             
+            <!-- Список товаров -->
+            <div class="thankyou__order-items">
+                <h2 class="thankyou__section-title">Состав заказа</h2>
+                <div class="thankyou__items-list">
+                    <?php
+                    foreach ( $order->get_items() as $item_id => $item ) {
+                        $product = $item->get_product();
+                        if ( ! $product ) {
+                            continue;
+                        }
+                        ?>
+                        <div class="thankyou__item">
+                            <div class="thankyou__item-image">
+                                <?php echo $product->get_image( 'thumbnail' ); ?>
+                            </div>
+                            <div class="thankyou__item-details">
+                                <h3 class="thankyou__item-name"><?php echo esc_html( $item->get_name() ); ?></h3>
+                                <div class="thankyou__item-meta">
+                                    <span class="thankyou__item-quantity">Количество: <?php echo esc_html( $item->get_quantity() ); ?></span>
+                                    <span class="thankyou__item-price"><?php echo $order->get_formatted_line_subtotal( $item ); ?></span>
+                                </div>
+                            </div>
+                        </div>
+                        <?php
+                    }
+                    ?>
+                </div>
+            </div>
+            
             <!-- Контактная информация -->
             <div class="thankyou__contact-info">
                 <h2 class="thankyou__section-title">Контактная информация</h2>
                 
                 <div class="thankyou__contact-cards">
+                    <?php if ( $manager_name ) : ?>
                     <div class="thankyou__contact-card">
                         <div class="thankyou__contact-icon">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -121,9 +188,18 @@ get_header();
                         </div>
                         <div class="thankyou__contact-details">
                             <h3>Ваш менеджер</h3>
-                            <p>Владимир Курдов</p>
+                            <p><?php echo esc_html( $manager_name ); ?></p>
+                            <?php if ( $manager_phone ) : ?>
+                                <p class="thankyou__contact-meta"><?php echo esc_html( $manager_phone ); ?></p>
+                            <?php endif; ?>
+                            <?php if ( $manager_email ) : ?>
+                                <p class="thankyou__contact-meta">
+                                    <a href="mailto:<?php echo esc_attr( $manager_email ); ?>"><?php echo esc_html( $manager_email ); ?></a>
+                                </p>
+                            <?php endif; ?>
                         </div>
                     </div>
+                    <?php endif; ?>
                     
                     <div class="thankyou__contact-card">
                         <div class="thankyou__contact-icon">
@@ -134,10 +210,11 @@ get_header();
                         </div>
                         <div class="thankyou__contact-details">
                             <h3>Email</h3>
-                            <p>opt@asker-corp.ru</p>
+                            <p><a href="mailto:<?php echo esc_attr( $order->get_billing_email() ); ?>"><?php echo esc_html( $order->get_billing_email() ); ?></a></p>
                         </div>
                     </div>
                     
+                    <?php if ( $order->get_billing_phone() ) : ?>
                     <div class="thankyou__contact-card">
                         <div class="thankyou__contact-icon">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -146,9 +223,10 @@ get_header();
                         </div>
                         <div class="thankyou__contact-details">
                             <h3>Телефон</h3>
-                            <p>+7 (812) 123-12-23</p>
+                            <p><a href="tel:<?php echo esc_attr( $order->get_billing_phone() ); ?>"><?php echo esc_html( $order->get_billing_phone() ); ?></a></p>
                         </div>
                     </div>
+                    <?php endif; ?>
                 </div>
             </div>
             
@@ -181,6 +259,16 @@ get_header();
                     </svg>
                     Вернуться на главную
                 </a>
+                
+                <?php if ( is_user_logged_in() && wc_get_page_permalink( 'myaccount' ) ) : ?>
+                <a href="<?php echo esc_url( wc_get_account_endpoint_url( 'orders' ) ); ?>" class="thankyou__btn thankyou__btn--secondary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M9 11l3 3L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Мои заказы
+                </a>
+                <?php endif; ?>
                 
                 <button class="thankyou__btn thankyou__btn--secondary" onclick="window.print()">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
