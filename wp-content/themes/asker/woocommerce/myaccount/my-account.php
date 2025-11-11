@@ -2,6 +2,10 @@
 /**
  * Переопределение шаблона WooCommerce My Account
  * Используем наш кастомный дизайн вместо стандартного WooCommerce
+ *
+ * @see     https://docs.woocommerce.com/document/template-structure/
+ * @package WooCommerce\Templates
+ * @version 3.5.0
  */
 
 // Обработка сохранения профиля

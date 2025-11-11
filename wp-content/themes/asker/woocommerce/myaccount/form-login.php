@@ -5,7 +5,7 @@
  * Этот шаблон переопределяет стандартную форму WooCommerce
  *
  * @package WooCommerce\Templates
- * @version 7.0.1
+ * @version 9.9.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

@@ -4,8 +4,31 @@
  */
 
 add_action('after_setup_theme', function () {
+    // Принудительно устанавливаем русский язык для WordPress и WooCommerce
+    if ( !get_option('WPLANG') ) {
+        update_option('WPLANG', 'ru_RU');
+    }
+    
+    // Устанавливаем локаль
+    add_filter('locale', function($locale) {
+        return 'ru_RU';
+    }, 10, 1);
+    
+    // Принудительно загружаем русский язык для WooCommerce
+    add_filter('plugin_locale', function($locale, $domain) {
+        if ($domain === 'woocommerce') {
+            return 'ru_RU';
+        }
+        return $locale;
+    }, 10, 2);
+    
     // Локализация строк темы
     load_theme_textdomain('asker', get_template_directory() . '/languages');
+    
+    // Пытаемся загрузить русский язык для WooCommerce
+    if (class_exists('WooCommerce')) {
+        load_plugin_textdomain('woocommerce', false, dirname(plugin_basename(WC_PLUGIN_FILE)) . '/languages/');
+    }
 
     // Базовая поддержка
     add_theme_support('title-tag');

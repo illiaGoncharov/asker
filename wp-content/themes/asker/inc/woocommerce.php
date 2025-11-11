@@ -3,6 +3,39 @@
  * Базовая интеграция WooCommerce. Без агрессивных оверрайдов.
  */
 
+/**
+ * Принудительно устанавливаем русский язык для WooCommerce
+ */
+function asker_force_woocommerce_russian() {
+    // Устанавливаем локаль для WooCommerce
+    add_filter('locale', function($locale) {
+        return 'ru_RU';
+    }, 999);
+    
+    // Принудительно загружаем русский язык для WooCommerce
+    add_filter('load_textdomain_mofile', function($mofile, $domain) {
+        if ($domain === 'woocommerce') {
+            // Пытаемся найти русский языковой файл
+            $ru_mofile = str_replace('/en_US.mo', '/ru_RU.mo', $mofile);
+            if (file_exists($ru_mofile)) {
+                return $ru_mofile;
+            }
+        }
+        return $mofile;
+    }, 10, 2);
+    
+    // Загружаем языковой пакет WooCommerce при инициализации
+    if (class_exists('WooCommerce')) {
+        $lang_dir = WP_LANG_DIR . '/plugins/';
+        $woocommerce_ru = $lang_dir . 'woocommerce-ru_RU.mo';
+        
+        if (file_exists($woocommerce_ru)) {
+            load_textdomain('woocommerce', $woocommerce_ru);
+        }
+    }
+}
+add_action('init', 'asker_force_woocommerce_russian', 1);
+
 // Пример: включить поддержку миниатюр галереи (по мере необходимости)
 // add_theme_support('wc-product-gallery-zoom');
 // add_theme_support('wc-product-gallery-lightbox');
@@ -472,10 +505,43 @@ function asker_create_woocommerce_pages() {
             'post_type' => 'page',
         ]);
     }
+
+    // Создаем страницу "Условия использования" (Terms and conditions)
+    $terms_page = get_page_by_path('terms');
+    if (!$terms_page) {
+        $terms_id = wp_insert_post([
+            'post_title' => 'Условия использования',
+            'post_name' => 'terms',
+            'post_content' => '<h2>Условия использования</h2><p>Здесь будут размещены условия использования сайта.</p>',
+            'post_status' => 'publish',
+            'post_type' => 'page',
+        ]);
+        
+        if ($terms_id && !is_wp_error($terms_id)) {
+            // Назначаем страницу в настройках WooCommerce
+            update_option('woocommerce_terms_page_id', $terms_id);
+        }
+    } else {
+        // Обновляем настройки WooCommerce, если страница уже существует
+        update_option('woocommerce_terms_page_id', $terms_page->ID);
+    }
 }
 
 // Запускаем создание страниц при активации темы
 add_action('after_switch_theme', 'asker_create_woocommerce_pages');
+
+// Также создаем страницы при каждом запросе админки (на случай если они были удалены)
+add_action('admin_init', function() {
+    // Создаем страницы только если WooCommerce активен и мы в админке
+    if ( is_admin() && class_exists('WooCommerce') && current_user_can('manage_options') ) {
+        // Проверяем, существует ли страница Terms
+        $terms_page = get_page_by_path('terms');
+        if ( !$terms_page && get_option('woocommerce_terms_page_id') ) {
+            // Страница была удалена, но настройка осталась - создаем заново
+            asker_create_woocommerce_pages();
+        }
+    }
+}, 99);
 
 /**
  * AJAX: вернуть количество товаров в корзине
@@ -892,13 +958,33 @@ add_action( 'woocommerce_before_shop_loop_item_title', 'asker_add_favorite_butto
  * Настройка валюты WooCommerce
  */
 function asker_set_woocommerce_currency() {
-    update_option( 'woocommerce_currency', 'RUB' );
-    update_option( 'woocommerce_currency_symbol', 'руб.' );
-    update_option( 'woocommerce_price_thousand_sep', ',' );
-    update_option( 'woocommerce_price_decimal_sep', '.' );
+    // Устанавливаем валюту только если она еще не установлена или не RUB
+    $current_currency = get_option( 'woocommerce_currency' );
+    if ( $current_currency !== 'RUB' ) {
+        update_option( 'woocommerce_currency', 'RUB' );
+        update_option( 'woocommerce_currency_symbol', 'руб.' );
+    }
+    
+    update_option( 'woocommerce_price_thousand_sep', ' ' );
+    update_option( 'woocommerce_price_decimal_sep', ',' );
     update_option( 'woocommerce_price_num_decimals', 0 );
+    
+    // Устанавливаем страну по умолчанию
+    update_option( 'woocommerce_default_country', 'RU' );
 }
 add_action( 'after_switch_theme', 'asker_set_woocommerce_currency' );
+
+// Также проверяем при каждом запросе админки (на случай если настройки были изменены)
+add_action( 'admin_init', function() {
+    if ( is_admin() && class_exists('WooCommerce') && current_user_can('manage_options') ) {
+        $current_currency = get_option( 'woocommerce_currency' );
+        if ( $current_currency !== 'RUB' ) {
+            // Валюта не RUB - устанавливаем автоматически
+            update_option( 'woocommerce_currency', 'RUB' );
+            update_option( 'woocommerce_currency_symbol', 'руб.' );
+        }
+    }
+}, 99 );
 
 /**
  * Изменяем формат цены: число + "руб." (рубль после числа)
@@ -935,6 +1021,24 @@ function asker_disable_block_checkout() {
     return false;
 }
 add_filter( 'woocommerce_checkout_is_block_based', 'asker_disable_block_checkout', 10 );
+
+/**
+ * Указываем версию шаблонов WooCommerce для совместимости
+ * Это убирает предупреждение об устаревших шаблонах
+ */
+function asker_wc_template_version() {
+    return '9.0'; // Версия WooCommerce, с которой совместимы наши шаблоны
+}
+add_filter( 'woocommerce_get_template_version', 'asker_wc_template_version' );
+
+/**
+ * Скрываем предупреждение об устаревших шаблонах (опционально)
+ * Раскомментируй, если хочешь скрыть предупреждение
+ */
+// function asker_hide_outdated_template_notice() {
+//     remove_action( 'admin_notices', array( 'WC_Admin_Notices', 'template_file_check_notice' ) );
+// }
+// add_action( 'admin_init', 'asker_hide_outdated_template_notice' );
 
 /**
  * Устанавливаем Россию как страной по умолчанию

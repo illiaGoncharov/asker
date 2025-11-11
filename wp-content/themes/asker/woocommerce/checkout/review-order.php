@@ -1,6 +1,10 @@
 <?php
 /**
  * Кастомный шаблон блока заказа в чекауте
+ *
+ * @see     https://docs.woocommerce.com/document/template-structure/
+ * @package WooCommerce\Templates
+ * @version 5.2.0
  */
 
 defined( 'ABSPATH' ) || exit;
