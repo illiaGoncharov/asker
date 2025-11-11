@@ -25,6 +25,7 @@ require_once get_template_directory() . '/inc/emails.php';
 require_once get_template_directory() . '/inc/seo.php';
 require_once get_template_directory() . '/inc/analytics.php';
 require_once get_template_directory() . '/inc/form-validation.php';
+require_once get_template_directory() . '/inc/schema.php';
 
 /**
  * КРИТИЧНО: Принудительно загружаем front-page.php для главной
