@@ -66,15 +66,24 @@ add_filter( 'post_thumbnail_html', 'asker_add_lazy_to_woocommerce_images', 10, 5
 /**
  * Для галереи товара: первое изображение - eager, остальные - lazy
  */
-function asker_optimize_product_gallery_images( $html, $attachment_id, $size, $main_image ) {
+function asker_optimize_product_gallery_images( $html, $attachment_id, $size ) {
     // Только на странице товара
     if ( ! is_product() ) {
         return $html;
     }
     
+    // Проверяем, является ли это главным изображением товара
+    global $product;
+    $is_main_image = false;
+    if ( $product ) {
+        $is_main_image = ( $product->get_image_id() == $attachment_id );
+    }
+    
     // Если это главное изображение - eager (загружаем сразу)
-    if ( $main_image ) {
-        $html = str_replace( '<img ', '<img loading="eager" ', $html );
+    if ( $is_main_image ) {
+        if ( strpos( $html, 'loading=' ) === false ) {
+            $html = str_replace( '<img ', '<img loading="eager" ', $html );
+        }
     } else {
         // Для миниатюр галереи - lazy
         if ( strpos( $html, 'loading=' ) === false ) {
@@ -84,7 +93,7 @@ function asker_optimize_product_gallery_images( $html, $attachment_id, $size, $m
     
     return $html;
 }
-add_filter( 'woocommerce_single_product_image_thumbnail_html', 'asker_optimize_product_gallery_images', 10, 4 );
+add_filter( 'woocommerce_single_product_image_thumbnail_html', 'asker_optimize_product_gallery_images', 10, 3 );
 
 /**
  * Добавляем fetchpriority="high" для первого изображения товара
@@ -121,15 +130,22 @@ function asker_add_image_dimensions( $attr, $attachment, $size ) {
     $image_meta = wp_get_attachment_metadata( $attachment->ID );
     if ( $image_meta ) {
         // Определяем размеры для указанного размера
-        $image_size = is_array( $size ) ? $size : image_get_intermediate_size( $attachment->ID, $size );
-        
-        if ( $image_size ) {
-            $attr['width'] = $image_size['width'];
-            $attr['height'] = $image_size['height'];
-        } elseif ( isset( $image_meta['width'] ) && isset( $image_meta['height'] ) ) {
-            // Используем оригинальные размеры
-            $attr['width'] = $image_meta['width'];
-            $attr['height'] = $image_meta['height'];
+        if ( is_array( $size ) ) {
+            // Если размер передан как массив [width, height]
+            $attr['width'] = $size[0];
+            $attr['height'] = $size[1];
+        } else {
+            // Пытаемся получить промежуточный размер
+            $image_size = image_get_intermediate_size( $attachment->ID, $size );
+            
+            if ( $image_size && isset( $image_size['width'] ) && isset( $image_size['height'] ) ) {
+                $attr['width'] = $image_size['width'];
+                $attr['height'] = $image_size['height'];
+            } elseif ( isset( $image_meta['width'] ) && isset( $image_meta['height'] ) ) {
+                // Используем оригинальные размеры
+                $attr['width'] = $image_meta['width'];
+                $attr['height'] = $image_meta['height'];
+            }
         }
     }
     

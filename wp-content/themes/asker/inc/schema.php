@@ -23,8 +23,13 @@ function asker_add_organization_schema() {
         'name' => $site_name,
         'url' => $site_url,
         'description' => $site_description ?: 'Интернет-магазин запчастей для водонагревателей',
-        'logo' => wp_get_attachment_image_url( get_theme_mod( 'custom_logo' ), 'full' ) ?: '',
     );
+    
+    // Логотип (только если есть)
+    $logo_url = wp_get_attachment_image_url( get_theme_mod( 'custom_logo' ), 'full' );
+    if ( $logo_url ) {
+        $schema['logo'] = $logo_url;
+    }
     
     // Контактная информация
     if ( $organization_phone || $organization_email ) {
@@ -341,8 +346,22 @@ function asker_add_collection_schema() {
         '@context' => 'https://schema.org',
         '@type' => 'CollectionPage',
         'name' => wp_get_document_title(),
-        'url' => ( is_shop() ? get_permalink( wc_get_page_id( 'shop' ) ) : ( is_product_category() ? get_term_link( get_queried_object() ) : home_url( add_query_arg( array(), $GLOBALS['wp']->request ) ) ) ),
     );
+    
+    // URL страницы
+    if ( is_shop() ) {
+        $schema['url'] = get_permalink( wc_get_page_id( 'shop' ) );
+    } elseif ( is_product_category() ) {
+        $term = get_queried_object();
+        if ( $term ) {
+            $term_link = get_term_link( $term );
+            if ( ! is_wp_error( $term_link ) ) {
+                $schema['url'] = $term_link;
+            }
+        }
+    } else {
+        $schema['url'] = home_url( add_query_arg( array(), $GLOBALS['wp']->request ) );
+    }
     
     // Для категории добавляем описание
     if ( is_product_category() ) {

@@ -90,26 +90,28 @@ add_filter( 'wpcf7_form_elements', 'asker_add_cf7_honeypot' );
 
 /**
  * Валидация honeypot для CF7
+ * Используем фильтр wpcf7_spam для блокировки спама
  */
-function asker_validate_cf7_honeypot( $result, $tag ) {
+function asker_validate_cf7_honeypot( $spam, $submission ) {
     // Проверяем honeypot поле
     if ( isset( $_POST['asker_cf7_honeypot'] ) && ! empty( $_POST['asker_cf7_honeypot'] ) ) {
-        $result->invalidate( $tag, 'Обнаружена подозрительная активность.' );
+        return true; // Помечаем как спам
     }
     
-    return $result;
+    return $spam;
 }
-// Добавляем валидацию для всех полей CF7
+// Добавляем валидацию для CF7 через фильтр спама
 if ( class_exists( 'WPCF7_ContactForm' ) ) {
-    add_filter( 'wpcf7_validate', 'asker_validate_cf7_honeypot', 10, 2 );
+    add_filter( 'wpcf7_spam', 'asker_validate_cf7_honeypot', 10, 2 );
 }
 
 /**
  * Rate limiting для CF7 форм (максимум 5 отправок за 10 минут с одного IP)
+ * Используем фильтр wpcf7_spam для блокировки
  */
-function asker_cf7_rate_limit( $result, $tag ) {
+function asker_cf7_rate_limit( $spam, $submission ) {
     if ( ! class_exists( 'WPCF7_ContactForm' ) ) {
-        return $result;
+        return $spam;
     }
     
     $ip_address = asker_get_client_ip();
@@ -119,15 +121,16 @@ function asker_cf7_rate_limit( $result, $tag ) {
     if ( $attempts === false ) {
         set_transient( $transient_key, 1, 10 * MINUTE_IN_SECONDS );
     } elseif ( $attempts >= 5 ) {
-        $result->invalidate( $tag, 'Слишком много попыток отправки формы. Пожалуйста, подождите несколько минут.' );
+        // Помечаем как спам при превышении лимита
+        return true;
     } else {
         set_transient( $transient_key, $attempts + 1, 10 * MINUTE_IN_SECONDS );
     }
     
-    return $result;
+    return $spam;
 }
 if ( class_exists( 'WPCF7_ContactForm' ) ) {
-    add_filter( 'wpcf7_validate', 'asker_cf7_rate_limit', 5, 2 );
+    add_filter( 'wpcf7_spam', 'asker_cf7_rate_limit', 5, 2 );
 }
 
 /**
@@ -152,6 +155,10 @@ function asker_get_client_ip() {
             
             // Проверяем валидность IP
             if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+                return $ip;
+            }
+            // Если IP не прошел проверку, но это валидный IP - все равно используем его
+            if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
                 return $ip;
             }
         }
