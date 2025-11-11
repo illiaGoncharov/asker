@@ -7720,14 +7720,107 @@ body.thankyou-modal-open {
   text-align: right;
 }
 
-/* Итоговая строка */
-.woocommerce-checkout .woocommerce-checkout-review-order-table .order-total {
-  font-weight: 700;
-  font-size: 18px;
-  color: #333333;
-  border-top: 2px solid #FFEB3B;
-  padding-top: 20px;
+/* ===== ВАЛИДАЦИЯ ФОРМ ===== */
+
+/* Сообщения об ошибках валидации */
+.field-error {
+  display: block;
+  color: #DC3545;
+  font-size: 13px;
+  margin-top: 6px;
+  font-family: var(--font-manrope);
+  line-height: 1.4;
 }
+
+/* Поля с ошибкой */
+input.has-error,
+textarea.has-error,
+select.has-error {
+  border-color: #DC3545 !important;
+  background-color: #FFF5F5;
+}
+
+input.has-error:focus,
+textarea.has-error:focus,
+select.has-error:focus {
+  border-color: #DC3545 !important;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+  outline: none;
+}
+
+/* Стили для WooCommerce checkout */
+.woocommerce-checkout .field-error,
+.checkout__form-card .field-error {
+  color: #DC3545;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.woocommerce-checkout input.has-error,
+.woocommerce-checkout textarea.has-error,
+.woocommerce-checkout select.has-error,
+.checkout__form-card input.has-error,
+.checkout__form-card textarea.has-error {
+  border-color: #DC3545;
+  background-color: #FFF5F5;
+}
+
+/* Стили для Contact Form 7 */
+.wpcf7-form .field-error {
+  color: #DC3545;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.wpcf7-form input.has-error,
+.wpcf7-form textarea.has-error {
+  border-color: #DC3545;
+  background-color: #FFF5F5;
+}
+
+/* Стили для кастомных форм */
+.wholesale-form .field-error,
+.footer__form .field-error {
+  color: #DC3545;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.wholesale-form input.has-error,
+.wholesale-form textarea.has-error,
+.footer__form input.has-error,
+.footer__form textarea.has-error {
+  border-color: #DC3545;
+  background-color: #FFF5F5;
+}
+
+/* Анимация появления ошибки */
+.field-error {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Улучшенная видимость обязательных полей */
+/* Примечание: звездочка для обязательных полей добавляется через placeholder или label */
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .field-error {
+    font-size: 12px;
+    margin-top: 4px;
+  }
+}
+
 
 /* Кнопка подтверждения */
 .woocommerce-checkout #place_order,

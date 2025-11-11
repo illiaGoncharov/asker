@@ -72,6 +72,19 @@ add_action('wp_enqueue_scripts', function () {
             );
         }
 
+        // Скрипт валидации форм
+        $validation_js_path = get_template_directory() . '/assets/js/form-validation.js';
+        if (file_exists($validation_js_path) && is_readable($validation_js_path)) {
+            $validation_js_version = filemtime($validation_js_path) ?: time();
+            wp_enqueue_script(
+                'asker-form-validation',
+                get_template_directory_uri() . '/assets/js/form-validation.js',
+                [],
+                $validation_js_version,
+                true
+            );
+        }
+
         // Скрипт Яндекс.Карт - только на странице контактов
         global $post;
         $is_contact_page = is_page_template('templates/page-contact.php') || 
