@@ -22,6 +22,7 @@ require_once get_template_directory() . '/inc/create-pages-helper.php';
 require_once get_template_directory() . '/inc/customer-levels.php';
 require_once get_template_directory() . '/inc/managers.php';
 require_once get_template_directory() . '/inc/emails.php';
+require_once get_template_directory() . '/inc/seo.php';
 
 /**
  * КРИТИЧНО: Принудительно загружаем front-page.php для главной
