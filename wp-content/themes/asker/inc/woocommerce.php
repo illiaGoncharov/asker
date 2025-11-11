@@ -961,8 +961,8 @@ function asker_set_woocommerce_currency() {
     // Устанавливаем валюту только если она еще не установлена или не RUB
     $current_currency = get_option( 'woocommerce_currency' );
     if ( $current_currency !== 'RUB' ) {
-        update_option( 'woocommerce_currency', 'RUB' );
-        update_option( 'woocommerce_currency_symbol', 'руб.' );
+    update_option( 'woocommerce_currency', 'RUB' );
+    update_option( 'woocommerce_currency_symbol', 'руб.' );
     }
     
     update_option( 'woocommerce_price_thousand_sep', ' ' );
