@@ -1010,6 +1010,8 @@ input[type="button"] {
 
 .filter-block:last-of-type {
   border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .filter-block-title {
@@ -1039,6 +1041,32 @@ input[type="button"] {
   width: 18px;
   height: 18px;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border: 2px solid var(--border-gray);
+  border-radius: 4px;
+  background: var(--bg-white);
+  position: relative;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.filter-checkbox input[type="checkbox"]:checked {
+  background: var(--primary-yellow);
+  border-color: var(--primary-yellow);
+}
+
+.filter-checkbox input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--primary-black);
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
 }
 
 .price-range {
@@ -1069,14 +1097,81 @@ input[type="button"] {
 .price-slider-wrapper {
   margin-top: 16px;
   padding: 0 4px;
+  position: relative;
+  height: 6px;
 }
 
 .price-slider {
+  position: absolute;
+  width: 100%;
   height: 6px;
-  border-radius: 3px;
-  background: linear-gradient(to right, #ddd 0%, var(--primary-yellow) 0%, var(--primary-yellow) 100%, #ddd 100%);
-  position: relative;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.price-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary-yellow);
+  border: 2px solid var(--bg-white);
   cursor: pointer;
+  pointer-events: all;
+  position: relative;
+  z-index: 3;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.price-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary-yellow);
+  border: 2px solid var(--bg-white);
+  cursor: pointer;
+  pointer-events: all;
+  position: relative;
+  z-index: 3;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.price-slider-wrapper::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  background: #ddd;
+  border-radius: 3px;
+  z-index: 1;
+}
+
+.price-slider-wrapper::after {
+  content: '';
+  position: absolute;
+  left: var(--min-percent, 0%);
+  top: 0;
+  width: calc(var(--max-percent, 100%) - var(--min-percent, 0%));
+  height: 6px;
+  background: var(--primary-yellow);
+  border-radius: 3px;
+  z-index: 1;
+}
+
+.price-slider-min {
+  z-index: 2;
+}
+
+.price-slider-max {
+  z-index: 3;
 }
 
 /* Глобально убираем тени у форм и интерактивных элементов */
@@ -1100,7 +1195,13 @@ button,
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
-  margin-top: 20px;
+  margin: 0 0 24px 0;
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  color: var(--primary-black);
+  font-family: var(--font-secondary);
+  box-sizing: border-box;
 }
 
 .filter-reset-btn:hover {
@@ -1259,8 +1360,7 @@ button,
 }
 
 /* Позиционирование в разных контекстах - БЕЗ !important */
-.woocommerce ul.products li.product,
-.shop-product-card,
+/* Убрано отсюда - перенесено в основное правило ниже для .shop-product-card и .woocommerce ul.products li.product */
 .product-card,
 .catalog-product-card {
   position: relative;
@@ -1445,55 +1545,156 @@ button,
 
 /* Боковая панель Shop */
 .shop-sidebar {
-  background: var(--bg-white);
+  /* background: var(--bg-white); */
   border-radius: 12px;
-  padding: 24px;
+  padding-right: 24px;
   height: fit-content;
   position: sticky;
   top: 20px;
-  /* box-shadow: 0 2px 8px rgba(0,0,0,0.05); */
+  width: 100%;
+  box-sizing: border-box;
 }
+
+.shop-sidebar .filters-wrap {
+  width: 100%;
+}
+
 
 /* Основной контент Shop */
 .shop-main {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 22px;
 }
 
 .shop-controls {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border-gray);
+  margin-top: -70px;
+  padding-bottom: 0;
+  border: none;
+  width: 100%;
 }
 
 .shop-result-count {
-  font-size: 14px;
-  color: var(--text-gray);
-  font-family: var(--font-secondary);
+  display: none;
 }
 
 .shop-sort {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 0;
+  cursor: pointer;
+  position: relative;
+  margin: 0;
+  padding: 0;
+}
+
+.shop-sort__label {
+  font-size: 14px;
+  color: var(--primary-black);
+  font-family: var(--font-secondary);
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.shop-sort__arrow {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-left: 6px;
+  margin-right: 0;
+  vertical-align: top;
+  margin-top: 2px;
+  position: relative;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.shop-sort__arrow::before,
+.shop-sort__arrow::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 2px;
+  background-color: var(--primary-black);
+  top: 30%;
+}
+
+.shop-sort__arrow::before {
+  left: 0;
+  transform: translateY(-50%) rotate(45deg);
+  transform-origin: left center;
+}
+
+.shop-sort__arrow::after {
+  right: 0;
+  transform: translateY(-50%) rotate(-45deg);
+  transform-origin: right center;
+}
+
+.shop-sort .woocommerce-ordering {
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.shop-sort .woocommerce-ordering form {
+  display: block;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .shop-sort select,
 .woocommerce-ordering select {
-  padding: 8px 32px 8px 12px;
-  border: 1px solid var(--border-gray);
-  border-radius: 4px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
   font-size: 14px;
+  color: transparent;
   cursor: pointer;
-  background: var(--bg-white);
+  background: transparent;
   font-family: var(--font-secondary);
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  display: block;
+  text-indent: -9999px;
+  overflow: hidden;
+  outline: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  z-index: 1;
+  margin: 0;
+}
+
+.shop-sort select:focus,
+.woocommerce-ordering select:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.shop-sort select option {
+  color: var(--primary-black);
 }
 
 /* Скрываем стандартные элементы WooCommerce */
@@ -1540,13 +1741,13 @@ button,
   clear: none;
 }
 
-/* Карточка товара Shop */
-.shop-product-card,
+
+
 .woocommerce ul.products li.product {
   background: var(--bg-white);
   /* border: 1px solid var(--border-gray); */
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: 40px;
+  padding: 20px; /* Единое правило, переопределяем возможные стили WooCommerce */
   position: relative;
   transition: all 0.3s ease;
   display: flex;
@@ -1555,7 +1756,25 @@ button,
   margin: 0;
   overflow: hidden;
   box-shadow: none !important; /* Убираем тень по умолчанию (включая WooCommerce) */
+  height: 100%; /* Чтобы карточка занимала всю высоту */
 }
+
+/* Карточка товара Shop - отдельное правило */
+.shop-product-card {
+  background: var(--bg-white);
+  /* border: 1px solid var(--border-gray); */
+  border-radius: 12px;
+  padding: 0; /* Единое правило, переопределяем возможные стили WooCommerce */
+  position: relative;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  margin: 0;
+  overflow: hidden;
+  box-shadow: none !important; /* Убираем тень по умолчанию (включая WooCommerce) */
+  height: 100%; /* Чтобы карточка занимала всю высоту */
+} 
 
 /* Дополнительная защита от WooCommerce стилей - базовое состояние */
 .shop-product-card,
@@ -1564,6 +1783,7 @@ button,
 body.woocommerce ul.products li.product {
   box-shadow: none !important;
   transform: none !important; /* Убираем transform по умолчанию */
+  /* Padding уже задан выше, не дублируем */
 }
 
 /* Убираем тени у всех вложенных элементов при hover */
@@ -1617,7 +1837,7 @@ body.woocommerce ul.products li.product:hover {
 .shop-product-image,
 .woocommerce ul.products li.product .woocommerce-loop-product__link {
   width: 100%;
-  height: 300px;
+  height: 222px;
   margin-bottom: 0;
   border-radius: 8px;
   overflow: hidden;
@@ -1628,6 +1848,7 @@ body.woocommerce ul.products li.product:hover {
   position: relative;
   text-decoration: none;
   box-shadow: none !important; /* Убираем тени у вложенных элементов */
+  border-radius: 40px;lba
 }
 
 .shop-product-image a {
@@ -1645,7 +1866,7 @@ body.woocommerce ul.products li.product:hover {
   margin: 0 !important;
   width: 100% !important;
   height: 100% !important;
-  object-fit: contain;
+  object-fit: conver;
   transition: transform 0.3s ease;
   background: var(--bg-white)
 }
@@ -1661,13 +1882,16 @@ body.woocommerce ul.products li.product:hover {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
+  min-height: 0; /* Для правильной работы flex-grow */
 }
 
-/* Контейнер для цены и кнопки на одной линии */
+/* Контейнер для цены и кнопки - на одной горизонтальной линии, центрированы и прилипают к низу */
 .shop-product-bottom {
   display: flex;
-  justify-content: space-between;
+  flex-direction: row;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-top: auto;
 }
 
@@ -1739,7 +1963,7 @@ body.woocommerce ul.products li.product:hover {
 .shop-product-actions,
 .woocommerce ul.products li.product .button-wrapper {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: center;
   margin: 0;
   padding: 0;
@@ -2451,6 +2675,63 @@ body.woocommerce-account .container .section__title,
   font-family: var(--font-secondary);
 }
 
+/* Кнопка открытия фильтров на мобильных */
+.filters-toggle-btn {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--bg-white);
+  border: 1px solid var(--border-gray);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--primary-black);
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: all 0.2s ease;
+  font-family: var(--font-primary);
+}
+
+.filters-toggle-btn:hover {
+  background: var(--bg-light);
+  border-color: var(--primary-black);
+}
+
+.filters-toggle-btn svg {
+  flex-shrink: 0;
+}
+
+/* Заголовок фильтров с кнопкой закрытия */
+.filters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.filters-close-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--primary-black);
+  transition: color 0.2s ease;
+}
+
+.filters-close-btn:hover {
+  color: var(--text-gray);
+}
+
+.filters-title {
+  margin: 0;
+}
+
 /* Адаптивность Shop */
 @media (max-width: 1024px) {
   .shop-wrapper {
@@ -2463,21 +2744,180 @@ body.woocommerce-account .container .section__title,
   }
   
   .shop-main .products,
-  .woocommerce .products {
+  .woocommerce .products,
+  .woocommerce ul.products {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 768px) {
+  /* Кнопка открытия фильтров */
+  .filters-toggle-btn {
+    display: flex;
+  }
+
+  /* Боковая панель - скрыта по умолчанию на мобильных */
+  .shop-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-white);
+    z-index: 9999;
+    padding: 20px;
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .shop-sidebar.active {
+    transform: translateX(0);
+  }
+
+  .filters-wrap {
+    max-width: 100%;
+  }
+
+  .filters-header {
+    margin-bottom: 24px;
+  }
+
+  .filters-close-btn {
+    display: flex;
+  }
+
+  .filters-title {
+    font-size: 20px;
+  }
+
+  /* Overlay для затемнения фона */
+  .shop-sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .shop-sidebar-overlay.active {
+    display: block;
+    opacity: 1;
+  }
+
+  /* Основной контент */
+  .shop-main {
+    width: 100%;
+    max-width: 100%;
+  }
+
   .shop-main .products,
-  .woocommerce .products {
-    grid-template-columns: 1fr;
+  .woocommerce .products,
+  .woocommerce ul.products {
+    grid-template-columns: 1fr !important;
+    gap: 16px;
+    width: 100%;
+    max-width: 100%;
   }
   
   .shop-controls {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    gap: 16px;
+    margin-top: 0;
+  }
+
+  .shop-sort {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* Хлебные крошки */
+  .breadcrumbs {
+    font-size: 12px;
+    margin-top: 20px !important;
+    margin-bottom: 16px !important;
+    flex-wrap: wrap;
+  }
+
+  /* Заголовок страницы */
+  .page-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+
+  /* Карточки товаров на мобильных */
+  .woocommerce ul.products li.product,
+  .shop-product-card {
+    padding: 16px;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box;
+  }
+
+  /* Фильтры */
+  .filter-block {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+  }
+
+  .filter-block-title {
+    font-size: 15px;
+  }
+
+  .price-range {
+    flex-direction: column;
+    align-items: stretch;
     gap: 12px;
+  }
+
+  .price-separator {
+    display: none;
+  }
+
+  .price-input {
+    width: 100%;
+  }
+
+  .filter-reset-btn {
+    width: 100%;
+    text-align: center;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .filters-toggle-btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .shop-main .products,
+  .woocommerce .products,
+  .woocommerce ul.products {
+    gap: 12px;
+  }
+
+  .woocommerce ul.products li.product,
+  .shop-product-card {
+    padding: 12px;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .page-title {
+    font-size: 20px;
   }
 }
 
@@ -2543,6 +2983,7 @@ body.woocommerce-account .container .section__title,
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  object-fit: cover;
 }
 
 .product-image img {

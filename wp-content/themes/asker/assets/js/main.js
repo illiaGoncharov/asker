@@ -9,13 +9,13 @@ document.addEventListener('DOMContentLoaded', function() {
         navMenuToggle.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            navDropdownMenu.classList.toggle('active');
+            navDropdownMenu.classList.toggle('show');
         });
         
         // Закрываем меню при клике вне его
         document.addEventListener('click', function(e) {
             if (!navMenuToggle.contains(e.target) && !navDropdownMenu.contains(e.target)) {
-                navDropdownMenu.classList.remove('active');
+                navDropdownMenu.classList.remove('show');
             }
         });
     }
@@ -315,9 +315,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             }
-                
-                // Обновляем счетчик в хедере
-                updateWishlistCounter();
+            
+            // Обновляем счетчик в хедере
+            updateWishlistCounter();
         });
         
         // Синхронизируем избранное при загрузке страницы (если пользователь залогинен)
@@ -539,7 +539,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             // Для .add_to_cart_button - WooCommerce обработает сам, но мы тоже можем добавить защиту
         }, true); // Используем capture фазу для раннего перехвата
-    });
     
     // Функция для обновления счетчика избранного (глобальная)
     // Убираем рекурсивный вызов, который создавал бесконечный цикл
@@ -725,26 +724,245 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 300);
         }, 3000);
     }
+    
+}); // Конец DOMContentLoaded для избранного и корзины
 
-    // Фильтры каталога - переход по категориям
-    document.querySelectorAll('.filter-checkbox input[type="checkbox"]').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const url = this.getAttribute('data-url');
-            if (url && this.checked) {
-                // Снимаем отметку с других чекбоксов
-                document.querySelectorAll('.filter-checkbox input[type="checkbox"]').forEach(cb => {
-                    if (cb !== this) {
-                        cb.checked = false;
-                    }
-                });
-                // Переходим на страницу категории
-                window.location.href = url;
-            } else if (!this.checked) {
-                // Если снята галочка - возвращаемся в общий каталог
-                window.location.href = document.querySelector('.filter-reset-btn').href;
+// Мобильные фильтры - открытие/закрытие боковой панели
+document.addEventListener('DOMContentLoaded', function() {
+    const filtersToggleBtn = document.querySelector('.filters-toggle-btn');
+    const filtersCloseBtn = document.querySelector('.filters-close-btn');
+    const shopSidebar = document.querySelector('.shop-sidebar');
+    const shopSidebarOverlay = document.querySelector('.shop-sidebar-overlay');
+    
+    // Закрытие фильтров
+    function closeFilters() {
+        if (shopSidebar) {
+            shopSidebar.classList.remove('active');
+        }
+        if (shopSidebarOverlay) {
+            shopSidebarOverlay.classList.remove('active');
+        }
+        document.body.style.overflow = ''; // Возвращаем прокрутку страницы
+    }
+    
+    // Открытие фильтров
+    if (filtersToggleBtn && shopSidebar) {
+        filtersToggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            shopSidebar.classList.add('active');
+            if (shopSidebarOverlay) {
+                shopSidebarOverlay.classList.add('active');
             }
+            document.body.style.overflow = 'hidden'; // Блокируем прокрутку страницы
         });
+    }
+    
+    // Закрытие через кнопку закрытия
+    if (filtersCloseBtn) {
+        filtersCloseBtn.addEventListener('click', closeFilters);
+    }
+    
+    // Закрытие при клике на overlay
+    if (shopSidebarOverlay) {
+        shopSidebarOverlay.addEventListener('click', closeFilters);
+    }
+    
+    // Закрытие при нажатии Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && shopSidebar && shopSidebar.classList.contains('active')) {
+            closeFilters();
+        }
     });
+});
+
+// Фильтры каталога - переход по категориям (с делегированием событий для динамических элементов)
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Filter script loaded'); // Для отладки
+    
+    // Обработчик изменения чекбокса
+    function handleCategoryChange(checkbox) {
+        const url = checkbox.getAttribute('data-url');
+        console.log('Checkbox changed:', checkbox.checked, 'URL:', url); // Для отладки
+        
+        if (!url) {
+            console.error('No URL found for checkbox');
+            return;
+        }
+        
+        if (checkbox.checked) {
+            // Снимаем отметку с других чекбоксов
+            document.querySelectorAll('.filter-checkbox input[type="checkbox"]').forEach(cb => {
+                if (cb !== checkbox) {
+                    cb.checked = false;
+                }
+            });
+            // Переходим на страницу категории
+            console.log('Navigating to:', url);
+            window.location.href = url;
+        } else {
+            // Если снята галочка - возвращаемся в общий каталог
+            const resetBtn = document.querySelector('.filter-reset-btn');
+            if (resetBtn && resetBtn.href) {
+                console.log('Resetting to shop page:', resetBtn.href);
+                window.location.href = resetBtn.href;
+            }
+        }
+    }
+    
+    // Используем делегирование событий для работы с динамически добавляемыми элементами
+    document.addEventListener('change', function(e) {
+        // Проверяем, что изменение было на чекбоксе категории
+        if (e.target && e.target.matches('.filter-checkbox input[type="checkbox"]')) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleCategoryChange(e.target);
+        }
+    });
+    
+    // Также обрабатываем клики на label (на случай если change не срабатывает)
+    document.addEventListener('click', function(e) {
+        // Проверяем клик на label или span внутри label
+        const label = e.target.closest('.filter-checkbox');
+        if (label && !e.target.matches('input[type="checkbox"]')) {
+            e.preventDefault();
+            e.stopPropagation();
+            const checkbox = label.querySelector('input[type="checkbox"]');
+            if (checkbox && !checkbox.disabled) {
+                // Переключаем состояние чекбокса вручную
+                checkbox.checked = !checkbox.checked;
+                // Вызываем обработчик
+                handleCategoryChange(checkbox);
+            }
+        }
+    });
+    
+    // Инициализация для уже существующих элементов
+    document.querySelectorAll('.filter-checkbox input[type="checkbox"]').forEach(checkbox => {
+        console.log('Found checkbox:', checkbox.getAttribute('data-url'));
+    });
+});
+
+// Range slider для фильтра цены в shop sidebar
+document.addEventListener('DOMContentLoaded', function() {
+    const priceSliderMin = document.querySelector('.price-slider-min');
+    const priceSliderMax = document.querySelector('.price-slider-max');
+    const priceInputMin = document.querySelector('input[name="min_price"]');
+    const priceInputMax = document.querySelector('input[name="max_price"]');
+    const priceSliderWrapper = document.querySelector('.price-slider-wrapper');
+    
+    // Получаем динамические значения min/max из data-атрибутов
+    let dynamicMin = 0;
+    let dynamicMax = 256000;
+    
+    if (priceSliderWrapper) {
+        dynamicMin = parseInt(priceSliderWrapper.getAttribute('data-min')) || 0;
+        dynamicMax = parseInt(priceSliderWrapper.getAttribute('data-max')) || 256000;
+    } else if (priceInputMin && priceInputMax) {
+        // Fallback: получаем из input полей
+        dynamicMin = parseInt(priceInputMin.getAttribute('data-min')) || parseInt(priceInputMin.getAttribute('min')) || 0;
+        dynamicMax = parseInt(priceInputMax.getAttribute('data-max')) || parseInt(priceInputMax.getAttribute('max')) || 256000;
+    }
+    
+    // Функция обновления фильтра по цене
+    let priceFilterTimeout;
+    function updatePriceFilterFromInputs() {
+        clearTimeout(priceFilterTimeout);
+        // Добавляем небольшую задержку для слайдера, чтобы не перезагружать страницу при каждом движении
+        priceFilterTimeout = setTimeout(function() {
+            const minPrice = priceInputMin.value;
+            const maxPrice = priceInputMax.value;
+            
+            const url = new URL(window.location);
+            // Удаляем старые параметры цены
+            url.searchParams.delete('min_price');
+            url.searchParams.delete('max_price');
+            
+            // Добавляем параметры цены только если они отличаются от значений по умолчанию
+            // или если они были явно изменены пользователем
+            if (minPrice && minPrice != dynamicMin) {
+                url.searchParams.set('min_price', minPrice);
+            }
+            if (maxPrice && maxPrice != dynamicMax) {
+                url.searchParams.set('max_price', maxPrice);
+            }
+            
+            // Перезагружаем страницу с новыми параметрами
+            window.location.href = url.toString();
+        }, 500); // Задержка 500мс для слайдера
+    }
+    
+    if (priceSliderMin && priceSliderMax && priceInputMin && priceInputMax) {
+        // Синхронизация slider -> input
+        priceSliderMin.addEventListener('input', function() {
+            const minValue = parseInt(this.value);
+            const maxValue = parseInt(priceSliderMax.value);
+            if (minValue > maxValue) {
+                priceSliderMax.value = minValue;
+                priceInputMax.value = minValue;
+            }
+            priceInputMin.value = minValue;
+            updatePriceSliderBackground();
+            // Применяем фильтр при изменении слайдера
+            updatePriceFilterFromInputs();
+        });
+        
+        priceSliderMax.addEventListener('input', function() {
+            const maxValue = parseInt(this.value);
+            const minValue = parseInt(priceSliderMin.value);
+            if (maxValue < minValue) {
+                priceSliderMin.value = maxValue;
+                priceInputMin.value = maxValue;
+            }
+            priceInputMax.value = maxValue;
+            updatePriceSliderBackground();
+            // Применяем фильтр при изменении слайдера
+            updatePriceFilterFromInputs();
+        });
+        
+        // Синхронизация input -> slider
+        priceInputMin.addEventListener('input', function() {
+            const minValue = parseInt(this.value) || 0;
+            const maxValue = parseInt(priceSliderMax.value);
+            if (minValue > maxValue) {
+                priceSliderMax.value = minValue;
+                priceInputMax.value = minValue;
+            }
+            priceSliderMin.value = minValue;
+            updatePriceSliderBackground();
+        });
+        
+        priceInputMax.addEventListener('input', function() {
+            const maxValue = parseInt(this.value) || 256000;
+            const minValue = parseInt(priceSliderMin.value);
+            if (maxValue < minValue) {
+                priceSliderMin.value = maxValue;
+                priceInputMin.value = maxValue;
+            }
+            priceSliderMax.value = maxValue;
+            updatePriceSliderBackground();
+        });
+        
+        // Функция обновления фона слайдера
+        function updatePriceSliderBackground() {
+            const minValue = parseInt(priceSliderMin.value);
+            const maxValue = parseInt(priceSliderMax.value);
+            const sliderMax = parseInt(priceSliderMax.getAttribute('max')) || dynamicMax;
+            
+            // Вычисляем проценты относительно динамического максимума
+            const minPercent = sliderMax > 0 ? (minValue / sliderMax) * 100 : 0;
+            const maxPercent = sliderMax > 0 ? (maxValue / sliderMax) * 100 : 100;
+            
+            const wrapper = document.querySelector('.price-slider-wrapper');
+            if (wrapper) {
+                wrapper.style.setProperty('--min-percent', minPercent + '%');
+                wrapper.style.setProperty('--max-percent', maxPercent + '%');
+            }
+        }
+        
+        // Инициализация при загрузке
+        updatePriceSliderBackground();
+    }
+});
 
     // Простой слайдер цены (визуальный, без jQuery UI)
     const priceSlider = document.getElementById('price-slider');
@@ -1405,6 +1623,57 @@ if (document.readyState === 'loading') {
         }); // Конец jQuery(document).ready для кнопок +/- и корзины
     }
     
+    // Кликабельная сортировка - открываем select при клике на текст/стрелку
+    document.addEventListener('DOMContentLoaded', function() {
+        const shopSort = document.querySelector('.shop-sort');
+        if (shopSort) {
+            const select = shopSort.querySelector('select');
+            const label = shopSort.querySelector('.shop-sort__label');
+            
+            if (select && label) {
+                // Маппинг значений на тексты
+                const sortLabels = {
+                    'menu_order': 'Популярности',
+                    'popularity': 'Популярности',
+                    'rating': 'Рейтингу',
+                    'date': 'Новизне',
+                    'price': 'Цене: по возрастанию',
+                    'price-desc': 'Цене: по убыванию'
+                };
+                
+                // Функция обновления текста
+                function updateSortLabel() {
+                    const selectedValue = select.value;
+                    const selectedOption = select.options[select.selectedIndex];
+                    const optionText = selectedOption ? selectedOption.text.trim() : '';
+                    
+                    // Используем текст из option, если есть, иначе из маппинга
+                    if (optionText) {
+                        label.textContent = 'Сортировать по ' + optionText.toLowerCase();
+                    } else if (sortLabels[selectedValue]) {
+                        label.textContent = 'Сортировать по ' + sortLabels[selectedValue].toLowerCase();
+                    }
+                }
+                
+                // Обновляем при загрузке страницы
+                updateSortLabel();
+                
+                // Обновляем при изменении select
+                select.addEventListener('change', updateSortLabel);
+                
+                // При клике на весь блок сортировки открываем select
+                shopSort.addEventListener('click', function(e) {
+                    // Не открываем, если клик был непосредственно на select
+                    if (e.target !== select) {
+                        e.preventDefault();
+                        select.focus();
+                        select.click();
+                    }
+                });
+            }
+        }
+    });
+
     // Запускаем инициализацию
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initJQueryCode);

@@ -65,11 +65,29 @@ if (!class_exists('WooCommerce')) {
             ?>
         </h1>
 
+        <!-- Кнопка открытия фильтров на мобильных -->
+        <button class="filters-toggle-btn" aria-label="Открыть фильтры">
+            <span>Фильтры</span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+
+        <!-- Overlay для мобильных фильтров -->
+        <div class="shop-sidebar-overlay"></div>
+
         <div class="shop-wrapper">
             <!-- Боковая панель с фильтрами -->
             <aside class="shop-sidebar">
                 <div class="filters-wrap">
-                    <h3 class="filters-title">Фильтры</h3>
+                    <div class="filters-header">
+                        <h3 class="filters-title">Фильтры</h3>
+                        <button class="filters-close-btn" aria-label="Закрыть фильтры">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15 5L5 15M5 5l10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+                    </div>
 
                     <!-- Фильтр по категориям -->
                     <div class="filter-block">
@@ -86,6 +104,10 @@ if (!class_exists('WooCommerce')) {
                                 foreach ($product_categories as $category):
                                     $checked = '';
                                     $cat_url = get_term_link($category);
+                                    // Проверяем, что URL получен без ошибок
+                                    if (is_wp_error($cat_url)) {
+                                        $cat_url = '';
+                                    }
                                     if (is_product_category() && get_queried_object_id() == $category->term_id) {
                                         $checked = 'checked';
                                     }
@@ -105,7 +127,29 @@ if (!class_exists('WooCommerce')) {
                         </div>
                     </div>
 
+                    <!-- Сброс фильтров -->
+                    <a href="<?php echo get_permalink(wc_get_page_id('shop')); ?>" class="filter-reset-btn">
+                        Показать все категории
+                    </a>
+
                     <!-- Фильтр по цене -->
+                    <?php
+                    // Получаем динамический диапазон цен товаров
+                    $price_range = asker_get_product_price_range();
+                    $default_min = $price_range['min'];
+                    $default_max = $price_range['max'];
+                    
+                    // ВРЕМЕННО: отладка (убрать после проверки)
+                    // var_dump($price_range); // Раскомментировать для проверки значений
+                    
+                    // Используем значения из GET или значения по умолчанию
+                    $current_min = isset($_GET['min_price']) && $_GET['min_price'] !== '' 
+                        ? intval($_GET['min_price']) 
+                        : $default_min;
+                    $current_max = isset($_GET['max_price']) && $_GET['max_price'] !== '' 
+                        ? intval($_GET['max_price']) 
+                        : $default_max;
+                    ?>
                     <div class="filter-block">
                         <h4 class="filter-block-title">Цена, ₽</h4>
                         <div class="filter-block-content">
@@ -114,23 +158,40 @@ if (!class_exists('WooCommerce')) {
                                        name="min_price" 
                                        placeholder="От" 
                                        class="price-input" 
-                                       value="<?php echo isset($_GET['min_price']) ? esc_attr($_GET['min_price']) : '6000'; ?>"
-                                       min="0">
+                                       value="<?php echo esc_attr($current_min); ?>"
+                                       min="<?php echo esc_attr($default_min); ?>"
+                                       max="<?php echo esc_attr($default_max); ?>"
+                                       data-min="<?php echo esc_attr($default_min); ?>"
+                                       data-max="<?php echo esc_attr($default_max); ?>">
                                 <span class="price-separator">—</span>
                                 <input type="number" 
                                        name="max_price" 
                                        placeholder="До" 
                                        class="price-input" 
-                                       value="<?php echo isset($_GET['max_price']) ? esc_attr($_GET['max_price']) : '256000'; ?>"
-                                       min="0">
+                                       value="<?php echo esc_attr($current_max); ?>"
+                                       min="<?php echo esc_attr($default_min); ?>"
+                                       max="<?php echo esc_attr($default_max); ?>"
+                                       data-min="<?php echo esc_attr($default_min); ?>"
+                                       data-max="<?php echo esc_attr($default_max); ?>">
+                            </div>
+                            <div class="price-slider-wrapper" 
+                                 data-min="<?php echo esc_attr($default_min); ?>" 
+                                 data-max="<?php echo esc_attr($default_max); ?>">
+                                <input type="range" 
+                                       class="price-slider price-slider-min" 
+                                       min="<?php echo esc_attr($default_min); ?>" 
+                                       max="<?php echo esc_attr($default_max); ?>" 
+                                       value="<?php echo esc_attr($current_min); ?>"
+                                       step="1000">
+                                <input type="range" 
+                                       class="price-slider price-slider-max" 
+                                       min="<?php echo esc_attr($default_min); ?>" 
+                                       max="<?php echo esc_attr($default_max); ?>" 
+                                       value="<?php echo esc_attr($current_max); ?>"
+                                       step="1000">
                             </div>
                         </div>
                     </div>
-
-                    <!-- Сброс фильтров -->
-                    <a href="<?php echo get_permalink(wc_get_page_id('shop')); ?>" class="filter-reset-btn">
-                        Показать все категории
-                    </a>
                 </div>
             </aside>
 
@@ -149,6 +210,8 @@ if (!class_exists('WooCommerce')) {
                         ?>
                     </div>
                     <div class="shop-sort">
+                        <span class="shop-sort__label">Сортировать по популярности</span>
+                        <span class="shop-sort__arrow"></span>
                         <?php woocommerce_catalog_ordering(); ?>
                     </div>
                 </div>

@@ -2344,6 +2344,130 @@ function asker_fix_svg_media_library($response, $attachment, $meta) {
  */
 
 /**
+ * Получить минимальную и максимальную цену товаров в каталоге
+ * 
+ * Функция использует WooCommerce API для получения цен всех товаров.
+ * Это более надежный способ, чем прямой SQL запрос, так как учитывает
+ * вариативные товары, скидки и другие особенности WooCommerce.
+ * 
+ * @return array Массив с ключами 'min' и 'max' (округленные до тысяч)
+ */
+function asker_get_product_price_range() {
+    // Проверяем, что WooCommerce активен
+    if (!class_exists('WooCommerce')) {
+        return [
+            'min' => 0,
+            'max' => 256000
+        ];
+    }
+    
+    // Используем кеш для оптимизации (кеш на 1 час)
+    $cache_key = 'asker_price_range';
+    
+    // ВРЕМЕННО: очищаем кеш для отладки (раскомментировать для принудительного обновления)
+    delete_transient($cache_key);
+    
+    $cached = get_transient($cache_key);
+    
+    if ($cached !== false) {
+        return $cached;
+    }
+    
+    $min_price = null;
+    $max_price = null;
+    
+    // Получаем все опубликованные товары через WP_Query для оптимизации
+    $args = [
+        'post_type' => 'product',
+        'post_status' => 'publish',
+        'posts_per_page' => -1, // Все товары
+        'fields' => 'ids', // Только ID для оптимизации
+        'meta_query' => [
+            [
+                'key' => '_price',
+                'value' => 0,
+                'compare' => '>',
+                'type' => 'DECIMAL'
+            ]
+        ]
+    ];
+    
+    $query = new WP_Query($args);
+    
+    if ($query->have_posts()) {
+        foreach ($query->posts as $product_id) {
+            $product = wc_get_product($product_id);
+            
+            if (!$product) {
+                continue;
+            }
+            
+            // Получаем цену товара (учитывает скидки и вариации)
+            $price = $product->get_price();
+            
+            // Пропускаем товары без цены или с нулевой ценой
+            if (empty($price) || floatval($price) <= 0) {
+                continue;
+            }
+            
+            $price = floatval($price);
+            
+            // Обновляем минимум и максимум
+            if ($min_price === null || $price < $min_price) {
+                $min_price = $price;
+            }
+            
+            if ($max_price === null || $price > $max_price) {
+                $max_price = $price;
+            }
+        }
+        
+        wp_reset_postdata();
+    }
+    
+    // Если цены найдены, округляем до тысяч
+    if ($min_price !== null && $max_price !== null) {
+        $min_price = floor($min_price / 1000) * 1000; // Округляем вниз до тысяч
+        $max_price = ceil($max_price / 1000) * 1000; // Округляем вверх до тысяч
+        
+        // Минимум должен быть хотя бы 0
+        $min_price = max(0, $min_price);
+        
+        $result = [
+            'min' => intval($min_price),
+            'max' => intval($max_price)
+        ];
+        
+        // Сохраняем в кеш на 1 час
+        set_transient($cache_key, $result, HOUR_IN_SECONDS);
+        
+        return $result;
+    }
+    
+    // Значения по умолчанию, если товаров нет или цены не найдены
+    $default = [
+        'min' => 0,
+        'max' => 256000
+    ];
+    
+    // Сохраняем в кеш даже значения по умолчанию (на 5 минут)
+    set_transient($cache_key, $default, 5 * MINUTE_IN_SECONDS);
+    
+    return $default;
+}
+
+/**
+ * Очистка кеша диапазона цен при обновлении товара
+ * Это нужно, чтобы диапазон цен обновлялся автоматически
+ */
+add_action('woocommerce_update_product', 'asker_clear_price_range_cache');
+add_action('woocommerce_new_product', 'asker_clear_price_range_cache');
+add_action('woocommerce_delete_product', 'asker_clear_price_range_cache');
+function asker_clear_price_range_cache() {
+    delete_transient('asker_price_range');
+}
+
+/**
  * Фильтр товаров по цене (min_price и max_price из GET параметров)
  * Применяется ТОЛЬКО если есть GET параметры
  */
@@ -2363,37 +2487,44 @@ function asker_price_filter_query($query) {
     $query->set('post_type', 'product');
     
     // Фильтр по цене применяется ТОЛЬКО если есть GET параметры
-    $min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? floatval($_GET['min_price']) : 0;
-    $max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? floatval($_GET['max_price']) : 0;
+    $min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? floatval($_GET['min_price']) : null;
+    $max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? floatval($_GET['max_price']) : null;
     
     // Применяем фильтр только если есть явные параметры в URL
-    if ($min_price > 0 || $max_price > 0) {
+    if ($min_price !== null || $max_price !== null) {
         $meta_query = $query->get('meta_query') ?: [];
         
-        if ($min_price > 0 && $max_price > 0) {
+        // WooCommerce хранит цену в _price (минимальная цена товара)
+        // Используем правильный способ фильтрации через meta_query
+        if ($min_price !== null && $max_price !== null && $min_price > 0 && $max_price > 0) {
+            // Диапазон цен - используем BETWEEN для более точной фильтрации
             $meta_query[] = [
                 'key' => '_price',
                 'value' => [$min_price, $max_price],
                 'compare' => 'BETWEEN',
-                'type' => 'NUMERIC'
+                'type' => 'DECIMAL'
             ];
-        } elseif ($min_price > 0) {
+        } elseif ($min_price !== null && $min_price > 0) {
+            // Только минимальная цена
             $meta_query[] = [
                 'key' => '_price',
                 'value' => $min_price,
                 'compare' => '>=',
-                'type' => 'NUMERIC'
+                'type' => 'DECIMAL'
             ];
-        } elseif ($max_price > 0) {
+        } elseif ($max_price !== null && $max_price > 0) {
+            // Только максимальная цена
             $meta_query[] = [
                 'key' => '_price',
                 'value' => $max_price,
                 'compare' => '<=',
-                'type' => 'NUMERIC'
+                'type' => 'DECIMAL'
             ];
         }
         
-        $query->set('meta_query', $meta_query);
+        if (!empty($meta_query)) {
+            $query->set('meta_query', $meta_query);
+        }
     }
 }
 add_action('pre_get_posts', 'asker_price_filter_query', 20);
