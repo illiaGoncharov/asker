@@ -6,8 +6,17 @@
 .site-header {
   background: var(--bg-white);
   border-bottom: 1px solid var(--border-gray);
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
   z-index: 100;
+  transition: box-shadow 0.3s ease;
+}
+
+.site-header.scrolled {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .header-top {
@@ -20,14 +29,14 @@
 .header-main {
   padding: 16px 0;
   position: relative;
-  z-index: 100;
+  z-index: 1;
 }
 
 .header-main .container {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 30px;
+  gap: 15px;
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
@@ -57,7 +66,9 @@
   color: var(--primary-black);
   border: none;
   border-radius: 50px;
-  padding: 12px 24px;
+  width: 200px;
+  height: 50px;
+  padding: 0;
   font-family: var(--font-manrope);
   font-weight: 500;
   font-size: 14px;
@@ -65,10 +76,12 @@
   transition: opacity 0.2s ease;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   text-decoration: none;
   box-shadow: none;
   outline: none;
+  flex-shrink: 0;
 }
 
 .burger-icon {
@@ -394,12 +407,18 @@ a.btn-catalog:hover {
 .btn-nav-menu {
   background: transparent;
   border: none;
-  padding: 8px;
+  width: 50px;
+  height: 50px;
+  padding: 0;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 24px;
   color: var(--primary-black);
   border-radius: 4px;
   transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .btn-nav-menu:hover {
@@ -639,26 +658,14 @@ a.btn-catalog:hover {
 
 /* Адаптивность хедера */
 @media (max-width: 768px) {
-  .mobile-menu-toggle {
-    display: flex;
-  }
-  
-  .nav-dropdown,
-  .btn-catalog {
-    display: none;
+  .header-main {
+    padding: 12px 0;
   }
   
   .header-main .container {
-    flex-wrap: wrap;
-    gap: 15px;
-  }
-  
-  .search-bar {
-    order: 3;
-    flex: 1 1 100%;
-    margin: 15px 0 0 0;
-    min-width: auto;
-    max-width: none;
+    flex-wrap: nowrap;
+    gap: 12px;
+    padding: 0 12px;
   }
   
   .header-actions {

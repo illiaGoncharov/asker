@@ -22,24 +22,7 @@ img { max-width: 100%; height: auto; display: block; }
 /* Контейнер и сетка */
 .container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 16px; }
 
-/* Хедер должен растягиваться на весь экран */
-.site-header {
-  width: 100vw;
-  max-width: none;
-  margin: 0;
-  padding: 0;
-  position: relative;
-  left: 50%;
-  right: 50%;
-  margin-left: -50vw;
-  margin-right: -50vw;
-}
-
-.site-header .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
+/* Хедер - стили перенесены в header.css */
 .grid { display: grid; gap: 16px; }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
 

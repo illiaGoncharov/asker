@@ -962,7 +962,7 @@ function asker_set_woocommerce_currency() {
     $current_currency = get_option( 'woocommerce_currency' );
     if ( $current_currency !== 'RUB' ) {
     update_option( 'woocommerce_currency', 'RUB' );
-    update_option( 'woocommerce_currency_symbol', 'руб.' );
+    update_option( 'woocommerce_currency_symbol', '₽' );
     }
     
     update_option( 'woocommerce_price_thousand_sep', ' ' );
@@ -981,7 +981,7 @@ add_action( 'admin_init', function() {
         if ( $current_currency !== 'RUB' ) {
             // Валюта не RUB - устанавливаем автоматически
             update_option( 'woocommerce_currency', 'RUB' );
-            update_option( 'woocommerce_currency_symbol', 'руб.' );
+            update_option( 'woocommerce_currency_symbol', '₽' );
         }
     }
 }, 99 );
@@ -1000,7 +1000,7 @@ add_filter( 'woocommerce_price_format', 'asker_change_price_format', 10, 2 );
  */
 function asker_change_currency_symbol( $symbol, $currency ) {
     if ( $currency == 'RUB' ) {
-        $symbol = 'руб.';
+        $symbol = '₽';
     }
     return $symbol;
 }
@@ -2607,5 +2607,16 @@ function asker_reset_login_attempts( $user_login, $user ) {
     delete_option( $transient_key . '_time' );
 }
 add_action( 'wp_login', 'asker_reset_login_attempts', 10, 2 );
+
+/**
+ * Добавляем заголовок на страницу восстановления пароля
+ */
+function asker_add_lost_password_title() {
+    if ( isset( $_GET['lost-password'] ) || isset( $_GET['reset-link-sent'] ) ) {
+        echo '<h1 class="auth-page-title">Восстановление пароля</h1>';
+        echo '<p class="auth-page-description">Введите E-mail, указанный при регистрации и мы отправим вам ссылку для восстановления пароля</p>';
+    }
+}
+add_action( 'woocommerce_before_lost_password_form', 'asker_add_lost_password_title', 5 );
 
 

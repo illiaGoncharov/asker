@@ -6,26 +6,7 @@
 @import url('pages.css');
 
 /* ===== FULL-BLEED ЧЕРЕЗ ПСЕВДОЭЛЕМЕНТЫ ===== */
-/* Хедер с full-bleed фоном */
-.site-header {
-  position: relative;
-  padding: 0;
-}
-
-.site-header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  right: 50%;
-  margin-left: -50vw;
-  margin-right: -50vw;
-  width: 100vw;
-  height: 100%;
-  background: var(--bg-white);
-  border-bottom: 1px solid var(--border-gray);
-  z-index: -1;
-}
+/* Хедер - стили в header.css */
 
 /* Херо с full-bleed фоном */
 .hero-section {
@@ -90,7 +71,7 @@
 
 /* CSS переменные */
 :root {
-  --primary-yellow: #FFE706;
+  --primary-yellow: #FFE600;
   --primary-black: #1a1a1a;
   --bg-light: #f8f9fa;
   --bg-white: #ffffff;
@@ -114,12 +95,8 @@ body {
   background: var(--bg-site);
   margin: 0;
   padding: 0;
+  padding-top: 82px; /* Высота хедера для fixed позиционирования */
 }
-
-/* Защита от горизонтального скролла на уровне документа
-   (на случай, если base.css не подключён) */
-html { overflow-x: hidden; }
-body { overflow-x: hidden; }
 
 /* Контейнер - стандарт 1200-1440px */
 .container {
@@ -177,100 +154,7 @@ body.woocommerce-page .header-main .container {
   }
 }
 
-/* Header - стили перенесены в псевдоэлемент */
-.site-header {
-  /* Стили перенесены в ::before псевдоэлемент */
-  position: relative;
-  left: 50%;
-  right: 50%;
-  margin-left: calc(100vw / -2);
-  margin-right: calc(100vw / -2);
-  
-}
-
-.header-top {
-  background: var(--bg-light);
-  padding: 8px 0;
-  font-size: 14px;
-  color: var(--text-gray);
-}
-
-.header-main {
-  padding: 16px 0;
-  width: 100%;
-  max-width: none;
-  margin: 0;
-}
-
-.header-main .container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 30px;
-  width: 100%;
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-/* Распределение пространства между элементами */
-.logo {
-  flex-shrink: 0;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--primary-black);
-  text-decoration: none;
-}
-
-/* Стили для кастомного логотипа */
-.logo .custom-logo {
-  width: 180px;
-  height: 50px;
-  object-fit: contain;
-}
-
-/* Стили для иконок в хедере */
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  flex-shrink: 0;
-  min-width: fit-content;
-}
-
-.header-actions a,
-.header-actions button {
-  display: flex;
-  align-items: center;
-  border: none;
-  background: none;
-  cursor: pointer;
-  text-decoration: none;
-  color: var(--primary-black);
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
-.header-actions a:hover,
-.header-actions button:hover {
-  background-color: #f5f5f5;
-}
-
-.header-actions img {
-  display: block;
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  opacity: 0.7;
-  transition: all 0.3s ease;
-  filter: brightness(0) saturate(100%) invert(15%) sepia(8%) saturate(1018%) hue-rotate(201deg) brightness(95%) contrast(88%);
-}
-
-.header-actions a:hover img,
-.header-actions button:hover img {
-  opacity: 1;
-  transform: scale(1.1);
-}
+/* Header - стили перенесены в header.css */
 
 /* Счетчики для корзины и избранного */
 .cart-count,
@@ -599,99 +483,7 @@ input[type="button"] {
   font-weight: 500;
 }
 
-/* Кнопка Каталог */
-.btn-catalog {
-  background-color: var(--primary-yellow);
-  color: var(--primary-black);
-  border: none;
-  border-radius: 50px;
-  padding: 12px 24px;
-  font-family: var(--font-manrope);
-  font-weight: 500;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-  flex-shrink: 0;
-}
-
-.burger-icon {
-  font-size: 16px;
-  line-height: 1;
-}
-
-.btn-catalog:hover {
-  opacity: 0.9;
-}
-
-/* Бургер-меню навигации (отдельная кнопка) */
-.nav-dropdown {
-  position: relative;
-}
-
-.btn-nav-menu {
-  background: transparent;
-  border: none;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  padding: 0;
-}
-
-.btn-nav-menu:hover {
-  opacity: 0.7;
-}
-
-.btn-nav-menu .burger-icon {
-  font-size: 20px;
-  color: var(--primary-black);
-}
-
-.nav-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  padding: 16px;
-  min-width: 200px;
-  display: none;
-  z-index: 102;
-}
-
-.nav-dropdown-menu.active {
-  display: block;
-}
-
-.nav-menu-item {
-  display: block;
-  padding: 12px 16px;
-  color: var(--primary-black);
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
-
-.nav-menu-item:hover {
-  background: #F5F6F8;
-  color: var(--primary-yellow);
-}
-
-.logo-main {
-  display: block;
-  position: relative;
-}
+/* Header - стили перенесены в header.css */
 
 .logo-main::after {
   content: '';
@@ -833,7 +625,7 @@ input[type="button"] {
 @media (min-width: 1920px) {
   .category-item {
     width: 240px;
-    padding: 28px 20px;
+    padding: 0;
   }
   
   .category-icon {
@@ -1935,10 +1727,10 @@ body.woocommerce ul.products li.product:hover {
   display: none;
 }
 
-/* Добавляем "руб." после суммы */
+/* Добавляем символ рубля после суммы */
 .shop-product-price .woocommerce-Price-amount:after,
 .woocommerce ul.products li.product .price .woocommerce-Price-amount:after {
-  content: " руб.";
+  content: " ₽";
   font-weight: 500;
   font-size: 16px;
 }
@@ -2690,7 +2482,7 @@ body.woocommerce-account .container .section__title,
 }
 
 .product-card {
-  background: #F5F6F8;
+  background: var(--bg-white);
   border: 1px solid #E5E7EB;
   border-radius: 24px;
   padding: 20px;
@@ -2698,7 +2490,7 @@ body.woocommerce-account .container .section__title,
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 410px;
   box-shadow: none; /* Убираем тень по умолчанию */
 }
 
@@ -2743,11 +2535,20 @@ body.woocommerce-account .container .section__title,
 .product-image {
   width: 100%;
   height: 200px;
-  object-fit: contain;
   border-radius: 12px;
   margin-bottom: 16px;
   background: var(--bg-white);
   padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .product-title {
@@ -2817,7 +2618,7 @@ body.woocommerce-account .container .section__title,
 /* Кнопка "В корзину" на главной - компактная */
 .product-card .btn-add-cart {
   width: auto;
-  padding: 10px 20px;
+  padding: 12px 24px;
   background: #111827;
   color: var(--bg-white);
   border: none;
@@ -2860,31 +2661,15 @@ body.woocommerce-account .container .section__title,
   font-weight: 300;
   font-size: 16px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
   display: block;
   margin: 0 auto;
   width: 200px;
   text-align: center;
 }
 
-/* Адаптивность кнопки "Смотреть все" для больших экранов */
-@media (min-width: 1440px) {
-  .btn-view-all {
-    padding: 18px 32px;
-    font-size: 16px;
-  }
-}
-
-@media (min-width: 1920px) {
-  .btn-view-all {
-    padding: 20px 40px;
-    font-size: 20px;
-  }
-}
-
 .btn-view-all:hover {
-  background: #e6c200;
-  transform: translateY(-2px);
+  opacity: 0.85;
 }
 
 /* Способы доставки */
@@ -3524,12 +3309,6 @@ body.woocommerce-account .container .section__title,
 @media (max-width: 768px) {
   .container {
     padding: 0 16px;
-  }
-  
-  .header-main {
-    flex-direction: column;
-    gap: 16px;
-    padding: 12px 0;
   }
   
   .search-bar {
@@ -4879,6 +4658,14 @@ body.woocommerce-page .woocommerce-products-header {
   
   /* Хедер */
   .site-header {
+    padding: 0;
+  }
+  
+  body {
+    padding-top: 60px; /* Высота хедера на мобильных: 12px padding * 2 + ~36px контент */
+  }
+  
+  .header-main {
     padding: 12px 0;
   }
   
@@ -4888,7 +4675,17 @@ body.woocommerce-page .woocommerce-products-header {
   }
   
   .logo img {
-    height: 32px;
+    height: 24px;
+    width: auto;
+  }
+  
+  .logo .custom-logo {
+    height: 24px;
+    width: auto;
+  }
+  
+  .logo {
+    font-size: 18px;
   }
   
   /* Скрываем всё кроме бургера, лого и корзины/лайков */
@@ -4902,7 +4699,7 @@ body.woocommerce-page .woocommerce-products-header {
   }
   
   .header-actions {
-    gap: 16px;
+    gap: 12px;
   }
   
   .header-actions .header-icon {
@@ -5818,7 +5615,7 @@ body.woocommerce-page .woocommerce-products-header {
 
 /* Стили для карточек товаров в избранном */
 .wishlist-products .product-card {
-  background: #F5F6F8;
+  background: var(--bg-white);
   border: 1px solid #E5E7EB;
   border-radius: 24px;
   padding: 20px;
@@ -5999,57 +5796,9 @@ div[class*="woocommerce-coming-soon"],
   gap: 24px;
 }
 
-.product-card {
-  border: 1px solid var(--border-gray);
-  border-radius: 12px;
-  overflow: hidden;
-  transition: all 0.2s ease;
-  box-shadow: none; /* Убираем тень по умолчанию, чтобы не было дублирования */
-}
+/* Стили для .product-card используются из основного блока выше (строка 2678) */
 
-.product-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1); /* Только одна тень при hover */
-}
-
-.product-image {
-  position: relative;
-  height: 200px;
-  background: var(--bg-light);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.product-image img {
-  max-width: 80%;
-  max-height: 80%;
-  object-fit: contain;
-}
-
-.favorite-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 32px;
-  height: 32px;
-  background: var(--bg-white);
-  border: 1px solid var(--border-gray);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.favorite-btn:hover {
-  transform: scale(1.05);
-}
-
-.favorite-btn.active {
-  /* Ничего не меняем - только SVG меняет цвет */
-}
+/* Дублирующиеся стили удалены - используются стили выше */
 
 /* Стилизуем кнопки YITH Wishlist */
 .product-image .yith-wcwl-add-to-wishlist {
@@ -6179,12 +5928,7 @@ div[class*="woocommerce-coming-soon"],
   line-height: 1.4;
 }
 
-.product-price {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--primary-black);
-  margin-bottom: 12px;
-}
+/* Стили для .product-price используются из основного блока выше (строка 2776) */
 
 .add-to-cart {
   width: 100%;
@@ -7956,6 +7700,58 @@ select.has-error:focus {
   .woocommerce-checkout .section__title {
     font-size: 24px;
     margin-bottom: 30px;
+  }
+}
+
+/* ===== КНОПКА "НАВЕРХ" ===== */
+.scroll-to-top {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 50px;
+  height: 50px;
+  background-color: var(--primary-yellow);
+  color: var(--primary-black);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.scroll-to-top:hover {
+  background-color: #e6d005;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.scroll-to-top.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.scroll-to-top svg {
+  width: 24px;
+  height: 24px;
+}
+
+@media (max-width: 768px) {
+  .scroll-to-top {
+    bottom: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+  }
+  
+  .scroll-to-top svg {
+    width: 20px;
+    height: 20px;
   }
 }
 

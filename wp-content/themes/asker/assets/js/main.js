@@ -1430,3 +1430,53 @@ if (typeof jQuery !== 'undefined') {
         });
     });
 }
+
+// Sticky header и кнопка "Наверх"
+document.addEventListener('DOMContentLoaded', function() {
+    const siteHeader = document.querySelector('.site-header');
+    let scrollTimeout;
+    
+    // Добавляем класс scrolled при прокрутке
+    function handleScroll() {
+        if (window.scrollY > 50) {
+            if (siteHeader) {
+                siteHeader.classList.add('scrolled');
+            }
+        } else {
+            if (siteHeader) {
+                siteHeader.classList.remove('scrolled');
+            }
+        }
+    }
+    
+    window.addEventListener('scroll', function() {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(handleScroll, 10);
+    });
+    
+    // Создаем кнопку "Наверх"
+    const scrollToTopBtn = document.createElement('button');
+    scrollToTopBtn.className = 'scroll-to-top';
+    scrollToTopBtn.setAttribute('aria-label', 'Наверх');
+    scrollToTopBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 19V5M12 5L5 12M12 5L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    document.body.appendChild(scrollToTopBtn);
+    
+    // Показываем/скрываем кнопку при прокрутке
+    function toggleScrollToTop() {
+        if (window.scrollY > 300) {
+            scrollToTopBtn.classList.add('visible');
+        } else {
+            scrollToTopBtn.classList.remove('visible');
+        }
+    }
+    
+    window.addEventListener('scroll', toggleScrollToTop);
+    
+    // Плавная прокрутка наверх
+    scrollToTopBtn.addEventListener('click', function() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+});
