@@ -68,19 +68,29 @@ if (function_exists('switch_theme')) {
     echo "✓ Тема перезагружена\n";
 }
 
-// 8. Проверка файла content-product.php
-$template_file = get_template_directory() . '/woocommerce/content-product.php';
-if (file_exists($template_file)) {
-    $file_content = file_get_contents($template_file);
-    if (strpos($file_content, 'shop-product-content') !== false) {
-        echo "✓ Файл content-product.php содержит shop-product-content\n";
-        echo "  Размер файла: " . filesize($template_file) . " байт\n";
-        echo "  Дата изменения: " . date('Y-m-d H:i:s', filemtime($template_file)) . "\n";
+// 8. Проверка ключевых файлов шаблонов
+$template_files = array(
+    'woocommerce/content-product.php' => 'shop-product-content',
+    'woocommerce/single-product.php' => 'container',
+    'woocommerce/content-single-product.php' => 'single-product-page',
+    'header.php' => 'wishlist-count',
+    'inc/woocommerce.php' => 'asker_output_related_products',
+);
+
+foreach ($template_files as $file => $check_string) {
+    $template_file = get_template_directory() . '/' . $file;
+    if (file_exists($template_file)) {
+        $file_content = file_get_contents($template_file);
+        if (strpos($file_content, $check_string) !== false) {
+            echo "✓ Файл {$file} содержит '{$check_string}'\n";
+            echo "  Размер: " . filesize($template_file) . " байт, Дата: " . date('Y-m-d H:i:s', filemtime($template_file)) . "\n";
+        } else {
+            echo "⚠ Файл {$file} НЕ содержит '{$check_string}'!\n";
+            echo "  Размер: " . filesize($template_file) . " байт, Дата: " . date('Y-m-d H:i:s', filemtime($template_file)) . "\n";
+        }
     } else {
-        echo "⚠ Файл content-product.php НЕ содержит shop-product-content!\n";
+        echo "⚠ Файл {$file} не найден!\n";
     }
-} else {
-    echo "⚠ Файл content-product.php не найден!\n";
 }
 
 echo "\n✅ Все операции завершены!\n";

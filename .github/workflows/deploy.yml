@@ -27,6 +27,8 @@ jobs:
           timeout: 600000  # Увеличиваем таймаут до 10 минут (в миллисекундах)
           dry-run: false
           log-level: verbose  # Подробные логи для отладки
+          # Принудительно перезаписываем все файлы
+          sync-options: '--delete --no-perms --no-owner --no-group'
           exclude: |
             **/.git*
             **/.git*/**
