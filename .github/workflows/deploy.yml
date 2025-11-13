@@ -24,8 +24,9 @@ jobs:
           local-dir: ./wp-content/themes/asker/
           server-dir: /askerspb.beget.tech/public_html/wp-content/themes/asker/  # Путь на сервере Beget
           dangerous-clean-slate: false
-          timeout: 300000  # Увеличиваем таймаут до 5 минут (в миллисекундах)
+          timeout: 600000  # Увеличиваем таймаут до 10 минут (в миллисекундах)
           dry-run: false
+          log-level: verbose  # Подробные логи для отладки
           exclude: |
             **/.git*
             **/.git*/**
@@ -38,6 +39,8 @@ jobs:
             **/.vscode/**
             **/clear-cache.php
             **/force-update.php
+            **/*.log
+            **/*.tmp
       
       # Вариант 2: Деплой через SSH (раскомментировать если есть SSH доступ)
       # - name: Deploy via SSH
