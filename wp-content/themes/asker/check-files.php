@@ -44,6 +44,10 @@ foreach ($critical_files as $file) {
         echo "  Размер: {$file_size} байт\n";
         echo "  Дата изменения: " . date('Y-m-d H:i:s', $file_time) . "\n";
         
+        // Проверяем кодировку файла
+        $encoding = mb_detect_encoding($file_content, array('UTF-8', 'Windows-1251', 'ISO-8859-1'), true);
+        echo "  Кодировка: " . ($encoding ? $encoding : 'не определена') . "\n";
+        
         // Проверяем ключевые строки в зависимости от файла
         $checks = array();
         switch ($file) {
