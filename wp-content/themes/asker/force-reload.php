@@ -80,6 +80,8 @@ $critical_files = array(
     'woocommerce/content-single-product.php',
     'header.php',
     'inc/woocommerce.php',
+    'assets/css/main.css',
+    'inc/enqueue.php',
 );
 
 foreach ($critical_files as $file) {
@@ -117,6 +119,12 @@ foreach ($critical_files as $file) {
                 break;
             case 'inc/woocommerce.php':
                 $checks = array('asker_output_related_products');
+                break;
+            case 'assets/css/main.css':
+                $checks = array('shop-product-card', 'shop-product-content');
+                break;
+            case 'inc/enqueue.php':
+                $checks = array('wp_enqueue_style', 'filemtime');
                 break;
         }
         
