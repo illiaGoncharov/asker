@@ -20,10 +20,30 @@ if (!current_user_can('manage_options')) {
 echo '<h1>Очистка кэша</h1>';
 echo '<pre>';
 
-// 1. Очистка OPcache
+// 1. Очистка OPcache (агрессивная)
 if (function_exists('opcache_reset')) {
+    // Сначала инвалидируем конкретные файлы
+    $critical_files = array(
+        'woocommerce/archive-product.php',
+        'woocommerce/content-product.php',
+        'woocommerce/single-product.php',
+        'woocommerce/content-single-product.php',
+        'header.php',
+        'inc/woocommerce.php',
+        'assets/css/main.css',
+    );
+    
+    $template_dir = get_template_directory();
+    foreach ($critical_files as $file) {
+        $file_path = $template_dir . '/' . $file;
+        if (file_exists($file_path) && function_exists('opcache_invalidate')) {
+            opcache_invalidate($file_path, true);
+        }
+    }
+    
+    // Затем очищаем весь кэш
     opcache_reset();
-    echo "✓ OPcache очищен\n";
+    echo "✓ OPcache очищен (включая инвалидацию критических файлов)\n";
 } else {
     echo "⚠ OPcache не доступен\n";
 }
