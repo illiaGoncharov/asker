@@ -108,10 +108,18 @@ foreach ($critical_files as $file) {
             case 'woocommerce/content-product.php':
                 $checks = array('shop-product-card', 'shop-product-content', 'product->get_name()', 'shop-product-bottom');
                 // Проверяем, что НЕТ старой кнопки "Подробнее"
-                if (strpos($file_content, 'shop-btn-details') !== false || strpos($file_content, 'Подробнее') !== false) {
+                if (strpos($file_content, 'shop-btn-details') !== false || (strpos($file_content, 'Подробнее') !== false && strpos($file_content, 'shop-product-actions') === false)) {
                     echo "  ⚠ СОДЕРЖИТ СТАРУЮ КНОПКУ 'Подробнее' - файл не обновился!\n";
+                    echo "  ⚠ РАЗМЕР ФАЙЛА: {$file_size} байт (ожидается ~2150 байт)\n";
                 } else {
                     echo "  ✓ НЕ содержит старую кнопку 'Подробнее' - файл обновлен\n";
+                }
+                // Проверяем наличие правильной структуры
+                if (strpos($file_content, 'shop-product-bottom') === false) {
+                    echo "  ⚠ ОТСУТСТВУЕТ 'shop-product-bottom' - файл не обновлен!\n";
+                }
+                if (strpos($file_content, 'add_to_cart_button') === false) {
+                    echo "  ⚠ ОТСУТСТВУЕТ 'add_to_cart_button' - файл не обновлен!\n";
                 }
                 break;
             case 'woocommerce/single-product.php':
