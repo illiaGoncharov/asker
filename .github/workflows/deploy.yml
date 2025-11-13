@@ -39,6 +39,8 @@ jobs:
             **/.vscode/**
             **/clear-cache.php
             **/force-update.php
+            **/force-reload.php
+            **/check-files.php
             **/*.log
             **/*.tmp
       
