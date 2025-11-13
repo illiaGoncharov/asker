@@ -1,14 +1,14 @@
-/* Пользовательские стили для Asker */
+/* Custom styles for Asker theme */
 
-/* Импорт базовых стилей и модулей */
+/* Import base styles and modules */
 @import url('base.css');
 @import url('header.css');
 @import url('pages.css');
 
-/* ===== FULL-BLEED ЧЕРЕЗ ПСЕВДОЭЛЕМЕНТЫ ===== */
-/* Хедер - стили в header.css */
+/* ===== FULL-BLEED VIA PSEUDO-ELEMENTS ===== */
+/* Header styles are in header.css */
 
-/* Херо с full-bleed фоном */
+/* Hero section with full-bleed background */
 .hero-section {
   position: relative;
   padding: 80px 0;
@@ -28,7 +28,7 @@
   z-index: -1;
 }
 
-/* Контент остается в контейнере 1200-1440px */
+/* Content stays in container 1200-1440px */
 .site-header .container {
   max-width: 1440px;
   margin: 0 auto;
@@ -46,7 +46,7 @@
   z-index: 1;
 }
 
-/* Адаптивность для больших экранов */
+/* Responsive for large screens */
 @media (min-width: 1440px) {
   .site-header .container {
     max-width: 1440px;
@@ -69,7 +69,7 @@
   }
 }
 
-/* CSS переменные */
+/* CSS Variables */
 :root {
   --primary-yellow: #FFE600;
   --primary-black: #1a1a1a;
@@ -80,13 +80,13 @@
   --border-gray: #e5e7eb;
   --icon-color: #2B2D34;
   
-  /* Шрифты */
+  /* Fonts */
   --font-primary: 'Montserrat', sans-serif;
   --font-secondary: 'Poppins', sans-serif;
   --font-manrope: 'Manrope', sans-serif;
 }
 
-/* Шрифты */
+/* Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap');
 
 body { 
@@ -95,17 +95,17 @@ body {
   background: var(--bg-site);
   margin: 0;
   padding: 0;
-  padding-top: 82px; /* Высота хедера для fixed позиционирования */
+  padding-top: 82px; /* Header height for fixed positioning */
 }
 
-/* Контейнер - стандарт 1200-1440px */
+/* Container - standard 1200-1440px */
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
 }
 
-/* Адаптивность для больших экранов */
+/* Responsive for large screens */
 @media (min-width: 1440px) {
   .container {
     max-width: 1440px;
@@ -118,7 +118,7 @@ body {
   }
 }
 
-/* Специальное правило для хедера - 1440px (приоритет над всеми) */
+/* Special rule for header - 1440px (priority over all) */
 .site-header .container,
 .header-main .container,
 .woocommerce-page .site-header .container,
@@ -131,7 +131,7 @@ body.woocommerce-page .header-main .container {
   width: 100%;
 }
 
-/* Адаптивность хедера для больших экранов */
+/* Header responsive for large screens */
 @media (min-width: 1440px) {
   .site-header .container,
   .header-main .container,
@@ -154,9 +154,9 @@ body.woocommerce-page .header-main .container {
   }
 }
 
-/* Header - стили перенесены в header.css */
+/* Header styles moved to header.css */
 
-/* Счетчики для корзины и избранного */
+/* Counters for cart and wishlist */
 .cart-count,
 .wishlist-count {
   position: absolute;
@@ -184,7 +184,7 @@ body.woocommerce-page .header-main .container {
   position: relative;
 }
 
-/* Всегда показываем счетчики */
+/* Always show counters */
 .cart-count,
 .wishlist-count {
   display: flex;
@@ -192,7 +192,7 @@ body.woocommerce-page .header-main .container {
   visibility: visible;
 }
 
-/* Скрываем мобильное меню на десктопе */
+/* Hide mobile menu on desktop */
 .mobile-menu-toggle {
   display: none;
 }
@@ -5737,7 +5737,7 @@ body.woocommerce-page .woocommerce-products-header {
   margin-top: 44px; /* Убираем возможные отступы сверху */
 }
 
-/* Адаптивность для больших экранов */
+/* Responsive for large screens */
 @media (min-width: 1440px) {
   .account-layout {
     max-width: 1440px;
