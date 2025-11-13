@@ -106,7 +106,13 @@ foreach ($critical_files as $file) {
                 $checks = array('shop-wrapper', 'wc_get_template_part');
                 break;
             case 'woocommerce/content-product.php':
-                $checks = array('shop-product-card', 'shop-product-content', 'product->get_name()');
+                $checks = array('shop-product-card', 'shop-product-content', 'product->get_name()', 'shop-product-bottom');
+                // Проверяем, что НЕТ старой кнопки "Подробнее"
+                if (strpos($file_content, 'shop-btn-details') !== false || strpos($file_content, 'Подробнее') !== false) {
+                    echo "  ⚠ СОДЕРЖИТ СТАРУЮ КНОПКУ 'Подробнее' - файл не обновился!\n";
+                } else {
+                    echo "  ✓ НЕ содержит старую кнопку 'Подробнее' - файл обновлен\n";
+                }
                 break;
             case 'woocommerce/single-product.php':
                 $checks = array('container', 'breadcrumbs');
