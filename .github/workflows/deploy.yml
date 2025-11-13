@@ -1,0 +1,48 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Позволяет запускать вручную из GitHub UI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # Вариант 1: Деплой через FTP (нужны FTP-данные из панели Beget)
+      - name: Deploy to Beget via FTP
+        uses: SamKirkland/FTP-Deploy-Action@4.3.0
+        with:
+          server: ${{ secrets.FTP_SERVER }}  # askerspb.beget.tech
+          username: ${{ secrets.FTP_USERNAME }}  # askerspb (или отдельный FTP-пользователь)
+          password: ${{ secrets.FTP_PASSWORD }}  # FTP пароль из панели Beget
+          local-dir: ./wp-content/themes/asker/
+          server-dir: /askerspb.beget.tech/public_html/wp-content/themes/asker/  # Путь на сервере Beget
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/.DS_Store
+            **/.env
+            **/README.md
+            **/.cursor/**
+            **/.idea/**
+            **/.vscode/**
+      
+      # Вариант 2: Деплой через SSH (раскомментировать если есть SSH доступ)
+      # - name: Deploy via SSH
+      #   uses: appleboy/ssh-action@master
+      #   with:
+      #     host: ${{ secrets.SSH_HOST }}
+      #     username: ${{ secrets.SSH_USERNAME }}
+      #     key: ${{ secrets.SSH_PRIVATE_KEY }}
+      #     script: |
+      #       cd /path/to/public_html/wp-content/themes/asker
+      #       git pull origin main
+
