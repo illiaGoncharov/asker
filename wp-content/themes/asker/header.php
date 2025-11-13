@@ -71,6 +71,67 @@
     </script>
     <script src="<?php echo get_template_directory_uri(); ?>/assets/js/header-functions.js"></script>
     
+    <!-- Скрипт очистки избранного при выходе и проверки авторизации -->
+    <script>
+    (function() {
+        // Проверяем статус авторизации при загрузке страницы
+        const isLoggedIn = <?php echo is_user_logged_in() ? 'true' : 'false'; ?>;
+        
+        // Если пользователь не авторизован - очищаем localStorage избранного
+        if (!isLoggedIn) {
+            try {
+                localStorage.removeItem('favorites');
+                // Обновляем счетчики сразу если DOM готов
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', function() {
+                        updateWishlistCounters();
+                    });
+                } else {
+                    updateWishlistCounters();
+                }
+            } catch (e) {
+                // Игнорируем ошибки
+            }
+        }
+        
+        function updateWishlistCounters() {
+            const wishlistCount = document.querySelector('.wishlist-count');
+            const mobileWishlistCount = document.querySelector('.mobile-wishlist-count');
+            if (wishlistCount) {
+                wishlistCount.textContent = '0';
+                wishlistCount.setAttribute('data-count', '0');
+                wishlistCount.style.display = 'none';
+            }
+            if (mobileWishlistCount) {
+                mobileWishlistCount.textContent = '0';
+                mobileWishlistCount.style.display = 'none';
+            }
+        }
+        
+        // Обработчик клика на ссылку выхода
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initLogoutHandler);
+        } else {
+            initLogoutHandler();
+        }
+        
+        function initLogoutHandler() {
+            // Обрабатываем все ссылки выхода
+            const logoutLinks = document.querySelectorAll('a[href*="wp-login.php?action=logout"], .logout-link');
+            logoutLinks.forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    // Очищаем localStorage избранного перед выходом
+                    try {
+                        localStorage.removeItem('favorites');
+                    } catch (e) {
+                        // Игнорируем ошибки
+                    }
+                });
+            });
+        }
+    })();
+    </script>
+    
 </head>
 <body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
@@ -134,11 +195,32 @@
                 </a>
                 <a href="<?php echo esc_url(home_url('/wishlist')); ?>" class="icon-heart">
                     <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/heart.svg" alt="Избранное" class="header-icon">
-                    <span class="wishlist-count" data-count="0">0</span>
+                    <?php
+                    // Получаем количество товаров в избранном
+                    // КРИТИЧНО: Для неавторизованных пользователей всегда 0
+                    $wishlist_count = 0;
+                    if (is_user_logged_in()) {
+                        if (function_exists('yith_wcwl_count_products')) {
+                            $wishlist_count = yith_wcwl_count_products();
+                        } else {
+                            $user_id = get_current_user_id();
+                            $wishlist = get_user_meta($user_id, 'asker_wishlist', true);
+                            $wishlist_count = (!empty($wishlist) && is_array($wishlist)) ? count($wishlist) : 0;
+                        }
+                    }
+                    ?>
+                    <span class="wishlist-count" data-count="<?php echo esc_attr($wishlist_count); ?>" style="display: <?php echo $wishlist_count > 0 ? 'flex' : 'none'; ?>"><?php echo esc_html($wishlist_count); ?></span>
                 </a>
                 <a href="<?php echo esc_url(home_url('/cart')); ?>" class="icon-cart">
                     <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/cart.svg" alt="Корзина" class="header-icon">
-                    <span class="cart-count" data-count="0">0</span>
+                    <?php
+                    // Получаем количество товаров в корзине
+                    $cart_count = 0;
+                    if (function_exists('WC') && WC()->cart) {
+                        $cart_count = WC()->cart->get_cart_contents_count();
+                    }
+                    ?>
+                    <span class="cart-count" data-count="<?php echo esc_attr($cart_count); ?>" style="display: <?php echo $cart_count > 0 ? 'flex' : 'none'; ?>"><?php echo esc_html($cart_count); ?></span>
                 </a>
                 <a href="<?php echo esc_url(home_url('/my-account')); ?>" class="btn-login">
                     <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/account.svg" alt="Аккаунт" class="header-icon">
@@ -191,14 +273,35 @@
                     <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/heart.svg" alt="" class="mobile-menu-icon">
                     Избранное
                 </span>
-                <span class="mobile-wishlist-count">0</span>
+                <?php
+                // Получаем количество товаров в избранном
+                // КРИТИЧНО: Для неавторизованных пользователей всегда 0
+                $mobile_wishlist_count = 0;
+                if (is_user_logged_in()) {
+                    if (function_exists('yith_wcwl_count_products')) {
+                        $mobile_wishlist_count = yith_wcwl_count_products();
+                    } else {
+                        $user_id = get_current_user_id();
+                        $wishlist = get_user_meta($user_id, 'asker_wishlist', true);
+                        $mobile_wishlist_count = (!empty($wishlist) && is_array($wishlist)) ? count($wishlist) : 0;
+                    }
+                }
+                ?>
+                <span class="mobile-wishlist-count" style="display: <?php echo $mobile_wishlist_count > 0 ? 'inline-flex' : 'none'; ?>"><?php echo esc_html($mobile_wishlist_count); ?></span>
             </a>
             <a href="<?php echo esc_url(home_url('/cart')); ?>" class="mobile-menu-link">
                 <span class="mobile-link-text">
                     <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/cart.svg" alt="" class="mobile-menu-icon">
                     Корзина
                 </span>
-                <span class="mobile-cart-count">0</span>
+                <?php
+                // Получаем количество товаров в корзине
+                $mobile_cart_count = 0;
+                if (function_exists('WC') && WC()->cart) {
+                    $mobile_cart_count = WC()->cart->get_cart_contents_count();
+                }
+                ?>
+                <span class="mobile-cart-count" style="display: <?php echo $mobile_cart_count > 0 ? 'inline-flex' : 'none'; ?>"><?php echo esc_html($mobile_cart_count); ?></span>
             </a>
             <a href="<?php echo esc_url(home_url('/my-account')); ?>" class="mobile-menu-link">
                 <span class="mobile-link-text">

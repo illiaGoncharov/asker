@@ -81,7 +81,7 @@ if (!class_exists('WooCommerce')) {
             <aside class="shop-sidebar">
                 <div class="filters-wrap">
                     <div class="filters-header">
-                        <h3 class="filters-title">Фильтры</h3>
+                    <h3 class="filters-title">Фильтры</h3>
                         <button class="filters-close-btn" aria-label="Закрыть фильтры">
                             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M15 5L5 15M5 5l10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>

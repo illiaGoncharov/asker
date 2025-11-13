@@ -12,7 +12,17 @@
   right: 0;
   width: 100%;
   z-index: 100;
-  transition: box-shadow 0.3s ease;
+  transition: box-shadow 0.3s ease, top 0.3s ease;
+}
+
+/* Исправление перекрытия WordPress admin bar */
+body.admin-bar .site-header {
+  top: 32px;
+}
+@media screen and (max-width: 782px) {
+  body.admin-bar .site-header {
+    top: 46px;
+  }
 }
 
 .site-header.scrolled {

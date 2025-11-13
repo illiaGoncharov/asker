@@ -4,6 +4,128 @@
  */
 
 /**
+ * Убираем стандартные обёртки WooCommerce для страницы товара
+ * Используем свой .container для единообразия с остальными страницами
+ */
+function asker_remove_wc_wrappers() {
+	if ( is_product() ) {
+		remove_action( 'woocommerce_before_main_content', 'woocommerce_output_content_wrapper', 10 );
+		remove_action( 'woocommerce_after_main_content', 'woocommerce_output_content_wrapper_end', 10 );
+		// Убираем стандартные хлебные крошки WooCommerce
+		remove_action( 'woocommerce_before_main_content', 'woocommerce_breadcrumb', 20 );
+	}
+}
+add_action( 'wp', 'asker_remove_wc_wrappers' );
+
+/**
+ * Убеждаемся что похожие товары выводятся на странице товара
+ */
+function asker_ensure_related_products() {
+	if ( is_product() ) {
+		// Убираем стандартный вывод похожих товаров если он был удален
+		remove_action( 'woocommerce_after_single_product_summary', 'woocommerce_output_related_products', 20 );
+		
+		// Добавляем свой вывод похожих товаров с кастомным шаблоном
+		add_action( 'woocommerce_after_single_product_summary', 'asker_output_related_products', 20 );
+	}
+}
+add_action( 'wp', 'asker_ensure_related_products' );
+
+/**
+ * Вывод похожих товаров с использованием кастомного шаблона
+ */
+function asker_output_related_products() {
+	global $product;
+	
+	if ( ! $product ) {
+		$product = wc_get_product( get_the_ID() );
+	}
+	
+	if ( ! $product ) {
+		return;
+	}
+	
+	$product_id = $product->get_id();
+	$related_products_ids = array();
+	
+	// Метод 1: Получаем похожие товары через WooCommerce API
+	$wc_related = wc_get_related_products( $product_id, 4 );
+	if ( ! empty( $wc_related ) ) {
+		$related_products_ids = $wc_related;
+	}
+	
+	// Метод 2: Если нет похожих через стандартный метод, пробуем через категории
+	if ( empty( $related_products_ids ) ) {
+		$categories = wp_get_post_terms( $product_id, 'product_cat', array( 'fields' => 'ids' ) );
+		if ( ! empty( $categories ) && ! is_wp_error( $categories ) ) {
+			$args = array(
+				'post_type' => 'product',
+				'posts_per_page' => 4,
+				'post__not_in' => array( $product_id ),
+				'post_status' => 'publish',
+				'orderby' => 'rand',
+				'tax_query' => array(
+					array(
+						'taxonomy' => 'product_cat',
+						'field' => 'term_id',
+						'terms' => $categories,
+						'operator' => 'IN',
+					),
+				),
+			);
+			$related_query = new WP_Query( $args );
+			if ( $related_query->have_posts() ) {
+				$related_products_ids = wp_list_pluck( $related_query->posts, 'ID' );
+			}
+			wp_reset_postdata();
+		}
+	}
+	
+	// Метод 3: Если всё ещё нет похожих, берём любые опубликованные товары (кроме текущего)
+	if ( empty( $related_products_ids ) ) {
+		$args = array(
+			'post_type' => 'product',
+			'posts_per_page' => 4,
+			'post__not_in' => array( $product_id ),
+			'post_status' => 'publish',
+			'orderby' => 'rand',
+		);
+		$related_query = new WP_Query( $args );
+		if ( $related_query->have_posts() ) {
+			$related_products_ids = wp_list_pluck( $related_query->posts, 'ID' );
+		}
+		wp_reset_postdata();
+	}
+	
+	if ( empty( $related_products_ids ) ) {
+		return;
+	}
+	
+	// Загружаем кастомный шаблон
+	$template_path = get_template_directory() . '/woocommerce/single-product/related.php';
+	
+	if ( file_exists( $template_path ) ) {
+		// Подготавливаем данные для шаблона
+		$related_products_objects = array();
+		foreach ( $related_products_ids as $related_product_id ) {
+			$related_product = wc_get_product( $related_product_id );
+			if ( $related_product && $related_product->is_visible() && $related_product->is_purchasable() ) {
+				$related_products_objects[] = $related_product;
+			}
+		}
+		
+		if ( ! empty( $related_products_objects ) ) {
+			// Устанавливаем переменную для шаблона
+			$related_products = $related_products_objects;
+			include $template_path;
+		}
+	} else {
+		// Если кастомного шаблона нет - используем стандартный
+		woocommerce_output_related_products();
+	}
+}
+
+/**
  * Принудительно устанавливаем русский язык для WooCommerce
  */
 function asker_force_woocommerce_russian() {
@@ -678,6 +800,23 @@ add_action( 'wp_ajax_nopriv_remove_cart_item', 'asker_ajax_remove_cart_item' );
 /**
  * Переопределяем шаблон карточки товара в цикле
  */
+/**
+ * Принудительно используем наш шаблон content-product.php
+ * Только для шаблона content-product в цикле товаров, не трогаем другие шаблоны
+ */
+function asker_force_content_product_template( $template, $template_name, $template_path ) {
+    // Если это шаблон content-product (только для карточек в цикле), используем наш файл
+    if ( 'content-product.php' === $template_name && ! is_singular( 'product' ) ) {
+        $custom_template = get_template_directory() . '/woocommerce/content-product.php';
+        if ( file_exists( $custom_template ) ) {
+            return $custom_template;
+        }
+    }
+    // Для всех остальных шаблонов возвращаем оригинал
+    return $template;
+}
+add_filter( 'woocommerce_locate_template', 'asker_force_content_product_template', 999, 3 );
+
 function asker_custom_product_card_template() {
     // Убираем стандартные хуки WooCommerce
     remove_action( 'woocommerce_before_shop_loop_item', 'woocommerce_template_loop_product_link_open', 10 );
@@ -1077,6 +1216,54 @@ function asker_override_checkout_template( $template ) {
     return $template;
 }
 add_filter( 'template_include', 'asker_override_checkout_template', 20 );
+
+/**
+ * Принудительно используем single-product.php для товаров
+ * КРИТИЧНО: Проверяем несколькими способами
+ */
+function asker_force_single_product_template( $template ) {
+    if ( is_admin() || ( defined( 'DOING_AJAX' ) && DOING_AJAX ) ) {
+        return $template;
+    }
+    
+    // Проверка 1: через is_product()
+    $is_product = false;
+    if ( function_exists( 'is_product' ) && is_product() ) {
+        $is_product = true;
+    }
+    
+    // Проверка 2: через URL - если содержит /product/
+    if ( ! $is_product ) {
+        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+        if ( strpos( $request_uri, '/product/' ) !== false ) {
+            // Проверяем, что это не архив
+            if ( ! is_archive() ) {
+                $is_product = true;
+            }
+        }
+    }
+    
+    // Проверка 3: через глобальную переменную $post
+    if ( ! $is_product ) {
+        global $post;
+        if ( isset( $post->post_type ) && $post->post_type === 'product' ) {
+            if ( ! is_archive() ) {
+                $is_product = true;
+            }
+        }
+    }
+    
+    if ( $is_product ) {
+        $product_template = get_template_directory() . '/woocommerce/single-product.php';
+        if ( file_exists( $product_template ) ) {
+            error_log( 'ASKER: Loading single-product.php template' );
+            return $product_template;
+        }
+    }
+    
+    return $template;
+}
+add_filter( 'template_include', 'asker_force_single_product_template', 1 );
 
 /**
  * Сохраняем данные формы чекаута в профиль пользователя
@@ -2523,7 +2710,7 @@ function asker_price_filter_query($query) {
         }
         
         if (!empty($meta_query)) {
-            $query->set('meta_query', $meta_query);
+        $query->set('meta_query', $meta_query);
         }
     }
 }

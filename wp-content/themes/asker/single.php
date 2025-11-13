@@ -1,7 +1,17 @@
 <?php
 /**
  * Запись блога/произвольного типа по умолчанию.
+ * НЕ используем для товаров WooCommerce - они используют single-product.php
  */
+
+// КРИТИЧНО: Если это товар WooCommerce - редиректим на правильный шаблон
+if ( function_exists( 'is_product' ) && is_product() ) {
+    $product_template = get_template_directory() . '/woocommerce/single-product.php';
+    if ( file_exists( $product_template ) ) {
+        include $product_template;
+        return;
+    }
+}
 
 get_header();
 ?>

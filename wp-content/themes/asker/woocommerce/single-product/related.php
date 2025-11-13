@@ -18,7 +18,8 @@ if ( $related_products ) : ?>
         <h2 class="section-title">Похожие товары</h2>
         <div class="products-grid">
             <?php foreach ( $related_products as $related_product ) : 
-                $product = wc_get_product( $related_product->get_id() );
+                // $related_product уже является объектом WC_Product
+                $product = is_a( $related_product, 'WC_Product' ) ? $related_product : wc_get_product( $related_product );
                 if ( $product ) :
                     $product_id = $product->get_id();
                     $product_image = wp_get_attachment_image_src( get_post_thumbnail_id( $product_id ), 'medium' );

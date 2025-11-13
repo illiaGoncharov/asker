@@ -544,24 +544,37 @@ document.addEventListener('DOMContentLoaded', function() {
     // Убираем рекурсивный вызов, который создавал бесконечный цикл
     window.updateWishlistCounter = function() {
         try {
-            const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-            const count = favorites.length;
+            // КРИТИЧНО: Проверяем статус авторизации
+            // Если пользователь не авторизован - избранное должно быть пустым
+            const isLoggedIn = document.body.classList.contains('logged-in') || 
+                              (typeof asker_ajax !== 'undefined' && asker_ajax.is_logged_in === true);
+            
+            let count = 0;
+            
+            // Если не авторизован - очищаем и возвращаем 0
+            if (!isLoggedIn) {
+                try {
+                    localStorage.removeItem('favorites');
+                } catch (e) {}
+                count = 0;
+            } else {
+                // Если авторизован - получаем из localStorage
+                const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+                count = favorites.length;
+            }
             
             // Обновляем десктопный счетчик
             const counter = document.querySelector('.wishlist-count');
             if (counter) {
                 counter.textContent = count;
                 counter.setAttribute('data-count', count.toString());
-                
-                if (count > 0) {
-                    counter.style.opacity = '1';
-                    counter.style.visibility = 'visible';
-                    counter.style.display = 'flex';
-                } else {
-                    counter.style.opacity = '0';
-                    counter.style.visibility = 'hidden';
-                    counter.style.display = 'none';
-                }
+                // Скрываем счетчик если 0
+                counter.style.display = count > 0 ? 'flex' : 'none';
+            }
+            
+            // Также вызываем серверную синхронизацию если функция доступна
+            if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
             }
             
             // Обновляем мобильный счетчик
@@ -603,13 +616,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (counter) {
                         counter.textContent = serverCount;
                         counter.setAttribute('data-count', String(serverCount));
-                        if (serverCount > 0) {
-                            counter.style.opacity = '1';
-                            counter.style.visibility = 'visible';
-                        } else {
-                            counter.style.opacity = '0';
-                            counter.style.visibility = 'hidden';
-                        }
+                        // Скрываем счетчик если 0
+                        counter.style.display = serverCount > 0 ? 'flex' : 'none';
                     }
                     // Обновим также мобильный счетчик
                     const mobileCartCount = document.querySelector('.mobile-cart-count');

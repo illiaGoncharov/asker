@@ -13,6 +13,12 @@ defined( 'ABSPATH' ) || exit;
 
 global $product;
 
+// WooCommerce автоматически устанавливает $product через хук woocommerce_single_product_summary
+// Но на всякий случай проверяем и инициализируем если нужно
+if ( empty( $product ) || ! is_a( $product, 'WC_Product' ) ) {
+	$product = wc_get_product( get_the_ID() );
+}
+
 /**
  * Hook: woocommerce_before_single_product.
  *
@@ -24,9 +30,16 @@ if ( post_password_required() ) {
 	echo get_the_password_form();
 	return;
 }
+
+// КРИТИЧНО: Если $product не установлен - выводим ошибку, но НЕ делаем return
+if ( ! $product ) {
+	echo '<div class="woocommerce"><div class="woocommerce-notices-wrapper"></div><p class="woocommerce-info">Товар не найден. Post ID: ' . get_the_ID() . '</p></div>';
+	// НЕ делаем return - пусть WooCommerce сам обработает
+}
 ?>
 
-<div id="product-<?php the_ID(); ?>" <?php wc_product_class( 'single-product-page', $product ); ?>>
+<?php if ( $product ) : ?>
+<div id="product-<?php the_ID(); ?>" <?php echo function_exists( 'wc_product_class' ) ? wc_product_class( 'single-product-page', $product ) : 'class="single-product-page"'; ?>>
 
 	<div class="product-main">
 		<!-- Галерея изображений слева -->
@@ -143,18 +156,19 @@ if ( post_password_required() ) {
 			<?php endif; ?>
 		</div>
 	</div>
+</div>
 
-	<!-- Похожие товары -->
+	<!-- Похожие товары - выводим ВНЕ div.single-product-page и ВНЕ .container -->
 	<?php
 	/**
 	 * Hook: woocommerce_after_single_product_summary.
 	 *
 	 * @hooked woocommerce_output_product_data_tabs - 10
 	 * @hooked woocommerce_upsell_display - 15
-	 * @hooked woocommerce_output_related_products - 20
+	 * @hooked asker_output_related_products - 20
 	 */
 	do_action( 'woocommerce_after_single_product_summary' );
 	?>
-</div>
 
 <?php do_action( 'woocommerce_after_single_product' ); ?>
+<?php endif; ?>

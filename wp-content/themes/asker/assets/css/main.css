@@ -1848,7 +1848,8 @@ body.woocommerce ul.products li.product:hover {
   position: relative;
   text-decoration: none;
   box-shadow: none !important; /* Убираем тени у вложенных элементов */
-  border-radius: 40px;lba
+  border-radius: 40px;
+  
 }
 
 .shop-product-image a {
@@ -2144,7 +2145,8 @@ body.woocommerce-shop .woocommerce ul.products li.product .button,
 
 /* ===== СТРАНИЦА ТОВАРА ===== */
 .single-product-page {
-  padding: 40px 0;
+  padding: 0;
+  margin-top: 0;
 }
 
 /* Layout страницы товара: галерея слева, информация справа */
@@ -4434,7 +4436,7 @@ body.woocommerce-page .site-main,
 body.woocommerce-page .content-area {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 20px;
+  /* padding: 0 20px; */
 }
 
 /* Адаптивность WooCommerce страниц для больших экранов - единая ширина 1440px */
@@ -4575,7 +4577,7 @@ body.woocommerce-page .woocommerce-result-count,
 body.woocommerce-page .woocommerce-ordering {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 20px;
+  /* padding: 0 20px; */
 }
 
 @media (min-width: 1440px) {

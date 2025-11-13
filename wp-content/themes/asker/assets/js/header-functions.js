@@ -97,10 +97,19 @@ function updateCartCount() {
     })
     .then(data => {
         if (data && data.success && data.data) {
+            const count = data.data.count || 0;
             const cartCount = document.querySelector('.cart-count');
             if (cartCount) {
-                cartCount.textContent = data.data.count || 0;
-                cartCount.setAttribute('data-count', data.data.count || 0);
+                cartCount.textContent = count;
+                cartCount.setAttribute('data-count', count);
+                // Скрываем счетчик если 0
+                cartCount.style.display = count > 0 ? 'flex' : 'none';
+            }
+            // Обновляем мобильный счетчик
+            const mobileCartCount = document.querySelector('.mobile-cart-count');
+            if (mobileCartCount) {
+                mobileCartCount.textContent = count;
+                mobileCartCount.style.display = count > 0 ? 'inline-flex' : 'none';
             }
         }
     })
@@ -137,11 +146,19 @@ function updateWishlistCount() {
         return response.json();
     })
     .then(data => {
-        if (data && data.success && data.count !== undefined) {
+        if (data && data.success && data.data && data.data.count !== undefined) {
             const wishlistCount = document.querySelector('.wishlist-count');
             if (wishlistCount) {
-                wishlistCount.textContent = data.count;
-                wishlistCount.setAttribute('data-count', data.count);
+                wishlistCount.textContent = data.data.count;
+                wishlistCount.setAttribute('data-count', data.data.count);
+                // Скрываем счетчик если 0
+                wishlistCount.style.display = data.data.count > 0 ? 'flex' : 'none';
+            }
+            // Обновляем мобильный счетчик
+            const mobileWishlistCount = document.querySelector('.mobile-wishlist-count');
+            if (mobileWishlistCount) {
+                mobileWishlistCount.textContent = data.data.count;
+                mobileWishlistCount.style.display = data.data.count > 0 ? 'inline-flex' : 'none';
             }
         }
     })
@@ -152,17 +169,20 @@ function updateWishlistCount() {
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
-    // ВРЕМЕННО ОТКЛЮЧЕНО для исправления белого экрана
     // Обновляем счетчики только если asker_ajax доступен (после полной загрузки скриптов)
     // Вызываем с небольшой задержкой, чтобы asker_ajax точно был загружен
-    /*
     setTimeout(function() {
         if (typeof asker_ajax !== 'undefined') {
             updateCartCount();
             updateWishlistCount();
+        } else {
+            // Если asker_ajax еще не загружен, пробуем еще раз через 200мс
+            setTimeout(function() {
+                updateCartCount();
+                updateWishlistCount();
+            }, 200);
         }
     }, 100);
-    */
     
     // Закрытие попапа по клику вне его
     document.addEventListener('click', function(e) {

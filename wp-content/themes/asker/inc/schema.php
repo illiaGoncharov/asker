@@ -83,21 +83,31 @@ function asker_add_product_schema() {
     }
     
     global $product;
-    if ( ! $product ) {
+    
+    // КРИТИЧНО: Инициализируем $product если не установлен
+    if ( ! $product || ! is_a( $product, 'WC_Product' ) ) {
+        $product_id = get_queried_object_id();
+        if ( $product_id ) {
+            $product = wc_get_product( $product_id );
+        }
+    }
+    
+    if ( ! $product || ! is_a( $product, 'WC_Product' ) ) {
         return;
     }
     
-    $site_name = get_bloginfo( 'name' );
-    $product_id = $product->get_id();
-    $product_name = $product->get_name();
-    $product_description = $product->get_short_description() ?: wp_trim_words( $product->get_description(), 50 );
-    $product_url = get_permalink( $product_id );
-    $product_price = $product->get_price();
-    $product_sku = $product->get_sku();
-    $product_image_id = $product->get_image_id();
-    
-    // Основная схема товара
-    $schema = array(
+    try {
+        $site_name = get_bloginfo( 'name' );
+        $product_id = $product->get_id();
+        $product_name = $product->get_name();
+        $product_description = $product->get_short_description() ?: wp_trim_words( $product->get_description(), 50 );
+        $product_url = get_permalink( $product_id );
+        $product_price = $product->get_price();
+        $product_sku = $product->get_sku();
+        $product_image_id = $product->get_image_id();
+        
+        // Основная схема товара
+        $schema = array(
         '@context' => 'https://schema.org',
         '@type' => 'Product',
         'name' => $product_name,
@@ -107,106 +117,109 @@ function asker_add_product_schema() {
         'mpn' => $product_sku ?: (string) $product_id,
     );
     
-    // Изображения товара
-    $images = array();
-    if ( $product_image_id ) {
-        $main_image = wp_get_attachment_image_url( $product_image_id, 'full' );
-        if ( $main_image ) {
-            $images[] = $main_image;
-        }
-    }
-    
-    // Дополнительные изображения
-    $gallery_ids = $product->get_gallery_image_ids();
-    foreach ( $gallery_ids as $gallery_id ) {
-        $gallery_image = wp_get_attachment_image_url( $gallery_id, 'full' );
-        if ( $gallery_image ) {
-            $images[] = $gallery_image;
-        }
-    }
-    
-    if ( ! empty( $images ) ) {
-        $schema['image'] = count( $images ) === 1 ? $images[0] : $images;
-    }
-    
-    // Бренд (если есть атрибут или термин)
-    $brand = $product->get_attribute( 'pa_brand' );
-    if ( ! $brand ) {
-        $brand_terms = wp_get_post_terms( $product_id, 'pa_brand' );
-        if ( ! empty( $brand_terms ) && ! is_wp_error( $brand_terms ) ) {
-            $brand = $brand_terms[0]->name;
-        }
-    }
-    
-    if ( $brand ) {
-        $schema['brand'] = array(
-            '@type' => 'Brand',
-            'name' => $brand,
-        );
-    } else {
-        // Используем название сайта как бренд по умолчанию
-        $schema['brand'] = array(
-            '@type' => 'Brand',
-            'name' => $site_name,
-        );
-    }
-    
-    // Цена и валюта
-    if ( $product_price ) {
-        $schema['offers'] = array(
-            '@type' => 'Offer',
-            'url' => $product_url,
-            'priceCurrency' => 'RUB',
-            'price' => number_format( (float) $product_price, 2, '.', '' ),
-            'availability' => $product->is_in_stock() ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-            'seller' => array(
-                '@type' => 'Organization',
-                'name' => $site_name,
-            ),
-        );
-        
-        // Если товар на распродаже
-        if ( $product->is_on_sale() ) {
-            $regular_price = $product->get_regular_price();
-            if ( $regular_price ) {
-                $schema['offers']['priceSpecification'] = array(
-                    '@type' => 'UnitPriceSpecification',
-                    'price' => number_format( (float) $product_price, 2, '.', '' ),
-                    'priceCurrency' => 'RUB',
-                    'referenceQuantity' => array(
-                        '@type' => 'QuantitativeValue',
-                        'value' => 1,
-                        'unitCode' => 'C62', // единица товара
-                    ),
-                );
+        // Изображения товара
+        $images = array();
+        if ( $product_image_id ) {
+            $main_image = wp_get_attachment_image_url( $product_image_id, 'full' );
+            if ( $main_image ) {
+                $images[] = $main_image;
             }
         }
-    }
-    
-    // Категории товара
-    $categories = wp_get_post_terms( $product_id, 'product_cat' );
-    if ( ! empty( $categories ) && ! is_wp_error( $categories ) ) {
-        $category_names = array();
-        foreach ( $categories as $category ) {
-            $category_names[] = $category->name;
+        
+        // Дополнительные изображения
+        $gallery_ids = $product->get_gallery_image_ids();
+        foreach ( $gallery_ids as $gallery_id ) {
+            $gallery_image = wp_get_attachment_image_url( $gallery_id, 'full' );
+            if ( $gallery_image ) {
+                $images[] = $gallery_image;
+            }
         }
-        $schema['category'] = implode( ', ', $category_names );
+        
+        if ( ! empty( $images ) ) {
+            $schema['image'] = count( $images ) === 1 ? $images[0] : $images;
+        }
+        
+        // Бренд (если есть атрибут или термин)
+        $brand = $product->get_attribute( 'pa_brand' );
+        if ( ! $brand ) {
+            $brand_terms = wp_get_post_terms( $product_id, 'pa_brand' );
+            if ( ! empty( $brand_terms ) && ! is_wp_error( $brand_terms ) ) {
+                $brand = $brand_terms[0]->name;
+            }
+        }
+        
+        if ( $brand ) {
+            $schema['brand'] = array(
+                '@type' => 'Brand',
+                'name' => $brand,
+            );
+        } else {
+            // Используем название сайта как бренд по умолчанию
+            $schema['brand'] = array(
+                '@type' => 'Brand',
+                'name' => $site_name,
+            );
+        }
+        
+        // Цена и валюта
+        if ( $product_price ) {
+            $schema['offers'] = array(
+                '@type' => 'Offer',
+                'url' => $product_url,
+                'priceCurrency' => 'RUB',
+                'price' => number_format( (float) $product_price, 2, '.', '' ),
+                'availability' => $product->is_in_stock() ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+                'seller' => array(
+                    '@type' => 'Organization',
+                    'name' => $site_name,
+                ),
+            );
+            
+            // Если товар на распродаже
+            if ( $product->is_on_sale() ) {
+                $regular_price = $product->get_regular_price();
+                if ( $regular_price ) {
+                    $schema['offers']['priceSpecification'] = array(
+                        '@type' => 'UnitPriceSpecification',
+                        'price' => number_format( (float) $product_price, 2, '.', '' ),
+                        'priceCurrency' => 'RUB',
+                        'referenceQuantity' => array(
+                            '@type' => 'QuantitativeValue',
+                            'value' => 1,
+                            'unitCode' => 'C62', // единица товара
+                        ),
+                    );
+                }
+            }
+        }
+        
+        // Категории товара
+        $categories = wp_get_post_terms( $product_id, 'product_cat' );
+        if ( ! empty( $categories ) && ! is_wp_error( $categories ) ) {
+            $category_names = array();
+            foreach ( $categories as $category ) {
+                $category_names[] = $category->name;
+            }
+            $schema['category'] = implode( ', ', $category_names );
+        }
+        
+        // Рейтинг и отзывы (если включены в WooCommerce)
+        if ( $product->get_review_count() > 0 ) {
+            $schema['aggregateRating'] = array(
+                '@type' => 'AggregateRating',
+                'ratingValue' => $product->get_average_rating(),
+                'reviewCount' => $product->get_review_count(),
+                'bestRating' => 5,
+                'worstRating' => 1,
+            );
+        }
+        
+        echo '<script type="application/ld+json">' . "\n";
+        echo wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
+        echo "\n" . '</script>' . "\n";
+    } catch ( Exception $e ) {
+        // Игнорируем ошибки чтобы не ломать страницу
     }
-    
-    // Рейтинг и отзывы (если включены в WooCommerce)
-    if ( $product->get_review_count() > 0 ) {
-        $schema['aggregateRating'] = array(
-            '@type' => 'AggregateRating',
-            'ratingValue' => $product->get_average_rating(),
-            'reviewCount' => $product->get_review_count(),
-            'bestRating' => 5,
-            'worstRating' => 1,
-        );
-    }
-    
-    echo '<script type="application/ld+json">' . "\n";
-    echo wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
-    echo "\n" . '</script>' . "\n";
 }
 add_action( 'wp_head', 'asker_add_product_schema', 5 );
 
@@ -233,6 +246,18 @@ function asker_add_breadcrumb_schema() {
     // Страница товара
     if ( is_product() ) {
         global $product;
+        
+        // КРИТИЧНО: Инициализируем $product если не установлен
+        if ( ! $product || ! is_a( $product, 'WC_Product' ) ) {
+            $product_id = get_queried_object_id();
+            if ( $product_id ) {
+                $product = wc_get_product( $product_id );
+            }
+        }
+        
+        if ( ! $product || ! is_a( $product, 'WC_Product' ) ) {
+            return;
+        }
         
         // Каталог
         $shop_page_id = wc_get_page_id( 'shop' );

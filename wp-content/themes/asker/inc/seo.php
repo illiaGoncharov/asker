@@ -38,23 +38,37 @@ function asker_add_seo_meta_tags() {
     // Страница товара
     elseif ( is_product() ) {
         global $product;
-        if ( $product ) {
-            $og_title = $product->get_name() . ' — ' . $site_name;
-            $og_description = $product->get_short_description() ?: wp_trim_words( $product->get_description(), 20 );
-            $og_url = get_permalink( $product->get_id() );
-            $og_type = 'product';
-            
-            // Изображение товара
-            $image_id = $product->get_image_id();
-            if ( $image_id ) {
-                $og_image = wp_get_attachment_image_url( $image_id, 'large' );
+        
+        // КРИТИЧНО: Инициализируем $product если не установлен
+        if ( ! $product || ! is_a( $product, 'WC_Product' ) ) {
+            $product_id = get_queried_object_id();
+            if ( $product_id ) {
+                $product = wc_get_product( $product_id );
             }
-            
-            // Добавляем мета для цены товара
-            $price = $product->get_price();
-            if ( $price ) {
-                echo '<meta property="product:price:amount" content="' . esc_attr( $price ) . '" />' . "\n";
-                echo '<meta property="product:price:currency" content="RUB" />' . "\n";
+        }
+        
+        // Проверяем, что $product это объект WC_Product
+        if ( $product && is_a( $product, 'WC_Product' ) ) {
+            try {
+                $og_title = $product->get_name() . ' — ' . $site_name;
+                $og_description = $product->get_short_description() ?: wp_trim_words( $product->get_description(), 20 );
+                $og_url = get_permalink( $product->get_id() );
+                $og_type = 'product';
+                
+                // Изображение товара
+                $image_id = $product->get_image_id();
+                if ( $image_id ) {
+                    $og_image = wp_get_attachment_image_url( $image_id, 'large' );
+                }
+                
+                // Добавляем мета для цены товара
+                $price = $product->get_price();
+                if ( $price ) {
+                    echo '<meta property="product:price:amount" content="' . esc_attr( $price ) . '" />' . "\n";
+                    echo '<meta property="product:price:currency" content="RUB" />' . "\n";
+                }
+            } catch ( Exception $e ) {
+                // Игнорируем ошибки чтобы не ломать страницу
             }
         }
     }
@@ -163,9 +177,13 @@ function asker_improve_page_title( $title ) {
     // Для товаров добавляем цену в title (опционально)
     if ( is_product() ) {
         global $product;
-        if ( $product && $product->get_price() ) {
-            $price = wc_price( $product->get_price() );
-            $title = $title . ' — ' . strip_tags( $price );
+        // Проверяем, что $product это объект WC_Product, а не строка
+        if ( $product && is_a( $product, 'WC_Product' ) ) {
+            $price = $product->get_price();
+            if ( $price ) {
+                $price_formatted = wc_price( $price );
+                $title = $title . ' — ' . strip_tags( $price_formatted );
+            }
         }
     }
     
@@ -175,9 +193,13 @@ add_filter( 'wp_title', 'asker_improve_page_title', 10, 1 );
 add_filter( 'document_title_parts', function( $title_parts ) {
     if ( is_product() ) {
         global $product;
-        if ( $product && $product->get_price() ) {
-            $price = wc_price( $product->get_price() );
-            $title_parts['title'] .= ' — ' . strip_tags( $price );
+        // Проверяем, что $product это объект WC_Product, а не строка
+        if ( $product && is_a( $product, 'WC_Product' ) ) {
+            $price = $product->get_price();
+            if ( $price ) {
+                $price_formatted = wc_price( $price );
+                $title_parts['title'] .= ' — ' . strip_tags( $price_formatted );
+            }
         }
     }
     return $title_parts;

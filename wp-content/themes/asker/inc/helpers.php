@@ -102,12 +102,21 @@ add_action('wp_ajax_get_wishlist_count', 'asker_get_wishlist_count');
 add_action('wp_ajax_nopriv_get_wishlist_count', 'asker_get_wishlist_count');
 
 function asker_get_wishlist_count() {
+    // КРИТИЧНО: Для неавторизованных пользователей возвращаем 0
+    // Избранное должно быть привязано к аккаунту
+    if (!is_user_logged_in()) {
+        wp_send_json_success(['count' => 0]);
+        return;
+    }
+    
     // Проверяем, есть ли плагин избранного (например, YITH Wishlist)
     if (function_exists('yith_wcwl_count_products')) {
         $wishlist_count = yith_wcwl_count_products();
     } else {
-        // Если плагина нет, используем сессию или cookies
-        $wishlist_count = isset($_SESSION['wishlist']) ? count($_SESSION['wishlist']) : 0;
+        // Используем user_meta для авторизованных пользователей
+        $user_id = get_current_user_id();
+        $wishlist = get_user_meta($user_id, 'asker_wishlist', true);
+        $wishlist_count = (!empty($wishlist) && is_array($wishlist)) ? count($wishlist) : 0;
     }
     
     wp_send_json_success(['count' => $wishlist_count]);
