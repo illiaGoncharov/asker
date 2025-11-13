@@ -70,13 +70,16 @@ if (function_exists('switch_theme')) {
 
 // 8. Проверка ключевых файлов шаблонов
 $template_files = array(
+    'woocommerce/archive-product.php' => 'shop-wrapper',
     'woocommerce/content-product.php' => 'shop-product-content',
     'woocommerce/single-product.php' => 'container',
     'woocommerce/content-single-product.php' => 'single-product-page',
     'header.php' => 'wishlist-count',
     'inc/woocommerce.php' => 'asker_output_related_products',
+    'assets/css/main.css' => 'shop-product-card',
 );
 
+echo "\n=== ПРОВЕРКА ФАЙЛОВ ШАБЛОНОВ ===\n";
 foreach ($template_files as $file => $check_string) {
     $template_file = get_template_directory() . '/' . $file;
     if (file_exists($template_file)) {
@@ -87,9 +90,37 @@ foreach ($template_files as $file => $check_string) {
         } else {
             echo "⚠ Файл {$file} НЕ содержит '{$check_string}'!\n";
             echo "  Размер: " . filesize($template_file) . " байт, Дата: " . date('Y-m-d H:i:s', filemtime($template_file)) . "\n";
+            echo "  Первые 200 символов: " . substr($file_content, 0, 200) . "...\n";
         }
     } else {
         echo "⚠ Файл {$file} не найден!\n";
+    }
+}
+
+// 9. Проверка активного шаблона для категорий товаров
+echo "\n=== ПРОВЕРКА ШАБЛОНОВ WOOCOMMERCE ===\n";
+if (function_exists('wc_get_template')) {
+    $template_loader = WC()->template_loader;
+    echo "✓ WooCommerce Template Loader активен\n";
+} else {
+    echo "⚠ WooCommerce Template Loader не найден\n";
+}
+
+// Проверяем какой шаблон используется для категорий
+$template_hierarchy = array(
+    'taxonomy-product_cat.php',
+    'archive-product.php',
+    'archive.php',
+    'index.php'
+);
+
+echo "\nПроверка иерархии шаблонов для категорий:\n";
+foreach ($template_hierarchy as $template_name) {
+    $template_path = get_template_directory() . '/' . $template_name;
+    if (file_exists($template_path)) {
+        echo "  ✓ {$template_name} существует\n";
+    } else {
+        echo "  ✗ {$template_name} не найден\n";
     }
 }
 
