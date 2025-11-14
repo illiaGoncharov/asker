@@ -36,7 +36,7 @@ function asker_get_customer_level( $user_id ) {
     // Дефолтные уровни если ACF не настроен
     if ( empty( $levels_config ) ) {
         $levels_config = array(
-            array('level_name' => 'Базовый', 'level_min' => 0, 'level_max' => 50000, 'level_discount' => 5),
+            array('level_name' => 'Базовый', 'level_min' => 0, 'level_max' => 50000, 'level_discount' => 10),
             array('level_name' => 'Серебро', 'level_min' => 50001, 'level_max' => 150000, 'level_discount' => 10),
             array('level_name' => 'Золото', 'level_min' => 150001, 'level_max' => 500000, 'level_discount' => 15),
             array('level_name' => 'Платина', 'level_min' => 500001, 'level_max' => null, 'level_discount' => 20),
