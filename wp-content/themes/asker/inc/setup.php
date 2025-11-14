@@ -131,4 +131,87 @@ add_action('after_switch_theme', function () {
     }
 });
 
+/**
+ * Исправляем страницу политики конфиденциальности и другие страницы
+ * Убеждаемся, что они имеют правильный slug и опубликованы
+ */
+function asker_fix_privacy_page() {
+    // Проверяем, существует ли страница по слагу
+    $privacy_page = get_page_by_path('privacy-policy');
+    
+    if (!$privacy_page) {
+        // Страницы нет - создаём её
+        $privacy_id = asker_create_page_if_missing(__('Политика конфиденциальности', 'asker'), 'privacy-policy', '<h2>Политика конфиденциальности</h2><p>Здесь будет размещена политика конфиденциальности.</p>');
+        if ($privacy_id) {
+            update_option('wp_page_for_privacy_policy', $privacy_id);
+        }
+    } else {
+        // Страница есть - проверяем и исправляем
+        if ($privacy_page->post_status !== 'publish') {
+            wp_update_post([
+                'ID' => $privacy_page->ID,
+                'post_status' => 'publish'
+            ]);
+        }
+        
+        if ($privacy_page->post_name !== 'privacy-policy') {
+            wp_update_post([
+                'ID' => $privacy_page->ID,
+                'post_name' => 'privacy-policy'
+            ]);
+        }
+        
+        // Назначаем страницу в настройках WordPress
+        update_option('wp_page_for_privacy_policy', $privacy_page->ID);
+    }
+    
+    // Проверяем страницу с ID=3 (если это политика конфиденциальности)
+    $page_id_3 = get_post(3);
+    if ($page_id_3 && $page_id_3->post_type === 'page') {
+        // Если это страница политики конфиденциальности, исправляем её
+        if (stripos($page_id_3->post_title, 'политика') !== false || 
+            stripos($page_id_3->post_title, 'privacy') !== false ||
+            stripos($page_id_3->post_title, 'конфиденциальн') !== false) {
+            
+            // Обновляем slug если он неправильный
+            if ($page_id_3->post_name !== 'privacy-policy') {
+                wp_update_post([
+                    'ID' => 3,
+                    'post_name' => 'privacy-policy',
+                    'post_status' => 'publish'
+                ]);
+            }
+            
+            // Назначаем страницу в настройках WordPress
+            update_option('wp_page_for_privacy_policy', 3);
+        }
+    }
+    
+    // Убеждаемся, что постоянные ссылки настроены
+    $permalink_structure = get_option('permalink_structure');
+    if (empty($permalink_structure)) {
+        update_option('permalink_structure', '/%postname%/');
+        flush_rewrite_rules();
+    }
+}
+add_action('admin_init', 'asker_fix_privacy_page', 1);
+add_action('init', 'asker_fix_privacy_page', 1);
+
+/**
+ * Редирект с ?page_id=3 на нормальный URL
+ */
+function asker_redirect_page_id_to_slug() {
+    if (isset($_GET['page_id']) && $_GET['page_id'] == 3) {
+        $page = get_post(3);
+        if ($page && $page->post_type === 'page' && $page->post_status === 'publish') {
+            $permalink = get_permalink($page->ID);
+            if ($permalink && $permalink !== home_url($_SERVER['REQUEST_URI'])) {
+                wp_redirect($permalink, 301);
+                exit;
+            }
+        }
+    }
+}
+add_action('template_redirect', 'asker_redirect_page_id_to_slug', 1);
+
 

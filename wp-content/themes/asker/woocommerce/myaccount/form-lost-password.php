@@ -15,7 +15,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 ?>
 
 <div class="auth-page">
-    <h1 class="auth-page-title">Восстановление пароля</h1>
+    <!-- Заголовок в стиле табов -->
+    <div class="auth-tabs">
+        <span class="auth-tab auth-tab--active">Восстановление пароля</span>
+    </div>
     <p class="auth-page-description">Введите E-mail, указанный при регистрации и мы отправим вам ссылку для восстановления пароля</p>
     
     <div class="auth-container">
@@ -36,7 +39,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                 
                 <div class="form-group">
                     <label for="user_login">Email&nbsp;<span class="required">*</span></label>
-                    <input class="woocommerce-Input woocommerce-Input--text input-text form-control" type="text" name="user_login" id="user_login" autocomplete="username" placeholder="Введите ваш email" required />
+                    <input class="woocommerce-Input woocommerce-Input--text input-text form-control" type="email" name="user_login" id="user_login" autocomplete="username" required />
                 </div>
                 
                 <?php do_action( 'woocommerce_lostpassword_form' ); ?>
@@ -50,7 +53,35 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <div class="auth-consent">
                     <label class="checkbox-label">
                         <input type="checkbox" name="consent" id="lost-password-consent" required>
-                        <span>Нажимая кнопку, вы даете согласие на обработку персональных данных <a href="#" class="auth-consent__link">Подробнее</a></span>
+                        <span>Нажимая кнопку, вы даете согласие на обработку персональных данных <a href="<?php 
+                            // Сначала ищем страницу по слагу
+                            $privacy_page = get_page_by_path( 'privacy-policy' );
+                            if ( $privacy_page && $privacy_page->post_status === 'publish' ) {
+                                // Используем slug для URL
+                                $privacy_url = home_url( '/privacy-policy' );
+                            } else {
+                                // Если не найдена по слагу, пробуем через настройки WordPress
+                                $privacy_id = get_option( 'wp_page_for_privacy_policy' );
+                                if ( $privacy_id ) {
+                                    $privacy_page = get_post( $privacy_id );
+                                    if ( $privacy_page && $privacy_page->post_status === 'publish' ) {
+                                        // Обновляем slug если нужно
+                                        if ( $privacy_page->post_name !== 'privacy-policy' ) {
+                                            wp_update_post([
+                                                'ID' => $privacy_id,
+                                                'post_name' => 'privacy-policy'
+                                            ]);
+                                        }
+                                        $privacy_url = home_url( '/privacy-policy' );
+                                    } else {
+                                        $privacy_url = home_url( '/privacy-policy' );
+                                    }
+                                } else {
+                                    $privacy_url = home_url( '/privacy-policy' );
+                                }
+                            }
+                            echo esc_url( $privacy_url );
+                        ?>" class="auth-consent__link" target="_blank">Подробнее</a></span>
                     </label>
                 </div>
                 

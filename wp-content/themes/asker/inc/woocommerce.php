@@ -971,33 +971,44 @@ function asker_get_wishlist_products() {
     
     ob_start();
     ?>
-    <div class="products-grid">
+    <div class="wishlist-list">
         <?php foreach ($product_ids as $product_id) :
             $product = wc_get_product($product_id);
             if ($product && $product->is_visible()) :
                 $product_image = wp_get_attachment_image_src(get_post_thumbnail_id($product_id), 'medium');
                 $product_url = get_permalink($product_id);
                 $price = $product->get_price_html();
-                $price = preg_replace('/,00/', '', $price);
+                $sku = $product->get_sku();
                 ?>
-                <div class="product-card">
-                    <button class="product-favorite active favorite-btn" data-product-id="<?php echo esc_attr($product_id); ?>" aria-label="Удалить из избранного">
-                        <img src="<?php echo get_template_directory_uri(); ?>/assets/images/ui/like[active].svg" alt="Избранное" class="favorite-icon favorite-icon--active">
-                        <img src="<?php echo get_template_directory_uri(); ?>/assets/images/ui/like[idle].svg" alt="Добавить в избранное" class="favorite-icon favorite-icon--idle">
-                    </button>
-                    <a href="<?php echo esc_url($product_url); ?>">
+                <div class="wishlist-item">
+                    <a href="<?php echo esc_url($product_url); ?>" class="wishlist-item-image">
                         <?php if ($product_image) : ?>
-                            <img class="product-image" src="<?php echo esc_url($product_image[0]); ?>" alt="<?php echo esc_attr($product->get_name()); ?>">
+                            <img src="<?php echo esc_url($product_image[0]); ?>" alt="<?php echo esc_attr($product->get_name()); ?>">
                         <?php else : ?>
                             <div class="product-placeholder"><?php echo esc_html($product->get_name()); ?></div>
                         <?php endif; ?>
                     </a>
-                    <h3 class="product-title">
+                    <div class="wishlist-item-info">
+                        <h3 class="wishlist-item-title">
                         <a href="<?php echo esc_url($product_url); ?>"><?php echo esc_html($product->get_name()); ?></a>
                     </h3>
-                    <div class="product-bottom">
-                        <div class="product-price"><?php echo $price; ?></div>
-                        <button class="btn-add-cart add_to_cart_button" data-product-id="<?php echo esc_attr($product_id); ?>">В корзину</button>
+                        <?php if ($sku) : ?>
+                            <p class="wishlist-item-sku">Аритикул: <?php echo esc_html($sku); ?></p>
+                        <?php endif; ?>
+                    </div>
+                    <div class="wishlist-item-price"><?php echo $price; ?></div>
+                    <button class="wishlist-item-remove" data-product-id="<?php echo esc_attr($product_id); ?>" aria-label="Удалить из избранного">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <div class="wishlist-item-right">
+                        <div class="wishlist-item-quantity">
+                            <button class="quantity-btn quantity-minus" data-product-id="<?php echo esc_attr($product_id); ?>">-</button>
+                            <input type="number" class="quantity-input" value="1" min="1" data-product-id="<?php echo esc_attr($product_id); ?>">
+                            <button class="quantity-btn quantity-plus" data-product-id="<?php echo esc_attr($product_id); ?>">+</button>
+                        </div>
+                        <button class="wishlist-item-add-cart btn-add-cart add_to_cart_button" data-product-id="<?php echo esc_attr($product_id); ?>">В корзину</button>
                     </div>
                 </div>
             <?php
@@ -2768,17 +2779,17 @@ add_action('template_redirect', 'asker_fix_product_category_requests', 1);
  * Сохраняем имя и фамилию при регистрации пользователя
  */
 function asker_save_user_name_on_registration( $customer_id, $new_customer_data, $password_generated ) {
-    // Сохраняем имя и фамилию из POST данных
+    // Сохраняем имя из POST данных
     if ( isset( $_POST['first_name'] ) && ! empty( $_POST['first_name'] ) ) {
         $first_name = sanitize_text_field( $_POST['first_name'] );
         update_user_meta( $customer_id, 'first_name', $first_name );
         update_user_meta( $customer_id, 'billing_first_name', $first_name );
     }
     
-    if ( isset( $_POST['last_name'] ) && ! empty( $_POST['last_name'] ) ) {
-        $last_name = sanitize_text_field( $_POST['last_name'] );
-        update_user_meta( $customer_id, 'last_name', $last_name );
-        update_user_meta( $customer_id, 'billing_last_name', $last_name );
+    // Сохраняем телефон из POST данных
+    if ( isset( $_POST['billing_phone'] ) && ! empty( $_POST['billing_phone'] ) ) {
+        $phone = sanitize_text_field( $_POST['billing_phone'] );
+        update_user_meta( $customer_id, 'billing_phone', $phone );
     }
     
     // Если имя не указано, но указан username - используем его как имя
@@ -2791,6 +2802,66 @@ function asker_save_user_name_on_registration( $customer_id, $new_customer_data,
     }
 }
 add_action( 'woocommerce_created_customer', 'asker_save_user_name_on_registration', 10, 3 );
+
+/**
+ * Генерируем username из email при регистрации
+ */
+function asker_generate_username_from_email( $username, $email, $new_user_args ) {
+    // Если username не передан или пустой, генерируем из email
+    if ( empty( $username ) && ! empty( $email ) ) {
+        $username = sanitize_user( $email, true );
+        // Убираем все недопустимые символы
+        $username = preg_replace( '/[^a-z0-9]/', '', strtolower( $username ) );
+        // Если username все еще пустой, используем часть email до @
+        if ( empty( $username ) ) {
+            $email_parts = explode( '@', $email );
+            $username = sanitize_user( $email_parts[0], true );
+        }
+        // Добавляем случайное число если username уже существует
+        $original_username = $username;
+        $counter = 1;
+        while ( username_exists( $username ) ) {
+            $username = $original_username . $counter;
+            $counter++;
+        }
+    }
+    return $username;
+}
+add_filter( 'woocommerce_registration_generate_username', 'asker_generate_username_from_email', 10, 3 );
+
+/**
+ * Генерируем пароль автоматически при регистрации
+ */
+function asker_generate_password_on_registration( $password_generated ) {
+    return true; // WooCommerce автоматически сгенерирует пароль
+}
+add_filter( 'woocommerce_registration_generate_password', 'asker_generate_password_on_registration' );
+
+/**
+ * Убираем стандартное сообщение WooCommerce о политике конфиденциальности
+ */
+function asker_remove_privacy_policy_text( $text ) {
+    return '';
+}
+add_filter( 'woocommerce_registration_privacy_policy_text', 'asker_remove_privacy_policy_text' );
+
+/**
+ * Убираем стандартное сообщение WooCommerce о политике конфиденциальности через хук
+ */
+function asker_remove_privacy_policy_message() {
+    remove_action( 'woocommerce_register_form', 'wc_registration_privacy_policy_text', 20 );
+}
+add_action( 'init', 'asker_remove_privacy_policy_message' );
+
+/**
+ * Убираем стандартное сообщение WooCommerce о политике конфиденциальности на странице регистрации
+ */
+function asker_remove_privacy_policy_on_register_page() {
+    if ( is_account_page() ) {
+        remove_action( 'woocommerce_register_form', 'wc_registration_privacy_policy_text', 20 );
+    }
+}
+add_action( 'template_redirect', 'asker_remove_privacy_policy_on_register_page', 1 );
 
 /**
  * ========================================
@@ -2928,7 +2999,9 @@ add_action( 'wp_login', 'asker_reset_login_attempts', 10, 2 );
 
 /**
  * Добавляем заголовок на страницу восстановления пароля
+ * ОТКЛЮЧЕНО: заголовок уже есть в шаблоне form-lost-password.php
  */
+/*
 function asker_add_lost_password_title() {
     if ( isset( $_GET['lost-password'] ) || isset( $_GET['reset-link-sent'] ) ) {
         echo '<h1 class="auth-page-title">Восстановление пароля</h1>';
@@ -2936,5 +3009,6 @@ function asker_add_lost_password_title() {
     }
 }
 add_action( 'woocommerce_before_lost_password_form', 'asker_add_lost_password_title', 5 );
+*/
 
 

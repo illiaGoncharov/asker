@@ -8,14 +8,153 @@
  * @version 3.5.0
  */
 
+// Инициализируем переменные для аватара
+$avatar_uploaded = false;
+$new_avatar_url = '';
+
 // Обработка сохранения профиля
 if (isset($_POST['first_name']) && is_user_logged_in()) {
     $user_id = get_current_user_id();
+    
+    // Обработка загрузки аватара
+    // Отладочный вывод для администраторов
+    if ( current_user_can('administrator') ) {
+        error_log('=== AVATAR UPLOAD DEBUG START ===');
+        error_log('REQUEST_METHOD: ' . $_SERVER['REQUEST_METHOD']);
+        error_log('CONTENT_TYPE: ' . (isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : 'NOT SET'));
+        error_log('FILES array: ' . print_r($_FILES, true));
+        error_log('POST array: ' . print_r($_POST, true));
+        error_log('POST first_name: ' . (isset($_POST['first_name']) ? $_POST['first_name'] : 'NOT SET'));
+        error_log('FILES avatar exists: ' . (isset($_FILES['avatar']) ? 'YES' : 'NO'));
+        if (isset($_FILES['avatar'])) {
+            error_log('FILES avatar name: ' . (isset($_FILES['avatar']['name']) ? $_FILES['avatar']['name'] : 'NOT SET'));
+            error_log('FILES avatar error: ' . (isset($_FILES['avatar']['error']) ? $_FILES['avatar']['error'] : 'NOT SET'));
+            error_log('FILES avatar size: ' . (isset($_FILES['avatar']['size']) ? $_FILES['avatar']['size'] : 'NOT SET'));
+            error_log('FILES avatar type: ' . (isset($_FILES['avatar']['type']) ? $_FILES['avatar']['type'] : 'NOT SET'));
+            error_log('FILES avatar tmp_name: ' . (isset($_FILES['avatar']['tmp_name']) ? $_FILES['avatar']['tmp_name'] : 'NOT SET'));
+        }
+        error_log('=== AVATAR UPLOAD DEBUG END ===');
+    }
+    
+    // Проверяем, был ли отправлен файл
+    $avatar_file_sent = false;
+    if (isset($_FILES['avatar'])) {
+        if (!empty($_FILES['avatar']['name'])) {
+            $avatar_file_sent = true;
+            if ($_FILES['avatar']['error'] !== UPLOAD_ERR_OK) {
+                if ( current_user_can('administrator') ) {
+                    error_log('Avatar upload error code: ' . $_FILES['avatar']['error']);
+                }
+            }
+        }
+    }
+    
+    if ($avatar_file_sent && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+        require_once(ABSPATH . 'wp-admin/includes/image.php');
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+        require_once(ABSPATH . 'wp-admin/includes/media.php');
+        
+        // Проверяем тип файла
+        $allowed_types = array('image/jpeg', 'image/png', 'image/gif', 'image/webp');
+        $file_type = wp_check_filetype($_FILES['avatar']['name']);
+        $mime_type = $_FILES['avatar']['type'];
+        
+        if (in_array($mime_type, $allowed_types) || in_array($file_type['type'], $allowed_types)) {
+            // Удаляем старый аватар если есть
+            $old_avatar_id = get_user_meta($user_id, 'custom_avatar', true);
+            if ($old_avatar_id) {
+                wp_delete_attachment($old_avatar_id, true);
+            }
+            
+            // Используем wp_handle_upload для загрузки файла
+            $upload_overrides = array('test_form' => false);
+            $uploaded_file = wp_handle_upload($_FILES['avatar'], $upload_overrides);
+            
+            if ( current_user_can('administrator') ) {
+                error_log('wp_handle_upload result: ' . print_r($uploaded_file, true));
+            }
+            
+            if (!isset($uploaded_file['error']) && isset($uploaded_file['file'])) {
+                // Создаем attachment
+                $attachment_data = array(
+                    'post_mime_type' => $uploaded_file['type'],
+                    'post_title' => sanitize_file_name(pathinfo($_FILES['avatar']['name'], PATHINFO_FILENAME)),
+                    'post_content' => '',
+                    'post_status' => 'inherit',
+                    'post_author' => $user_id
+                );
+                
+                $attachment_id = wp_insert_attachment($attachment_data, $uploaded_file['file']);
+                
+                if ( current_user_can('administrator') ) {
+                    error_log('wp_insert_attachment result: ' . ($attachment_id ? $attachment_id : 'NULL'));
+                    if (is_wp_error($attachment_id)) {
+                        error_log('wp_insert_attachment error: ' . $attachment_id->get_error_message());
+                    }
+                }
+                
+                if (!is_wp_error($attachment_id) && $attachment_id) {
+                    // Генерируем метаданные
+                    $attach_data = wp_generate_attachment_metadata($attachment_id, $uploaded_file['file']);
+                    wp_update_attachment_metadata($attachment_id, $attach_data);
+                    
+                    // Сохраняем attachment ID
+                    $saved = update_user_meta($user_id, 'custom_avatar', $attachment_id);
+                    
+                    // Проверяем сразу после сохранения
+                    $check_id = get_user_meta($user_id, 'custom_avatar', true);
+                    if ( current_user_can('administrator') ) {
+                        error_log('After update_user_meta: saved = ' . ($saved ? 'true' : 'false') . ', check_id = ' . $check_id);
+                    }
+                    
+                    // Получаем URL нового аватара
+                    $new_avatar_url = wp_get_attachment_image_url($attachment_id, 'thumbnail');
+                    if (!$new_avatar_url) {
+                        $new_avatar_url = wp_get_attachment_url($attachment_id);
+                    }
+                    
+                    if ($new_avatar_url) {
+                        update_user_meta($user_id, 'custom_avatar_url', $new_avatar_url);
+                        $avatar_uploaded = true;
+                        
+                        // Проверяем сразу после сохранения URL
+                        $check_url = get_user_meta($user_id, 'custom_avatar_url', true);
+                        if ( current_user_can('administrator') ) {
+                            error_log('Avatar uploaded successfully: ID=' . $attachment_id . ', URL=' . $new_avatar_url);
+                            error_log('Avatar saved check: ID=' . $check_id . ', URL=' . $check_url);
+                        }
+                    } else {
+                        error_log('Avatar uploaded but URL is empty: ID=' . $attachment_id);
+                    }
+                } else {
+                    $error_msg = is_wp_error($attachment_id) ? $attachment_id->get_error_message() : 'Unknown error';
+                    error_log('Avatar attachment creation error: ' . $error_msg);
+                }
+            } else {
+                $error_msg = isset($uploaded_file['error']) ? $uploaded_file['error'] : 'Unknown error';
+                error_log('Avatar upload error: ' . $error_msg);
+                error_log('FILES array: ' . print_r($_FILES, true));
+            }
+        } else {
+            error_log('Avatar upload: Invalid file type. MIME: ' . $mime_type . ', Type: ' . $file_type['type']);
+        }
+    } else {
+        // Файл не был отправлен или была ошибка
+        if ( current_user_can('administrator') ) {
+            if (!$avatar_file_sent) {
+                error_log('Avatar upload: File was not sent in form');
+            } else {
+                error_log('Avatar upload: File was sent but has error code: ' . $_FILES['avatar']['error']);
+            }
+        }
+    }
     
     // Обновляем данные пользователя
     update_user_meta($user_id, 'first_name', sanitize_text_field($_POST['first_name']));
     update_user_meta($user_id, 'last_name', sanitize_text_field($_POST['last_name']));
     update_user_meta($user_id, 'billing_phone', sanitize_text_field($_POST['phone']));
+    update_user_meta($user_id, 'billing_company', sanitize_text_field($_POST['company_name']));
+    update_user_meta($user_id, 'billing_inn', sanitize_text_field($_POST['company_inn']));
     
     // Обновляем email если он изменился
     if (isset($_POST['email']) && $_POST['email'] !== wp_get_current_user()->user_email) {
@@ -26,47 +165,76 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
         wp_update_user($user_data);
     }
     
-    // Показываем сообщение об успехе
-    echo '<div class="success-message" style="background: #D1FAE5; color: #065F46; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; text-align: center;">Профиль успешно обновлен!</div>';
+    // Обновляем пароль если нужно
+    if (isset($_POST['change_password']) && $_POST['change_password'] && !empty($_POST['new_password'])) {
+        if ($_POST['new_password'] === $_POST['confirm_password']) {
+            wp_set_password($_POST['new_password'], $user_id);
+        }
+    }
+    
+    // Показываем сообщение об успехе или ошибке
+    if ($avatar_uploaded) {
+        $success_message = '<div class="success-message" style="background: #D1FAE5; color: #065F46; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; text-align: center;">Профиль успешно обновлен! Аватар загружен.</div>';
+    } else {
+        $success_message = '<div class="success-message" style="background: #D1FAE5; color: #065F46; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; text-align: center;">Профиль успешно обновлен!</div>';
+        
+        // Показываем предупреждение, если файл был отправлен, но не загружен
+        if (isset($_POST['first_name']) && current_user_can('administrator')) {
+            $debug_info = '';
+            
+            if (isset($_FILES['avatar'])) {
+                if (!empty($_FILES['avatar']['name'])) {
+                    if ($_FILES['avatar']['error'] !== UPLOAD_ERR_OK) {
+                        $error_codes = array(
+                            UPLOAD_ERR_INI_SIZE => 'Файл превышает максимальный размер (upload_max_filesize)',
+                            UPLOAD_ERR_FORM_SIZE => 'Файл превышает максимальный размер формы',
+                            UPLOAD_ERR_PARTIAL => 'Файл загружен частично',
+                            UPLOAD_ERR_NO_FILE => 'Файл не был загружен',
+                            UPLOAD_ERR_NO_TMP_DIR => 'Отсутствует временная папка',
+                            UPLOAD_ERR_CANT_WRITE => 'Не удалось записать файл на диск',
+                            UPLOAD_ERR_EXTENSION => 'Загрузка остановлена расширением'
+                        );
+                        $error_msg = isset($error_codes[$_FILES['avatar']['error']]) ? $error_codes[$_FILES['avatar']['error']] : 'Неизвестная ошибка';
+                        $debug_info = 'Ошибка загрузки аватара: ' . $error_msg . ' (код: ' . $_FILES['avatar']['error'] . ')';
+                    } else {
+                        $debug_info = 'Файл был отправлен, но не обработан. Проверьте логи WordPress.';
+                    }
+                } else {
+                    $debug_info = 'Файл не был выбран или имя файла пустое.';
+                }
+            } else {
+                $debug_info = 'Файл не был отправлен в форме. Проверьте enctype="multipart/form-data" в форме.';
+            }
+            
+            if ($debug_info) {
+                $success_message .= '<div class="error-message" style="background: #FEE2E2; color: #991B1B; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; text-align: center;">' . $debug_info . '</div>';
+            }
+        }
+    }
 }
 
 ?>
 
 <div class="account-page container">
     <?php if (is_user_logged_in()): ?>
+        <?php if (isset($success_message)): ?>
+            <?php echo $success_message; ?>
+        <?php endif; ?>
         <div class="account-layout">
                 <!-- Сайдбар -->
                 <aside class="account-sidebar">
                     <div class="sidebar-header">
                         <div class="account-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="currentColor"/>
-                                <path d="M12 14C7.58172 14 4 17.5817 4 22H20C20 17.5817 16.4183 14 12 14Z" fill="currentColor"/>
-                            </svg>
+                            <img src="<?php echo get_template_directory_uri(); ?>/assets/images/login/acc_main.svg" alt="Личный кабинет" width="24" height="24">
                         </div>
                         <div class="account-info">
                             <h2>Личный кабинет</h2>
-                            <p class="user-name">
-                                <?php 
-                                $first_name = get_user_meta(get_current_user_id(), 'first_name', true);
-                                $last_name = get_user_meta(get_current_user_id(), 'last_name', true);
-                                if ($first_name || $last_name) {
-                                    echo esc_html(trim($first_name . ' ' . $last_name));
-                                } else {
-                                    echo esc_html(wp_get_current_user()->display_name);
-                                }
-                                ?>
-                            </p>
                         </div>
                     </div>
                     
                     <nav class="account-nav">
                         <a href="#" class="nav-item active" data-tab="overview">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                                <path d="M3 4C3 3.44772 3.44772 3 4 3H16C16.5523 3 17 3.44772 17 4V6C17 6.55228 16.5523 7 16 7H4C3.44772 7 3 6.55228 3 6V4Z" fill="currentColor"/>
-                                <path d="M3 10C3 9.44772 3.44772 9 4 9H10C10.5523 9 11 9.44772 11 10V16C11 16.5523 10.5523 17 10 17H4C3.44772 17 3 16.5523 3 16V10Z" fill="currentColor"/>
-                                <path d="M13 9C12.4477 9 12 9.44772 12 10V16C12 16.5523 12.4477 17 13 17H16C16.5523 17 17 16.5523 17 16V10C17 9.44772 16.5523 9 16 9H13Z" fill="currentColor"/>
-                            </svg>
+                            <img src="<?php echo get_template_directory_uri(); ?>/assets/images/login/acc_general.svg" alt="Обзор" width="20" height="20">
                             <span>Обзор</span>
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                 <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -74,10 +242,7 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                         </a>
                         
                         <a href="#" class="nav-item" data-tab="profile">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                                <path d="M10 9C11.6569 9 13 7.65685 13 6C13 4.34315 11.6569 3 10 3C8.34315 3 7 4.34315 7 6C7 7.65685 8.34315 9 10 9Z" fill="currentColor"/>
-                                <path d="M10 11C6.68629 11 4 13.6863 4 17H16C16 13.6863 13.3137 11 10 11Z" fill="currentColor"/>
-                            </svg>
+                            <img src="<?php echo get_template_directory_uri(); ?>/assets/images/login/acc_general.svg" alt="Профиль" width="20" height="20">
                             <span>Профиль</span>
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                 <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -85,9 +250,7 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                         </a>
                         
                         <a href="#" class="nav-item" data-tab="orders">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                                <path d="M2 3H4L4.4 5M7 13H13L17 5H4.4M7 13L4.4 5M7 13L5.2 15.4C5.1 15.5 5 15.7 5 16V18C5 18.6 5.4 19 6 19H16C16.6 19 17 18.6 17 18V16C17 15.7 16.9 15.5 16.8 15.4L15 13M7 13H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
+                            <img src="<?php echo get_template_directory_uri(); ?>/assets/images/login/acc_order.svg" alt="Мои заказы" width="20" height="20">
                             <span>Мои заказы</span>
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                 <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -95,9 +258,7 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                         </a>
                         
                         <a href="#" class="nav-item" data-tab="wishlist">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                                <path d="M20.84 4.61C20.3292 4.099 19.7228 3.69364 19.0554 3.41708C18.3879 3.14052 17.6725 2.99817 16.95 2.99817C16.2275 2.99817 15.5121 3.14052 14.8446 3.41708C14.1772 3.69364 13.5708 4.099 13.06 4.61L12 5.67L10.94 4.61C9.9083 3.5783 8.50903 2.9987 7.05 2.9987C5.59096 2.9987 4.19169 3.5783 3.16 4.61C2.1283 5.6417 1.5487 7.04097 1.5487 8.5C1.5487 9.95903 2.1283 11.3583 3.16 12.39L4.22 13.45L12 21.23L19.78 13.45L20.84 12.39C21.351 11.8792 21.7563 11.2728 22.0329 10.6053C22.3095 9.93789 22.4518 9.22248 22.4518 8.5C22.4518 7.77752 22.3095 7.06211 22.0329 6.39467C21.7563 5.72723 21.351 5.1208 20.84 4.61Z" fill="currentColor"/>
-                            </svg>
+                            <img src="<?php echo get_template_directory_uri(); ?>/assets/images/login/acc_like.svg" alt="Избранное" width="20" height="20">
                             <span>Избранное</span>
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                 <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -113,32 +274,19 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                         <div class="level-info">
                             <span class="level-label">Ваш уровень:</span>
                             <span class="level-name"><?php echo esc_html( $level_data['level'] ); ?></span>
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="2"/>
-                                <path d="M8 5V8L10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <div class="level-help-icon" data-tooltip="Правила уровней: Уровень определяется суммой ваших покупок. Чем больше сумма, тем выше уровень и больше скидка.">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                                    <path d="M8 6C7.44772 6 7 6.44772 7 7C7 7.55228 7.44772 8 8 8C8.55228 8 9 7.55228 9 7C9 6.44772 8.55228 6 8 6Z" fill="currentColor"/>
+                                    <path d="M8 9.5V11.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <circle cx="8" cy="12.5" r="0.5" fill="currentColor"/>
                             </svg>
+                            </div>
                         </div>
                         <div class="discount-info">
                             <span class="discount-label">Ваша скидка:</span>
                             <span class="discount-value"><?php echo esc_html( $level_data['discount'] ); ?>%</span>
                         </div>
-                        
-                        <?php if ( $level_data['next_level'] ) : 
-                            $next_level_min = floatval( $level_data['next_level']['level_min'] );
-                            $remaining = $next_level_min - $level_data['total_spent'];
-                            $progress = ( $level_data['total_spent'] - $level_data['level_min'] ) / ( $next_level_min - $level_data['level_min'] ) * 100;
-                            $progress = max( 0, min( 100, $progress ) );
-                        ?>
-                        <div class="level-progress" style="margin-top: 16px; padding: 12px; background: #F5F6F8; border-radius: 8px;">
-                            <p style="font-size: 12px; color: #6B7280; margin: 0 0 8px;">
-                                До уровня "<?php echo esc_html( $level_data['next_level']['level_name'] ); ?>": 
-                                <strong><?php echo wc_price( $remaining ); ?></strong>
-                            </p>
-                            <div style="background: #E5E7EB; height: 6px; border-radius: 3px; overflow: hidden;">
-                                <div style="background: #FFD600; height: 100%; width: <?php echo round( $progress ); ?>%;"></div>
-                            </div>
-                        </div>
-                        <?php endif; ?>
                     </div>
                     
                     <?php
@@ -371,27 +519,203 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                     <!-- Вкладка Профиль -->
                     <div class="tab-content" id="profile">
                         <div class="content-section">
-                            <h2>Мой профиль</h2>
+                            <h2>Личные данные</h2>
+                            
+                            <?php
+                            // Получаем уровень клиента для шкалы
+                            $level_data = asker_get_customer_level( get_current_user_id() );
+                            $current_level = strtolower( $level_data['level'] );
+                            
+                            // Определяем активный уровень для шкалы
+                            // Базовый = Базовый, Серебро = Премиум, Золото/Платина = VIP
+                            $active_bar_level = 'basic';
+                            if ( $current_level === 'базовый' || $current_level === 'basic' ) {
+                                $active_bar_level = 'basic';
+                            } elseif ( $current_level === 'серебро' || $current_level === 'silver' || $current_level === 'премиум' || $current_level === 'premium' ) {
+                                $active_bar_level = 'premium';
+                            } else {
+                                $active_bar_level = 'vip';
+                            }
+                            ?>
+                            
+                            <!-- Шкала уровней -->
+                            <div class="privilege-level-wrapper">
+                                <?php
+                                // Видимый отладочный блок для администраторов
+                                if ( current_user_can('administrator') && isset($_GET['debug_avatar']) ) {
+                                    $user_id = get_current_user_id();
+                                    $custom_avatar_id = get_user_meta( $user_id, 'custom_avatar', true );
+                                    $avatar_url = get_user_meta( $user_id, 'custom_avatar_url', true );
+                                    
+                                    // Получаем все user_meta для проверки
+                                    $all_meta = get_user_meta($user_id);
+                                    
+                                    echo '<div style="background: #fff3cd; border: 1px solid #ffc107; padding: 10px; margin-bottom: 20px; border-radius: 4px; font-family: monospace; font-size: 12px;">';
+                                    echo '<strong>DEBUG INFO:</strong><br>';
+                                    echo 'User ID: ' . $user_id . '<br>';
+                                    echo 'Avatar ID (custom_avatar): ' . ($custom_avatar_id ? $custom_avatar_id : 'NULL') . '<br>';
+                                    echo 'Avatar URL (custom_avatar_url): ' . ($avatar_url ? $avatar_url : 'NULL') . '<br>';
+                                    
+                                    if ($custom_avatar_id) {
+                                        $attachment = get_post($custom_avatar_id);
+                                        echo 'Attachment exists: ' . ($attachment ? 'YES' : 'NO') . '<br>';
+                                        if ($attachment) {
+                                            echo 'Attachment post_type: ' . $attachment->post_type . '<br>';
+                                            echo 'Attachment URL (wp_get_attachment_url): ' . wp_get_attachment_url($custom_avatar_id) . '<br>';
+                                            echo 'Attachment Image URL (thumbnail): ' . wp_get_attachment_image_url($custom_avatar_id, 'thumbnail') . '<br>';
+                                        }
+                                    }
+                                    
+                                    echo '<br><strong>All user_meta keys:</strong><br>';
+                                    foreach ($all_meta as $key => $value) {
+                                        if (strpos($key, 'custom_avatar') !== false || strpos($key, 'avatar') !== false) {
+                                            echo $key . ': ' . (is_array($value) ? print_r($value[0], true) : $value) . '<br>';
+                                        }
+                                    }
+                                    
+                                    echo '</div>';
+                                }
+                                ?>
+                                <div class="avatar-upload">
+                                    <div class="avatar-placeholder" id="avatar-preview">
+                                        <?php
+                                        $user_id = get_current_user_id();
+                                        
+                                        // Получаем данные об аватаре
+                                        $custom_avatar_id = get_user_meta( $user_id, 'custom_avatar', true );
+                                        $avatar_url = get_user_meta( $user_id, 'custom_avatar_url', true );
+                                        
+                                        // Отладочный вывод для администраторов
+                                        if ( current_user_can('administrator') ) {
+                                            echo '<!-- DEBUG: User ID = ' . $user_id . ', Avatar ID = ' . ($custom_avatar_id ? $custom_avatar_id : 'NULL') . ', Avatar URL = ' . ($avatar_url ? $avatar_url : 'NULL') . ' -->';
+                                        }
+                                        
+                                        // Если URL нет, пробуем получить из attachment ID
+                                        if ( empty($avatar_url) && $custom_avatar_id && is_numeric($custom_avatar_id) ) {
+                                            // Проверяем, существует ли attachment
+                                            $attachment = get_post($custom_avatar_id);
+                                            if ($attachment && $attachment->post_type === 'attachment') {
+                                                // Пробуем получить thumbnail
+                                                $avatar_url = wp_get_attachment_image_url( $custom_avatar_id, 'thumbnail' );
+                                                
+                                                // Если thumbnail не получился, пробуем полный размер
+                                                if ( !$avatar_url ) {
+                                                    $avatar_url = wp_get_attachment_url( $custom_avatar_id );
+                                                }
+                                                
+                                                // Если получили URL, сохраняем для кеша
+                                                if ( $avatar_url ) {
+                                                    update_user_meta( $user_id, 'custom_avatar_url', $avatar_url );
+                                                }
+                                            } else {
+                                                // Attachment не существует, удаляем из мета
+                                                delete_user_meta( $user_id, 'custom_avatar' );
+                                                delete_user_meta( $user_id, 'custom_avatar_url' );
+                                                $avatar_url = '';
+                                            }
+                                        }
+                                        
+                                        if ( !empty($avatar_url) ) {
+                                            // Добавляем cache-busting параметр
+                                            $avatar_url_with_cache = $avatar_url . (strpos($avatar_url, '?') !== false ? '&' : '?') . 'v=' . time();
+                                            echo '<img src="' . esc_url( $avatar_url_with_cache ) . '" alt="Аватар" id="avatar-image" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">';
+                                        } else {
+                                            // Плейсхолдер для аватара
+                                            echo '<div class="avatar-placeholder-icon">';
+                                            echo '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">';
+                                            echo '<path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="currentColor"/>';
+                                            echo '<path d="M12 14C7.58172 14 4 17.5817 4 22H20C20 17.5817 16.4183 14 12 14Z" fill="currentColor"/>';
+                                            echo '</svg>';
+                                            echo '</div>';
+                                        }
+                                        ?>
+                                    </div>
+                                    <label for="avatar" class="avatar-upload-label">Изменить фото</label>
+                                </div>
+                                <div class="privilege-level-bar">
+                                    <p class="privilege-level-label">Ваш уровень в программе привилегий: <strong><?php echo esc_html( $level_data['level'] ); ?></strong></p>
+                                    <div class="level-bar">
+                                        <div class="level-item <?php echo $active_bar_level === 'basic' ? 'level-item--active' : ''; ?>">
+                                            <span>Базовый</span>
+                                        </div>
+                                        <div class="level-item <?php echo $active_bar_level === 'premium' ? 'level-item--active' : ''; ?>">
+                                            <span>Премиум</span>
+                                        </div>
+                                        <div class="level-item <?php echo $active_bar_level === 'vip' ? 'level-item--active' : ''; ?>">
+                                            <span>VIP</span>
+                                        </div>
+                                    </div>
+                                    <p class="privilege-discount">Ваша скидка: <span class="discount-value"><?php echo esc_html( $level_data['discount'] ); ?>%</span> от розничной цены</p>
+                                </div>
+                            </div>
+                            
                             <div class="profile-form">
-                                <form method="post" action="<?php echo esc_url(get_permalink()); ?>">
+                                <form method="post" action="<?php echo esc_url(get_permalink()); ?>" enctype="multipart/form-data">
+                                    <!-- Input для аватара должен быть внутри формы -->
+                                    <input type="file" id="avatar" name="avatar" accept="image/*" style="display: none;">
                                     <?php wp_nonce_field('update_profile', 'profile_nonce'); ?>
+                                    
+                                    <div class="form-row">
                                     <div class="form-group">
-                                        <label for="first_name">Имя</label>
+                                            <label for="first_name">Имя<span class="required">*</span></label>
                                         <input type="text" id="first_name" name="first_name" value="<?php echo esc_attr(get_user_meta(get_current_user_id(), 'first_name', true)); ?>" required>
                                     </div>
                                     <div class="form-group">
                                         <label for="last_name">Фамилия</label>
                                         <input type="text" id="last_name" name="last_name" value="<?php echo esc_attr(get_user_meta(get_current_user_id(), 'last_name', true)); ?>">
                                     </div>
-                                    <div class="form-group">
-                                        <label for="email">Email</label>
-                                        <input type="email" id="email" name="email" value="<?php echo esc_attr(wp_get_current_user()->user_email); ?>" required>
                                     </div>
+                                    
+                                    <div class="form-row">
                                     <div class="form-group">
                                         <label for="phone">Телефон</label>
                                         <input type="tel" id="phone" name="phone" value="<?php echo esc_attr(get_user_meta(get_current_user_id(), 'billing_phone', true)); ?>">
                                     </div>
-                                    <button type="submit" class="btn-primary">Сохранить изменения</button>
+                                        <div class="form-group">
+                                            <label for="email">E-mail<span class="required">*</span></label>
+                                            <input type="email" id="email" name="email" value="<?php echo esc_attr(wp_get_current_user()->user_email); ?>" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="company_name">Название компании</label>
+                                            <input type="text" id="company_name" name="company_name" value="<?php echo esc_attr(get_user_meta(get_current_user_id(), 'billing_company', true)); ?>">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="company_inn">ИНН компании</label>
+                                            <input type="text" id="company_inn" name="company_inn" value="<?php echo esc_attr(get_user_meta(get_current_user_id(), 'billing_inn', true)); ?>">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-checkbox">
+                                        <label>
+                                            <input type="checkbox" id="change_password" name="change_password" value="1">
+                                            <span>Сменить пароль</span>
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="password-fields" style="display: none;">
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label for="new_password">Новый пароль<span class="required">*</span></label>
+                                                <input type="password" id="new_password" name="new_password">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="confirm_password">Повторите пароль<span class="required">*</span></label>
+                                                <input type="password" id="confirm_password" name="confirm_password">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-checkbox">
+                                        <label>
+                                            <input type="checkbox" id="consent" name="consent" value="1" checked>
+                                            <span>Согласие на обработку персональных данных <a href="#" class="consent-link">Подробнее</a></span>
+                                        </label>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn-save">Сохранить изменения</button>
                                 </form>
                             </div>
                         </div>
@@ -561,7 +885,8 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                     <!-- Вкладка Избранное -->
                     <div class="tab-content" id="wishlist">
                         <div class="content-section">
-                            <h2>Мое избранное</h2>
+                            <h2>Ваши избранные товары</h2>
+                            <p class="wishlist-subtitle">Мы можете добавить товары в корзину и оформить заказ</p>
                             <div class="wishlist-products">
                                 <?php
                                 $customer_id = get_current_user_id();
@@ -572,41 +897,109 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                                     $wishlist_items = array();
                                 }
                                 
-                                if (!empty($wishlist_items)) :
+                                // Пагинация для избранного
+                                $paged = isset($_GET['wishlist_page']) ? max(1, intval($_GET['wishlist_page'])) : 1;
+                                $per_page = 10;
+                                $total_items = count($wishlist_items);
+                                $total_pages = ceil($total_items / $per_page);
+                                $offset = ($paged - 1) * $per_page;
+                                $paged_items = array_slice($wishlist_items, $offset, $per_page);
+                                
+                                if (!empty($paged_items)) :
                                     ?>
-                                    <div class="products-grid">
-                                        <?php foreach ($wishlist_items as $product_id) :
+                                    <div class="wishlist-list">
+                                        <?php foreach ($paged_items as $product_id) :
                                             $product = wc_get_product($product_id);
                                             if ($product && $product->is_visible()) :
                                                 $product_image = wp_get_attachment_image_src(get_post_thumbnail_id($product_id), 'medium');
                                                 $product_url = get_permalink($product_id);
                                                 $price = $product->get_price_html();
-                                                // Показываем полную цену (не убираем копейки)
+                                                $sku = $product->get_sku();
                                                 ?>
-                                                <div class="product-card">
-                                                    <button class="product-favorite active favorite-btn" data-product-id="<?php echo esc_attr($product_id); ?>" aria-label="Удалить из избранного">
-                                                        <img src="<?php echo get_template_directory_uri(); ?>/assets/images/ui/like[active].svg" alt="Избранное" class="favorite-icon favorite-icon--active">
-                                                        <img src="<?php echo get_template_directory_uri(); ?>/assets/images/ui/like[idle].svg" alt="Добавить в избранное" class="favorite-icon favorite-icon--idle">
-                                                    </button>
-                                                    <a href="<?php echo esc_url($product_url); ?>">
+                                                <div class="wishlist-item">
+                                                    <a href="<?php echo esc_url($product_url); ?>" class="wishlist-item-image">
                                                         <?php if ($product_image) : ?>
-                                                            <img class="product-image" src="<?php echo esc_url($product_image[0]); ?>" alt="<?php echo esc_attr($product->get_name()); ?>">
+                                                            <img src="<?php echo esc_url($product_image[0]); ?>" alt="<?php echo esc_attr($product->get_name()); ?>">
                                                         <?php else : ?>
                                                             <div class="product-placeholder"><?php echo esc_html($product->get_name()); ?></div>
                                                         <?php endif; ?>
                                                     </a>
-                                                    <h3 class="product-title">
+                                                    <div class="wishlist-item-info">
+                                                        <h3 class="wishlist-item-title">
                                                         <a href="<?php echo esc_url($product_url); ?>"><?php echo esc_html($product->get_name()); ?></a>
                                                     </h3>
-                                                    <div class="product-bottom">
-                                                        <div class="product-price"><?php echo $price; ?></div>
-                                                        <button class="btn-add-cart add_to_cart_button" data-product-id="<?php echo esc_attr($product_id); ?>">В корзину</button>
+                                                        <?php if ($sku) : ?>
+                                                            <p class="wishlist-item-sku">Аритикул: <?php echo esc_html($sku); ?></p>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <div class="wishlist-item-price"><?php echo $price; ?></div>
+                                                    <button class="wishlist-item-remove" data-product-id="<?php echo esc_attr($product_id); ?>" aria-label="Удалить из избранного">
+                                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                        </svg>
+                                                    </button>
+                                                    <div class="wishlist-item-right">
+                                                        <div class="wishlist-item-quantity">
+                                                            <button class="quantity-btn quantity-minus" data-product-id="<?php echo esc_attr($product_id); ?>">-</button>
+                                                            <input type="number" class="quantity-input" value="1" min="1" data-product-id="<?php echo esc_attr($product_id); ?>">
+                                                            <button class="quantity-btn quantity-plus" data-product-id="<?php echo esc_attr($product_id); ?>">+</button>
+                                                        </div>
+                                                        <button class="wishlist-item-add-cart btn-add-cart add_to_cart_button" data-product-id="<?php echo esc_attr($product_id); ?>">В корзину</button>
                                                     </div>
                                                 </div>
                                             <?php
                                             endif;
                                         endforeach; ?>
                                     </div>
+                                    
+                                    <?php if ($total_pages > 1) : ?>
+                                    <div class="wishlist-pagination">
+                                        <?php if ($paged > 1) : ?>
+                                            <a href="?wishlist_page=<?php echo $paged - 1; ?>#wishlist" class="pagination-btn pagination-btn--prev">
+                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                                    <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                                Предыдущая
+                                            </a>
+                                        <?php endif; ?>
+                                        
+                                        <div class="pagination-numbers">
+                                            <?php
+                                            // Показываем максимум 7 страниц
+                                            $range = 3;
+                                            $start = max(1, $paged - $range);
+                                            $end = min($total_pages, $paged + $range);
+                                            
+                                            if ($start > 1) {
+                                                echo '<a href="?wishlist_page=1#wishlist" class="page-number">1</a>';
+                                                if ($start > 2) echo '<span class="page-dots">...</span>';
+                                            }
+                                            
+                                            for ($i = $start; $i <= $end; $i++) :
+                                                if ($i === $paged) : ?>
+                                                    <span class="page-number page-number--active"><?php echo $i; ?></span>
+                                                <?php else : ?>
+                                                    <a href="?wishlist_page=<?php echo $i; ?>#wishlist" class="page-number"><?php echo $i; ?></a>
+                                                <?php endif;
+                                            endfor;
+                                            
+                                            if ($end < $total_pages) {
+                                                if ($end < $total_pages - 1) echo '<span class="page-dots">...</span>';
+                                                echo '<a href="?wishlist_page=' . $total_pages . '#wishlist" class="page-number">' . $total_pages . '</a>';
+                                            }
+                                            ?>
+                                        </div>
+                                        
+                                        <?php if ($paged < $total_pages) : ?>
+                                            <a href="?wishlist_page=<?php echo $paged + 1; ?>#wishlist" class="pagination-btn pagination-btn--next">
+                                                Следующая
+                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                                    <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php endif; ?>
                                 <?php else : ?>
                                     <div class="no-products">
                                         <p>В вашем избранном пока нет товаров.</p>
@@ -670,4 +1063,207 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
         ?>
     <?php endif; ?>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Показать/скрыть поля пароля
+    const changePasswordCheckbox = document.getElementById('change_password');
+    const passwordFields = document.querySelector('.password-fields');
+    
+    if (changePasswordCheckbox && passwordFields) {
+        changePasswordCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                passwordFields.style.display = 'block';
+                document.getElementById('new_password').required = true;
+                document.getElementById('confirm_password').required = true;
+            } else {
+                passwordFields.style.display = 'none';
+                document.getElementById('new_password').required = false;
+                document.getElementById('confirm_password').required = false;
+                document.getElementById('new_password').value = '';
+                document.getElementById('confirm_password').value = '';
+            }
+        });
+    }
+    
+    // Загрузка аватара
+    const avatarInput = document.getElementById('avatar');
+    const avatarPreview = document.getElementById('avatar-preview');
+    const avatarLabel = document.querySelector('.avatar-upload-label');
+    
+    if (avatarInput && avatarPreview && avatarLabel) {
+        avatarLabel.addEventListener('click', function(e) {
+            e.preventDefault();
+            avatarInput.click();
+        });
+        
+        avatarInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                console.log('Avatar file selected:', file.name, file.size, file.type);
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    avatarPreview.innerHTML = '<img src="' + e.target.result + '" alt="Аватар" id="avatar-image" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Проверка формы перед отправкой
+    const profileForm = document.querySelector('.profile-form form');
+    if (profileForm) {
+        profileForm.addEventListener('submit', function(e) {
+            const avatarFile = document.getElementById('avatar');
+            console.log('=== FORM SUBMIT DEBUG ===');
+            console.log('Avatar file element:', avatarFile);
+            console.log('Avatar file files:', avatarFile ? avatarFile.files : 'NOT FOUND');
+            console.log('Avatar file files length:', avatarFile ? avatarFile.files.length : 'NOT FOUND');
+            
+            if (avatarFile && avatarFile.files.length > 0) {
+                console.log('Form submitting with avatar file:', avatarFile.files[0].name);
+                console.log('Form enctype:', profileForm.enctype);
+                console.log('Form method:', profileForm.method);
+                console.log('Form action:', profileForm.action);
+                
+                // Проверяем, что input находится внутри формы
+                console.log('Avatar file is inside form:', profileForm.contains(avatarFile));
+                
+                // Проверяем, что форма отправляется обычным способом (не через AJAX)
+                const formData = new FormData(profileForm);
+                console.log('FormData entries:');
+                let hasAvatar = false;
+                for (let pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + (pair[1] instanceof File ? pair[1].name + ' (' + pair[1].size + ' bytes)' : pair[1]));
+                    if (pair[0] === 'avatar' && pair[1] instanceof File) {
+                        hasAvatar = true;
+                    }
+                }
+                console.log('Avatar file in FormData:', hasAvatar);
+                
+                // Если файл есть в FormData, но не отправляется, возможно форма отправляется через AJAX
+                // В этом случае нужно предотвратить отправку и отправить форму обычным способом
+                if (hasAvatar) {
+                    console.log('Avatar file is in FormData - allowing normal form submission');
+                } else {
+                    console.error('Avatar file is NOT in FormData! This is a problem.');
+                    // Не блокируем отправку, но логируем проблему
+                }
+            } else {
+                console.log('No avatar file selected');
+            }
+            console.log('=== END FORM SUBMIT DEBUG ===');
+        });
+    }
+    
+    // Селектор количества в избранном
+    document.querySelectorAll('.wishlist-item-quantity .quantity-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const productId = this.getAttribute('data-product-id');
+            const input = this.closest('.wishlist-item-quantity').querySelector('.quantity-input');
+            let value = parseInt(input.value) || 1;
+            
+            if (this.classList.contains('quantity-minus')) {
+                value = Math.max(1, value - 1);
+            } else if (this.classList.contains('quantity-plus')) {
+                value = value + 1;
+            }
+            
+            input.value = value;
+        });
+    });
+    
+    // Удаление из избранного
+    document.querySelectorAll('.wishlist-item-remove').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const productId = this.getAttribute('data-product-id');
+            const wishlistItem = this.closest('.wishlist-item');
+            
+            if (confirm('Удалить товар из избранного?')) {
+                // Удаляем из localStorage
+                let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+                favorites = favorites.filter(id => id != productId);
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+                
+                // Удаляем через AJAX
+                if (typeof asker_ajax !== 'undefined') {
+                    jQuery.ajax({
+                        url: asker_ajax.ajax_url,
+                        type: 'POST',
+                        data: {
+                            action: 'asker_sync_wishlist',
+                            product_ids: favorites
+                        },
+                        success: function() {
+                            wishlistItem.remove();
+                            
+                            // Обновляем счетчик
+                            if (typeof updateWishlistCounter === 'function') {
+                                updateWishlistCounter();
+                            }
+                            
+                            // Если список пуст, перезагружаем страницу
+                            if (document.querySelectorAll('.wishlist-item').length === 0) {
+                                window.location.reload();
+                            }
+                        }
+                    });
+                } else {
+                    // Если AJAX недоступен, просто удаляем элемент и перезагружаем
+                    wishlistItem.remove();
+                    window.location.reload();
+                }
+            }
+        });
+    });
+    
+    // Добавление в корзину с учетом количества
+    document.querySelectorAll('.wishlist-item-add-cart').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const productId = this.getAttribute('data-product-id');
+            const quantityInput = this.closest('.wishlist-item').querySelector('.quantity-input');
+            const quantity = parseInt(quantityInput.value) || 1;
+            
+            // Используем стандартную функцию добавления в корзину WooCommerce
+            if (typeof addToCart === 'function') {
+                addToCart(productId, quantity);
+            } else if (typeof jQuery !== 'undefined' && jQuery.fn.wc_add_to_cart) {
+                jQuery.ajax({
+                    url: asker_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'woocommerce_add_to_cart',
+                        product_id: productId,
+                        quantity: quantity
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            // Обновляем счетчик корзины
+                            if (typeof updateCartCount === 'function') {
+                                updateCartCount();
+                            }
+                            // Показываем уведомление
+                            alert('Товар добавлен в корзину');
+                        }
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+
+<?php if ($avatar_uploaded && !empty($new_avatar_url)): ?>
+<script>
+// Если аватар был загружен, обновляем превью без перезагрузки страницы
+(function() {
+    var avatarPreview = document.getElementById('avatar-preview');
+    if (avatarPreview) {
+        var avatarUrl = '<?php echo esc_js($new_avatar_url); ?>?v=' + new Date().getTime();
+        avatarPreview.innerHTML = '<img src="' + avatarUrl + '" alt="Аватар" id="avatar-image" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">';
+    }
+})();
+</script>
+<?php endif; ?>
 

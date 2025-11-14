@@ -410,13 +410,6 @@
   font-family: var(--font-secondary);
 }
 
-.account-info {
-  background: var(--bg-light);
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 30px;
-}
-
 .account-info h3 {
   margin-top: 0;
   margin-bottom: 15px;
@@ -759,18 +752,29 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 60px 0;
+  justify-content: flex-start;
+  padding: 60px 0 60px 0;
   width: 100%;
 }
 
-.auth-page-title {
+.auth-page-title,
+.auth-page h1.auth-page-title,
+.auth-page .auth-page-title,
+.auth-page h1 {
   font-size: 28px;
   font-weight: 700;
   color: var(--primary-black);
   margin: 0 0 16px 0;
   text-align: center;
-  font-family: var(--font-primary);
+  font-family: var(--font-secondary);
+  background: transparent;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  width: auto !important;
+  position: relative !important;
+  z-index: 1 !important;
 }
 
 .auth-page-description {
@@ -781,17 +785,27 @@
   font-family: var(--font-secondary);
   line-height: 1.5;
   max-width: 480px;
+  display: block !important;
+  visibility: visible !important;
 }
 
 .auth-page .auth-container {
-  max-width: 480px;
-  width: 100%;
+  max-width: 946px;
+  width: 50%;
+  min-width: 320px;
   margin: 0 auto;
   padding: 40px;
   background: var(--bg-white);
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border-radius: 40px;
+  box-shadow: none;
   overflow: hidden;
+  height: auto;
+}
+
+/* Удваиваем паддинги только для страницы восстановления пароля */
+.auth-page:has(.woocommerce-ResetPassword) .auth-container,
+.auth-page:has(.lost_reset_password) .auth-container {
+  padding: 80px 40px;
 }
 
 .auth-title {
@@ -815,25 +829,29 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  align-items: flex-start;
 }
 
 .auth-page .auth-container .auth-form .form-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
 }
 
 /* Поля имени и фамилии в две колонки */
 .auth-page .auth-container .auth-form .form-group--two-columns {
-  display: grid !important;
+  display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  width: 100%;
 }
 
 .auth-page .auth-container .auth-form .form-group--two-columns > div {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
 }
 
 .auth-page .auth-container .auth-form .form-group--two-columns label {
@@ -853,16 +871,19 @@
   font-size: 14px;
   font-weight: 500;
   color: var(--primary-black);
-  font-family: var(--font-primary);
+  font-family: var(--font-secondary);
 }
 
 .auth-page .auth-container .auth-form .form-control,
 .auth-page .auth-container .auth-form input[type="text"],
 .auth-page .auth-container .auth-form input[type="email"],
-.auth-page .auth-container .auth-form input[type="password"] {
+.auth-page .auth-container .auth-form input[type="password"],
+.auth-page .auth-container .auth-form input.form-control,
+.auth-page .auth-container .auth-form .woocommerce-Input,
+.auth-page .auth-container .auth-form .input-text {
   padding: 12px 16px;
   border: 1px solid var(--border-gray);
-  border-radius: 8px;
+  border-radius: 40px;
   font-size: 14px;
   font-family: var(--font-secondary);
   transition: border-color 0.2s ease;
@@ -905,18 +926,31 @@
 
 .auth-page .auth-container .auth-form .btn--full,
 .auth-page .auth-container .auth-form .auth-submit,
-.auth-page .auth-container .auth-form .woocommerce-button {
-  width: 100%;
+.auth-page .auth-container .auth-form .woocommerce-button,
+.auth-page .auth-container .auth-form button[type="submit"] {
+  width: 250px;
   margin-top: 8px;
   padding: 14px 24px;
   font-size: 16px;
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: 50px;
   background: var(--primary-black);
   color: var(--bg-white);
   border: none;
+  outline: none;
+  box-shadow: none;
   cursor: pointer;
   transition: all 0.2s ease;
+  align-self: flex-start;
+}
+
+.auth-page .auth-container .auth-form .btn--full:focus,
+.auth-page .auth-container .auth-form .auth-submit:focus,
+.auth-page .auth-container .auth-form .woocommerce-button:focus,
+.auth-page .auth-container .auth-form button[type="submit"]:focus {
+  outline: none;
+  border: none;
+  box-shadow: none;
 }
 
 .auth-page .auth-container .auth-form .btn--full:hover,
@@ -924,11 +958,6 @@
 .auth-page .auth-container .auth-form .woocommerce-button:hover {
   background: #333;
   transform: translateY(-1px);
-}
-
-.auth-page .auth-container .auth-links {
-  margin-top: 20px;
-  text-align: center;
 }
 
 .auth-page .auth-container .auth-link {
@@ -943,43 +972,75 @@
   color: var(--primary-yellow);
 }
 
-/* Вкладки Вход/Регистрация */
-.auth-page .auth-container .auth-tabs {
+/* Вкладки Вход/Регистрация - вне белой карточки */
+.auth-page .auth-tabs {
   display: flex;
-  border-bottom: 1px solid var(--border-gray);
-  background: var(--bg-white);
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent !important;
+  padding: 0 0 24px 0;
+  margin-bottom: 0;
+  border: none !important;
+  border-bottom: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
-.auth-page .auth-container .auth-tab {
-  flex: 1;
-  padding: 16px 24px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  font-size: 16px;
+.auth-page .auth-tab {
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  font-size: 20px;
   font-weight: 500;
   color: var(--text-gray);
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: var(--font-primary);
+  transition: color 0.2s ease;
+  font-family: var(--font-secondary);
   text-align: center;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
 }
 
-.auth-page .auth-container .auth-tab:hover {
-  color: var(--primary-black);
-  /* background: rgba(255, 231, 6, 0.05); */
+.auth-page .auth-tab-separator {
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--text-gray);
+  font-family: var(--font-secondary);
+  padding: 0 4px;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
 }
 
-.auth-page .auth-container .auth-tab.auth-tab--active {
+.auth-page .auth-tab:hover {
   color: var(--primary-black);
-  /* border-bottom-color: var(--primary-black); */
+}
+
+.auth-page .auth-tab.auth-tab--active {
+  color: var(--primary-black);
   font-weight: 600;
+}
+
+/* Заголовок на странице восстановления пароля в стиле таба */
+.auth-page .auth-tabs .auth-tab:not(button) {
+  cursor: default;
+  pointer-events: none;
 }
 
 /* Обертки форм */
 .auth-page .auth-container .auth-form-wrapper {
   display: none;
-  padding: 40px;
+  padding: 0;
 }
 
 .auth-page .auth-container .auth-form-wrapper.active {
@@ -1003,12 +1064,15 @@
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .auth-page .auth-container .password-input-wrapper .form-control,
 .auth-page .auth-container .password-input-wrapper input[type="password"],
 .auth-page .auth-container .password-input-wrapper input[type="text"] {
   padding-right: 48px;
+  border-radius: 40px;
+  width: 100%;
 }
 
 .auth-page .auth-container .password-toggle {
@@ -1033,10 +1097,18 @@
 .auth-page .auth-container .password-toggle__icon {
   width: 20px;
   height: 20px;
+  display: block;
+  pointer-events: none;
+  stroke: currentColor;
+  fill: none;
 }
 
-.auth-page .auth-container .password-toggle__icon--eye-off {
+.auth-page .auth-container .password-toggle__icon--open {
   display: none;
+}
+
+.auth-page .auth-container .password-toggle__icon--closed {
+  display: block;
 }
 
 /* Согласие на обработку данных */
@@ -1065,64 +1137,102 @@
 .auth-page .auth-container .auth-links {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid var(--border-gray);
+  text-align: center;
 }
 
 /* Переопределяем стандартные стили WooCommerce для формы входа */
 .auth-page .woocommerce-form-login,
-.auth-page .woocommerce-form-register {
-  background: transparent !important;
-  border: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
+.auth-page .woocommerce-form-register,
+.auth-page .woocommerce-ResetPassword,
+.auth-page .lost_reset_password {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Убираем рамку у форм WooCommerce */
+.woocommerce form.checkout_coupon,
+.woocommerce form.login,
+.woocommerce form.register {
+  border: none;
+}
+
+/* Скрываем стандартное сообщение WooCommerce о политике конфиденциальности */
+.woocommerce-privacy-policy-text,
+.woocommerce-form-register .woocommerce-privacy-policy-text,
+.woocommerce-form-register p:has(.woocommerce-privacy-policy-text) {
+  display: none !important;
 }
 
 .auth-page .woocommerce-form-login .form-row,
 .auth-page .woocommerce-form-register .form-row {
-  margin-bottom: 0 !important;
-  padding: 0 !important;
+  margin-bottom: 0;
+  padding: 0;
+  width: 100%;
 }
 
 .auth-page .woocommerce-form-login .form-row label,
 .auth-page .woocommerce-form-register .form-row label {
-  margin-bottom: 8px !important;
+  margin-bottom: 8px;
 }
 
-.auth-page .woocommerce-Input {
-  width: 100% !important;
-  padding: 12px 16px !important;
-  border: 1px solid var(--border-gray) !important;
-  border-radius: 8px !important;
-  font-size: 14px !important;
-  font-family: var(--font-secondary) !important;
+.auth-page .woocommerce-form-login .form-row input,
+.auth-page .woocommerce-form-register .form-row input,
+.auth-page .woocommerce-form-login .form-row .form-control,
+.auth-page .woocommerce-form-register .form-row .form-control {
+  width: 100%;
+}
+
+.auth-page .woocommerce-Input,
+.auth-page .woocommerce-Input--text,
+.auth-page input.woocommerce-Input,
+.auth-page input.input-text {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--border-gray);
+  border-radius: 40px;
+  font-size: 14px;
+  font-family: var(--font-secondary);
 }
 
 .auth-page .woocommerce-Input:focus {
-  outline: none !important;
-  border-color: var(--primary-yellow) !important;
-  box-shadow: 0 0 0 2px rgba(255, 231, 6, 0.2) !important;
+  outline: none;
+  border-color: var(--primary-yellow);
+  box-shadow: 0 0 0 2px rgba(255, 231, 6, 0.2);
 }
 
 .auth-page .woocommerce-form-login__rememberme {
-  margin-bottom: 0 !important;
+  margin-bottom: 0;
 }
 
-.auth-page .woocommerce-button {
-  width: 100% !important;
-  background: var(--primary-black) !important;
-  color: var(--bg-white) !important;
-  border: none !important;
-  padding: 14px 24px !important;
-  border-radius: 8px !important;
-  font-size: 16px !important;
-  font-weight: 600 !important;
-  cursor: pointer !important;
-  transition: all 0.2s ease !important;
+.auth-page .woocommerce-button,
+.auth-page button.woocommerce-button {
+  width: 250px;
+  background: var(--primary-black);
+  color: var(--bg-white);
+  border: none;
+  outline: none;
+  box-shadow: none;
+  padding: 14px 24px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+}
+
+.auth-page .woocommerce-button:focus,
+.auth-page button.woocommerce-button:focus {
+  outline: none;
+  border: none;
+  box-shadow: none;
 }
 
 .auth-page .woocommerce-button:hover {
-  background: #333 !important;
-  transform: translateY(-1px) !important;
+  background: #333;
+  transform: translateY(-1px);
 }
 
 /* Скрываем стандартные сообщения WooCommerce если они дублируются */
@@ -1176,16 +1286,133 @@
     padding: 30px 20px;
   }
   
+  .auth-page {
+    padding: 40px 0;
+  }
+  
   .auth-page .auth-container {
+    width: calc(100% - 40px);
+    max-width: 100%;
     margin: 0 20px;
+    padding: 24px;
+    min-height: auto;
   }
   
   .auth-page .auth-container .auth-form-wrapper {
-    padding: 32px 24px;
+    padding: 0;
   }
   
-  .auth-page .auth-container .auth-tab {
-    padding: 14px 16px;
-    font-size: 14px;
+  .auth-page .auth-tabs {
+    padding: 0 0 20px 0;
+  }
+  
+  .auth-page .auth-tab {
+    padding: 0;
+    font-size: 18px;
+  }
+  
+  .auth-page .auth-tab-separator {
+    font-size: 18px;
+  }
+  
+  .auth-page .auth-container .auth-form {
+    gap: 16px;
+  }
+  
+  .auth-page .auth-container .auth-form .form-group {
+    width: 100%;
+  }
+  
+  .auth-page .auth-container .auth-form .form-group--two-columns {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .auth-page .auth-container .auth-form .form-group--two-columns > div {
+    width: 100%;
+  }
+  
+  .auth-page .auth-container .auth-form .form-control,
+  .auth-page .auth-container .auth-form input[type="text"],
+  .auth-page .auth-container .auth-form input[type="email"],
+  .auth-page .auth-container .auth-form input[type="password"] {
+    width: 100%;
+  }
+  
+  .auth-page .auth-container .password-input-wrapper {
+    width: 100%;
+  }
+  
+  .auth-page .auth-container .password-input-wrapper .form-control,
+  .auth-page .auth-container .password-input-wrapper input[type="password"],
+  .auth-page .auth-container .password-input-wrapper input[type="text"] {
+    width: 100%;
+  }
+  
+  .auth-page .auth-container .auth-form .btn--full,
+  .auth-page .auth-container .auth-form .auth-submit,
+  .auth-page .auth-container .auth-form .woocommerce-button,
+  .auth-page .woocommerce-button {
+    width: 100%;
+    align-self: stretch;
+  }
+  
+  .auth-page .woocommerce-Input,
+  .auth-page .woocommerce-Input--text,
+  .auth-page input.woocommerce-Input,
+  .auth-page input.input-text {
+    width: 100%;
+  }
+  
+  .auth-page .woocommerce-form-login .form-row,
+  .auth-page .woocommerce-form-register .form-row {
+    width: 100%;
+  }
+  
+  .auth-page .woocommerce-form-login .form-row input,
+  .auth-page .woocommerce-form-register .form-row input,
+  .auth-page .woocommerce-form-login .form-row .form-control,
+  .auth-page .woocommerce-form-register .form-row .form-control {
+    width: 100%;
+  }
+  
+  /* Стили для страницы восстановления пароля */
+  .auth-page-description {
+    font-size: 12px;
+    margin: 0 0 24px 0;
+    padding: 0 20px;
+  }
+  
+  .auth-page-title,
+  .auth-page h1.auth-page-title,
+  .auth-page .auth-page-title,
+  .auth-page h1 {
+    font-size: 20px;
+    margin: 0 0 12px 0;
+  }
+  
+  /* Убираем удвоенные паддинги на мобильных для страницы восстановления */
+  .auth-page:has(.woocommerce-ResetPassword) .auth-container,
+  .auth-page:has(.lost_reset_password) .auth-container {
+    padding: 40px 24px;
+  }
+  
+  /* Стили для формы восстановления пароля */
+  .auth-page .woocommerce-ResetPassword,
+  .auth-page .lost_reset_password {
+    width: 100%;
+  }
+  
+  .auth-page .woocommerce-ResetPassword .form-group,
+  .auth-page .lost_reset_password .form-group {
+    width: 100%;
+  }
+  
+  .auth-page .woocommerce-ResetPassword .woocommerce-button,
+  .auth-page .lost_reset_password .woocommerce-button,
+  .auth-page .woocommerce-ResetPassword button,
+  .auth-page .lost_reset_password button {
+    width: 100%;
+    align-self: stretch;
   }
 }
