@@ -125,7 +125,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('favorites', JSON.stringify(favorites));
                 
                 // Обновляем счетчик
-                updateWishlistCounter();
+                if (typeof updateWishlistCounter === 'function') {
+                    updateWishlistCounter();
+                } else if (typeof updateWishlistCount === 'function') {
+                    updateWishlistCount();
+                }
                 
                 // Синхронизируем с сервером
                 if (typeof jQuery !== 'undefined' && typeof asker_ajax !== 'undefined') {
@@ -138,7 +142,19 @@ document.addEventListener('DOMContentLoaded', function() {
                             action_type: 'remove'
                         },
                         success: function(response) {
-                            updateWishlistCounter();
+                            if (typeof updateWishlistCounter === 'function') {
+                                if (typeof updateWishlistCounter === 'function') {
+                if (typeof updateWishlistCounter === 'function') {
+                    updateWishlistCounter();
+                } else if (typeof updateWishlistCount === 'function') {
+                    updateWishlistCount();
+                }
+            } else if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
+            }
+                            } else if (typeof updateWishlistCount === 'function') {
+                                updateWishlistCount();
+                            }
                             
                             // Обновляем список если в ЛК
                             const $wishlistTab = jQuery('#wishlist');
@@ -268,7 +284,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('favorites', JSON.stringify(favorites));
             
             // Сразу обновляем счетчик локально
-            updateWishlistCounter();
+            if (typeof updateWishlistCounter === 'function') {
+                if (typeof updateWishlistCounter === 'function') {
+                    updateWishlistCounter();
+                } else if (typeof updateWishlistCount === 'function') {
+                    updateWishlistCount();
+                }
+            } else if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
+            }
                 
             // Синхронизируем с сервером, если пользователь залогинен
             if (typeof jQuery !== 'undefined' && typeof asker_ajax !== 'undefined') {
@@ -282,7 +306,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     success: function(response) {
                         // Обновляем счетчик всегда
-                        updateWishlistCounter();
+                        if (typeof updateWishlistCounter === 'function') {
+                if (typeof updateWishlistCounter === 'function') {
+                    updateWishlistCounter();
+                } else if (typeof updateWishlistCount === 'function') {
+                    updateWishlistCount();
+                }
+            } else if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
+            }
                         
                         // Если удалили из избранного и вкладка "Избранное" видна - обновляем список
                         if (wasFavorite) {
@@ -301,7 +333,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     error: function(xhr, status, error) {
                         // При ошибке AJAX всё равно обновляем счетчик
-                        updateWishlistCounter();
+                        if (typeof updateWishlistCounter === 'function') {
+                if (typeof updateWishlistCounter === 'function') {
+                    updateWishlistCounter();
+                } else if (typeof updateWishlistCount === 'function') {
+                    updateWishlistCount();
+                }
+            } else if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
+            }
                         
                         // И обновляем список если в ЛК
                         const $wishlistTab = jQuery('#wishlist');
@@ -317,7 +357,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Обновляем счетчик в хедере
-            updateWishlistCounter();
+            if (typeof updateWishlistCounter === 'function') {
+                if (typeof updateWishlistCounter === 'function') {
+                    updateWishlistCounter();
+                } else if (typeof updateWishlistCount === 'function') {
+                    updateWishlistCount();
+                }
+            } else if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
+            }
         });
         
         // Синхронизируем избранное при загрузке страницы (если пользователь залогинен)
@@ -393,25 +441,77 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Обновляем счетчик при загрузке
-        updateWishlistCounter();
-        updateCartCounter();
+        if (typeof updateWishlistCount === 'function') {
+            updateWishlistCount();
+        }
+        if (typeof updateCartCount === 'function') {
+            updateCartCount();
+        }
         
         // Дополнительная проверка через небольшую задержку
         setTimeout(() => {
-            updateWishlistCounter();
-            updateCartCounter();
+            if (typeof updateWishlistCounter === 'function') {
+                if (typeof updateWishlistCounter === 'function') {
+                if (typeof updateWishlistCounter === 'function') {
+                    updateWishlistCounter();
+                } else if (typeof updateWishlistCount === 'function') {
+                    updateWishlistCount();
+                }
+            } else if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
+            }
+            } else if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
+            }
+            if (typeof updateCartCounter === 'function') {
+                updateCartCounter();
+            } else if (typeof updateCartCount === 'function') {
+                updateCartCount();
+            }
         }, 100);
         
         // Еще одна проверка через большую задержку для надежности
         setTimeout(() => {
-            updateWishlistCounter();
-            updateCartCounter();
+            if (typeof updateWishlistCounter === 'function') {
+                if (typeof updateWishlistCounter === 'function') {
+                if (typeof updateWishlistCounter === 'function') {
+                    updateWishlistCounter();
+                } else if (typeof updateWishlistCount === 'function') {
+                    updateWishlistCount();
+                }
+            } else if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
+            }
+            } else if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
+            }
+            if (typeof updateCartCounter === 'function') {
+                updateCartCounter();
+            } else if (typeof updateCartCount === 'function') {
+                updateCartCount();
+            }
         }, 500);
         
         // Периодически обновляем счетчики (каждые 10 секунд, чтобы не мигало)
         setInterval(() => {
-            updateWishlistCounter();
-            updateCartCounter();
+            if (typeof updateWishlistCounter === 'function') {
+                if (typeof updateWishlistCounter === 'function') {
+                if (typeof updateWishlistCounter === 'function') {
+                    updateWishlistCounter();
+                } else if (typeof updateWishlistCount === 'function') {
+                    updateWishlistCount();
+                }
+            } else if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
+            }
+            } else if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
+            }
+            if (typeof updateCartCounter === 'function') {
+                updateCartCounter();
+            } else if (typeof updateCartCount === 'function') {
+                updateCartCount();
+            }
         }, 10000);
         
         // Функционал кнопок "В корзину" - используем делегирование событий
@@ -420,6 +520,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Проверяем .btn-add-cart или .add_to_cart_button
             const button = e.target.closest('.btn-add-cart, .add_to_cart_button');
             if (!button) return;
+            
+            // Пропускаем кнопки в избранном - их обрабатывает код в my-account.php
+            const wishlistItem = button.closest('.wishlist-item');
+            if (wishlistItem) {
+                return; // Не обрабатываем, пусть код из my-account.php обработает
+            }
             
             // Защита от двойных кликов
             if (button.hasAttribute('data-processing') || button.classList.contains('loading')) {
@@ -442,6 +548,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 const originalText = button.textContent || button.innerText;
                 button.textContent = 'Добавляется...';
                 
+                // Получаем количество из input, если есть
+                let quantity = 1;
+                const productCard = button.closest('.shop-product-card, .product-card');
+                if (productCard) {
+                    const qtyInput = productCard.querySelector('input.qty, .quantity-input');
+                    if (qtyInput) {
+                        const qtyValue = parseInt(qtyInput.value || qtyInput.getAttribute('value'), 10);
+                        if (!isNaN(qtyValue) && qtyValue > 0) {
+                            quantity = qtyValue;
+                        }
+                    }
+                }
+                
                 // Используем правильный AJAX endpoint
                 const ajaxUrl = (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) 
                     ? asker_ajax.ajax_url 
@@ -455,7 +574,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: new URLSearchParams({
                         action: 'woocommerce_add_to_cart',
                         product_id: productId,
-                        quantity: 1
+                        quantity: quantity
                     })
                 })
                 .then(response => {
@@ -647,7 +766,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Дополнительная инициализация при полной загрузке страницы
     window.addEventListener('load', function() {
         setTimeout(() => {
-            updateWishlistCounter();
+            if (typeof updateWishlistCounter === 'function') {
+                if (typeof updateWishlistCounter === 'function') {
+                    updateWishlistCounter();
+                } else if (typeof updateWishlistCount === 'function') {
+                    updateWishlistCount();
+                }
+            } else if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
+            }
             updateCartCounter();
         }, 200);
     });
@@ -656,7 +783,15 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('visibilitychange', function() {
         if (!document.hidden) {
             setTimeout(() => {
-                updateWishlistCounter();
+                if (typeof updateWishlistCounter === 'function') {
+                if (typeof updateWishlistCounter === 'function') {
+                    updateWishlistCounter();
+                } else if (typeof updateWishlistCount === 'function') {
+                    updateWishlistCount();
+                }
+            } else if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
+            }
                 updateCartCounter();
             }, 100);
         }
@@ -1312,6 +1447,12 @@ if (document.readyState === 'loading') {
     // Перехватываем клик на кнопку "В корзину" ПЕРЕД WooCommerce (но НЕ блокируем!)
     $(document).on('click', '.add_to_cart_button', function(e) {
         const $btn = $(this);
+        
+        // Пропускаем кнопки в избранном - их обрабатывает код в my-account.php
+        const $wishlistItem = $btn.closest('.wishlist-item');
+        if ($wishlistItem.length) {
+            return; // Не обрабатываем, пусть код из my-account.php обработает
+        }
         
         // НЕ используем preventDefault - пусть WooCommerce обрабатывает клик стандартно
         

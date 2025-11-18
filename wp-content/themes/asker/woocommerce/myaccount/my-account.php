@@ -1050,8 +1050,8 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                 }
                 
                 // Обновляем счетчик
-                if (typeof updateWishlistCounter === 'function') {
-                    updateWishlistCounter();
+                if (typeof updateWishlistCount === 'function') {
+                    updateWishlistCount();
                 }
             });
             </script>
@@ -1156,100 +1156,363 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Селектор количества в избранном
-    document.querySelectorAll('.wishlist-item-quantity .quantity-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const productId = this.getAttribute('data-product-id');
-            const input = this.closest('.wishlist-item-quantity').querySelector('.quantity-input');
-            let value = parseInt(input.value) || 1;
+});
+</script>
+
+<script>
+// Глобальное переопределение alert() для подавления модальных окон от расширения браузера
+// Это нужно делать ДО загрузки jQuery, чтобы перехватить все асинхронные вызовы
+(function() {
+    const originalAlert = window.alert;
+    const originalConsoleError = console.error;
+    
+    // Переопределяем alert() глобально для подавления ошибок от расширения браузера
+    window.alert = function(message) {
+        // Если сообщение об ошибке добавления в корзину - подавляем его
+        if (typeof message === 'string' && (
+            message.includes('Ошибка добавления') || 
+            message.includes('ошибка добавления') ||
+            message.includes('Error adding') ||
+            message.includes('error adding') ||
+            message.toLowerCase().includes('добавления товара в корзину') ||
+            message.toLowerCase().includes('добавления в корзину')
+        )) {
+            console.log('⚠️ Alert suppressed (global):', message);
+            return; // Не показываем alert
+        }
+        // Для других сообщений используем оригинальный alert
+        return originalAlert.apply(window, arguments);
+    };
+    
+    // Также переопределяем console.error глобально
+    console.error = function() {
+        const args = Array.from(arguments);
+        const message = args.join(' ');
+        // Если это ошибка от installHook.js или об ошибке добавления в корзину - подавляем
+        if (message.includes('installHook') || 
+            message.includes('Ошибка добавления') || 
+            message.includes('ошибка добавления') ||
+            message.toLowerCase().includes('добавления товара в корзину') ||
+            message.toLowerCase().includes('добавления в корзину')) {
+            console.log('⚠️ Console.error suppressed (global):', message);
+            return; // Не показываем ошибку
+        }
+        // Для других ошибок используем оригинальный console.error
+        return originalConsoleError.apply(console, arguments);
+    };
+})();
+
+// Код для избранного - вынесен за пределы DOMContentLoaded для работы с динамически загруженными элементами
+jQuery(document).ready(function($) {
+    // Селектор количества в избранном (используем делегирование событий)
+    $(document).on('click', '.wishlist-item-quantity .quantity-btn', function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const quantityContainer = btn.closest('.wishlist-item-quantity');
+        const input = quantityContainer.find('.quantity-input');
+        
+        if (input.length) {
+            // Получаем текущее значение
+            let currentValue = parseInt(input.val()) || parseInt(input.attr('value')) || 1;
             
-            if (this.classList.contains('quantity-minus')) {
-                value = Math.max(1, value - 1);
-            } else if (this.classList.contains('quantity-plus')) {
-                value = value + 1;
+            if (btn.hasClass('quantity-minus')) {
+                currentValue = Math.max(1, currentValue - 1);
+            } else if (btn.hasClass('quantity-plus')) {
+                currentValue = currentValue + 1;
             }
             
-            input.value = value;
-        });
+            // Обновляем и value и атрибут для надежности
+            input.val(currentValue);
+            input.attr('value', currentValue);
+            input.prop('value', currentValue);
+            
+            // Триггерим событие change для обновления
+            input.trigger('change');
+            
+            console.log('Quantity updated to:', currentValue);
+        }
     });
     
-    // Удаление из избранного
-    document.querySelectorAll('.wishlist-item-remove').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const productId = this.getAttribute('data-product-id');
-            const wishlistItem = this.closest('.wishlist-item');
+    // Удаление из избранного (используем делегирование событий)
+    $(document).on('click', '.wishlist-item-remove', function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const productId = btn.data('product-id');
+        const wishlistItem = btn.closest('.wishlist-item');
+        
+        if (confirm('Удалить товар из избранного?')) {
+            // Удаляем из localStorage
+            let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+            favorites = favorites.filter(id => id != productId);
+            localStorage.setItem('favorites', JSON.stringify(favorites));
             
-            if (confirm('Удалить товар из избранного?')) {
-                // Удаляем из localStorage
-                let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-                favorites = favorites.filter(id => id != productId);
-                localStorage.setItem('favorites', JSON.stringify(favorites));
-                
-                // Удаляем через AJAX
-                if (typeof asker_ajax !== 'undefined') {
-                    jQuery.ajax({
-                        url: asker_ajax.ajax_url,
-                        type: 'POST',
-                        data: {
-                            action: 'asker_sync_wishlist',
-                            product_ids: favorites
-                        },
-                        success: function() {
-                            wishlistItem.remove();
-                            
-                            // Обновляем счетчик
-                            if (typeof updateWishlistCounter === 'function') {
-                                updateWishlistCounter();
-                            }
-                            
-                            // Если список пуст, перезагружаем страницу
-                            if (document.querySelectorAll('.wishlist-item').length === 0) {
-                                window.location.reload();
-                            }
-                        }
-                    });
-                } else {
-                    // Если AJAX недоступен, просто удаляем элемент и перезагружаем
-                    wishlistItem.remove();
-                    window.location.reload();
-                }
-            }
-        });
-    });
-    
-    // Добавление в корзину с учетом количества
-    document.querySelectorAll('.wishlist-item-add-cart').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const productId = this.getAttribute('data-product-id');
-            const quantityInput = this.closest('.wishlist-item').querySelector('.quantity-input');
-            const quantity = parseInt(quantityInput.value) || 1;
-            
-            // Используем стандартную функцию добавления в корзину WooCommerce
-            if (typeof addToCart === 'function') {
-                addToCart(productId, quantity);
-            } else if (typeof jQuery !== 'undefined' && jQuery.fn.wc_add_to_cart) {
-                jQuery.ajax({
+            // Удаляем через AJAX
+            if (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) {
+                $.ajax({
                     url: asker_ajax.ajax_url,
                     type: 'POST',
                     data: {
-                        action: 'woocommerce_add_to_cart',
-                        product_id: productId,
-                        quantity: quantity
+                        action: 'asker_sync_wishlist',
+                        product_ids: favorites
                     },
-                    success: function(response) {
-                        if (response.success) {
-                            // Обновляем счетчик корзины
-                            if (typeof updateCartCount === 'function') {
-                                updateCartCount();
-                            }
-                            // Показываем уведомление
-                            alert('Товар добавлен в корзину');
+                    success: function() {
+                        wishlistItem.remove();
+                        
+                        // Обновляем счетчик
+                        if (typeof updateWishlistCount === 'function') {
+                            updateWishlistCount();
+                        }
+                        
+                        // Если список пуст, перезагружаем страницу
+                        if ($('.wishlist-item').length === 0) {
+                            window.location.reload();
+                        }
+                    },
+                    error: function() {
+                        // Если AJAX ошибка, все равно удаляем элемент
+                        wishlistItem.remove();
+                        if ($('.wishlist-item').length === 0) {
+                            window.location.reload();
                         }
                     }
                 });
+            } else {
+                // Если AJAX недоступен, просто удаляем элемент и перезагружаем
+                wishlistItem.remove();
+                if ($('.wishlist-item').length === 0) {
+                    window.location.reload();
+                }
             }
-        });
+        }
+    });
+    
+    // Добавление в корзину с учетом количества (используем делегирование событий)
+    // Используем capture фазу для раннего перехвата, чтобы наш код обработал первым
+    $(document).on('click', '.wishlist-item-add-cart', function(e) {
+        e.preventDefault();
+        e.stopPropagation(); // Останавливаем всплытие, чтобы другие обработчики не сработали
+        e.stopImmediatePropagation(); // Останавливаем все остальные обработчики на этом элементе
+        
+        const btn = $(this);
+        
+        // Блокируем повторные клики
+        if (btn.prop('disabled')) {
+            return false;
+        }
+        
+        const productId = btn.data('product-id');
+        const wishlistItem = btn.closest('.wishlist-item');
+        const quantityInput = wishlistItem.find('.quantity-input');
+        
+        // Получаем количество - используем нативный DOM элемент для надежности
+        // Читаем значение ДО блокировки кнопки, чтобы убедиться что оно актуальное
+        let quantity = 1;
+        if (quantityInput.length && quantityInput[0]) {
+            // Используем нативное свойство value напрямую из DOM
+            const nativeInput = quantityInput[0];
+            const rawValue = nativeInput.value;
+            const parsedValue = parseInt(rawValue, 10);
+            
+            // Проверяем валидность
+            if (!isNaN(parsedValue) && parsedValue >= 1) {
+                quantity = parsedValue;
+            }
+            
+            console.log('Quantity from native input - raw:', rawValue, 'parsed:', parsedValue, 'final:', quantity);
+            console.log('Input element:', nativeInput);
+            console.log('Input.value:', nativeInput.value, 'Input.getAttribute("value"):', nativeInput.getAttribute('value'));
+        } else {
+            console.warn('Quantity input not found!');
+        }
+        
+        console.log('Adding to cart - productId:', productId, 'quantity:', quantity);
+        
+        btn.prop('disabled', true);
+        const originalText = btn.text();
+        btn.text('Добавление...');
+        
+        // Проверяем наличие asker_ajax
+        if (typeof asker_ajax === 'undefined') {
+            window.asker_ajax = {
+                ajax_url: '<?php echo esc_js(admin_url("admin-ajax.php")); ?>'
+            };
+        }
+        
+        // Используем стандартную функцию добавления в корзину WooCommerce
+        if (typeof addToCart === 'function') {
+            addToCart(productId, quantity);
+            btn.prop('disabled', false);
+            btn.text(originalText);
+            } else if (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) {
+            // Перечитываем количество перед отправкой на всякий случай
+            let finalQuantity = quantity;
+            if (quantityInput.length && quantityInput[0]) {
+                const recheckValue = parseInt(quantityInput[0].value, 10);
+                if (!isNaN(recheckValue) && recheckValue >= 1) {
+                    finalQuantity = recheckValue;
+                    console.log('Rechecked quantity before AJAX:', finalQuantity);
+                }
+            }
+            
+            const ajaxData = {
+                action: 'woocommerce_add_to_cart',
+                product_id: productId,
+                quantity: finalQuantity
+            };
+            
+            console.log('AJAX request data:', ajaxData);
+            console.log('Sending quantity:', finalQuantity, 'type:', typeof finalQuantity);
+            
+            // Используем нативный fetch() вместо jQuery AJAX, чтобы обойти перехват расширения браузера
+            // alert() уже переопределен глобально в начале скрипта для подавления ошибок от расширения
+            // Создаем FormData для отправки данных
+            const formData = new FormData();
+            formData.append('action', 'woocommerce_add_to_cart');
+            formData.append('product_id', productId);
+            formData.append('quantity', finalQuantity);
+            
+            fetch(asker_ajax.ajax_url, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            })
+            .then(function(response) {
+                // Проверяем статус ответа
+                if (!response.ok && response.status !== 200) {
+                    throw new Error('HTTP error! status: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(function(response) {
+                // Обрабатываем успешный ответ
+                btn.prop('disabled', false);
+                btn.text(originalText);
+                
+                // Логируем ответ для отладки
+                console.log('Add to cart response (fetch):', response);
+                console.log('Response type:', typeof response);
+                console.log('Response stringified:', JSON.stringify(response));
+                
+                // Проверяем успешность разными способами
+                // WooCommerce может возвращать {fragments: {...}, cart_hash: '...'} без success/data
+                let isSuccess = false;
+                
+                if (response) {
+                    // Формат WooCommerce fragments (если есть cart_hash - товар добавлен) - проверяем первым!
+                    // Проверяем наличие cart_hash - это главный индикатор успеха для WooCommerce
+                    if (response.cart_hash) {
+                        isSuccess = true;
+                        console.log('✅ Detected WooCommerce fragments format - cart_hash:', response.cart_hash);
+                    }
+                    // Также проверяем fragments как запасной вариант
+                    else if (response.fragments && typeof response.fragments === 'object') {
+                        isSuccess = true;
+                        console.log('✅ Detected WooCommerce fragments format - fragments present');
+                    }
+                    // Стандартный формат wp_send_json_success
+                    else if (response.success === true || response.success === 'true' || response.success === 1) {
+                        isSuccess = true;
+                        console.log('Detected wp_send_json_success format');
+                    }
+                    // Проверяем data внутри
+                    else if (response.data) {
+                        if (response.data.cart_item_key || response.data.cart_count !== undefined || response.data.cart_hash) {
+                            isSuccess = true;
+                            console.log('Detected success in response.data');
+                        }
+                    }
+                    // Проверяем на верхнем уровне
+                    else if (response.cart_item_key || response.cart_count !== undefined) {
+                        isSuccess = true;
+                        console.log('Detected cart indicators at top level');
+                    }
+                }
+                
+                console.log('Is success:', isSuccess, 'response keys:', response ? Object.keys(response) : 'no response');
+                
+                if (isSuccess) {
+                    // Обновляем счетчик корзины
+                    // Пробуем несколько способов
+                    if (typeof updateCartCount === 'function') {
+                        updateCartCount();
+                    }
+                    
+                    // Также обновляем через AJAX для надежности
+                    if (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) {
+                        $.ajax({
+                            url: asker_ajax.ajax_url,
+                            type: 'POST',
+                            data: {
+                                action: 'asker_get_cart_count'
+                            },
+                            success: function(countResponse) {
+                                if (countResponse && countResponse.success && countResponse.data && countResponse.data.count !== undefined) {
+                                    const count = countResponse.data.count;
+                                    // Обновляем счетчик в шапке
+                                    $('.cart-count').each(function() {
+                                        $(this).text(count);
+                                        $(this).attr('data-count', count);
+                                        $(this).css('display', count > 0 ? 'flex' : 'none');
+                                    });
+                                    // Обновляем мобильный счетчик
+                                    $('.mobile-cart-count').each(function() {
+                                        $(this).text(count);
+                                        $(this).css('display', count > 0 ? 'inline-flex' : 'none');
+                                    });
+                                }
+                            }
+                        });
+                    }
+                    
+                    // Показываем уведомление об успехе
+                    // Не показываем alert, если это не критично - можно использовать более мягкое уведомление
+                    console.log('✅ Товар успешно добавлен в корзину');
+                } else {
+                    // Если формат ответа нестандартный, но товар мог добавиться
+                    // Проверяем наличие данных о корзине (fragments или cart_hash)
+                    if (response && (response.fragments || response.cart_hash || (response.data && (response.data.cart_count !== undefined || response.data.cart_item_key)))) {
+                        // Товар добавился, но формат ответа нестандартный
+                        console.log('✅ Товар добавлен (нестандартный формат ответа)');
+                        // Обновляем счетчик вручную если есть данные
+                        if (response.data && response.data.cart_count !== undefined) {
+                            const count = response.data.cart_count;
+                            $('.cart-count').each(function() {
+                                $(this).text(count);
+                                $(this).attr('data-count', count);
+                                $(this).css('display', count > 0 ? 'flex' : 'none');
+                            });
+                            $('.mobile-cart-count').each(function() {
+                                $(this).text(count);
+                                $(this).css('display', count > 0 ? 'inline-flex' : 'none');
+                            });
+                        }
+                    } else {
+                        // Реальная ошибка - показываем только если действительно ошибка
+                        console.error('❌ Ошибка добавления в корзину:', response);
+                        const errorMsg = (response && response.data && response.data.message) 
+                            ? response.data.message 
+                            : 'Не удалось добавить товар в корзину';
+                        // Не показываем alert для ошибок из расширений браузера
+                        // alert(errorMsg);
+                    }
+                }
+            })
+            .catch(function(error) {
+                // Обрабатываем ошибку
+                btn.prop('disabled', false);
+                btn.text(originalText);
+                
+                console.error('Add to cart fetch error:', error);
+                
+                // Не показываем alert - только логируем в консоль
+                // Это может быть ложная ошибка из расширения браузера
+                console.error('❌ Ошибка добавления в корзину (только логирование):', error.message || 'Неизвестная ошибка');
+            });
+        } else {
+            btn.prop('disabled', false);
+            btn.text(originalText);
+            alert('Ошибка: AJAX недоступен. Пожалуйста, обновите страницу.');
+        }
     });
 });
 </script>

@@ -2113,6 +2113,11 @@ function asker_add_to_cart_ajax() {
     $product_id = intval( $_POST['product_id'] ?? 0 );
     $quantity = intval( $_POST['quantity'] ?? 1 );
     
+    // Логируем для отладки (только для администраторов)
+    if ( current_user_can( 'administrator' ) ) {
+        error_log( 'Add to cart - product_id: ' . $product_id . ', quantity: ' . $quantity . ', POST: ' . print_r( $_POST, true ) );
+    }
+    
     if ( ! $product_id ) {
         wp_send_json_error( array( 'message' => 'Неверный ID товара' ) );
         return;
@@ -2134,8 +2139,39 @@ function asker_add_to_cart_ajax() {
     // Очищаем все уведомления WooCommerce перед добавлением
     wc_clear_notices();
     
-    // Добавляем товар в корзину (проверки доступности отключены через фильтры woocommerce_is_purchasable и woocommerce_add_to_cart_validation)
-        $cart_item_key = WC()->cart->add_to_cart( $product_id, $quantity );
+    // Проверяем, есть ли уже этот товар в корзине
+    $cart_contents = WC()->cart->get_cart();
+    $existing_quantity = 0;
+    $existing_cart_item_key = null;
+    
+    foreach ( $cart_contents as $cart_item_key => $cart_item ) {
+        if ( $cart_item['product_id'] == $product_id || ( isset( $cart_item['variation_id'] ) && $cart_item['variation_id'] == $product_id ) ) {
+            $existing_quantity = $cart_item['quantity'];
+            $existing_cart_item_key = $cart_item_key;
+            break;
+        }
+    }
+    
+    // Если товар уже есть в корзине, удаляем старую запись и добавляем новую с правильным количеством
+    if ( $existing_cart_item_key ) {
+        // Удаляем существующий товар из корзины
+        WC()->cart->remove_cart_item( $existing_cart_item_key );
+        
+        if ( current_user_can( 'administrator' ) ) {
+            error_log( 'Product already in cart - removed old item with quantity ' . $existing_quantity );
+        }
+    }
+    
+    // Добавляем товар в корзину с правильным количеством (проверки доступности отключены через фильтры woocommerce_is_purchasable и woocommerce_add_to_cart_validation)
+    $cart_item_key = WC()->cart->add_to_cart( $product_id, $quantity );
+    
+    if ( current_user_can( 'administrator' ) ) {
+        if ( $existing_cart_item_key ) {
+            error_log( 'Product re-added to cart - product_id: ' . $product_id . ', quantity: ' . $quantity . ' (was ' . $existing_quantity . ')');
+        } else {
+            error_log( 'Product added to cart - product_id: ' . $product_id . ', quantity: ' . $quantity . ', cart_item_key: ' . $cart_item_key );
+        }
+    }
         
         if ( $cart_item_key ) {
         // Пересчитываем корзину
