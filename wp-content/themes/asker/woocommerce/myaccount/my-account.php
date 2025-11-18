@@ -670,7 +670,7 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
                                     <div class="form-group">
                                         <label for="phone">Телефон</label>
                                         <input type="tel" id="phone" name="phone" value="<?php echo esc_attr(get_user_meta(get_current_user_id(), 'billing_phone', true)); ?>">
-                                    </div>
+                                        </div>
                                         <div class="form-group">
                                             <label for="email">E-mail<span class="required">*</span></label>
                                             <input type="email" id="email" name="email" value="<?php echo esc_attr(wp_get_current_user()->user_email); ?>" required>
