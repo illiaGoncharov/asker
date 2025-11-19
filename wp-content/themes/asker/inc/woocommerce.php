@@ -2357,66 +2357,176 @@ add_action( 'wp_ajax_nopriv_woocommerce_add_to_cart', 'asker_add_to_cart_ajax' )
 
 /**
  * AJAX обработчик для создания заказа
+ * СТРОГАЯ валидация - заказ не создастся без всех обязательных данных
  */
 function asker_create_order_ajax() {
     try {
-        // Получаем данные из корзины
+        // Проверка 1: Корзина не пуста
         $cart = WC()->cart;
-        
         if ( $cart->is_empty() ) {
-            wp_send_json_error( 'Корзина пуста' );
+            wp_send_json_error( array(
+                'message' => 'Корзина пуста',
+                'field' => 'cart'
+            ) );
             return;
         }
         
-        // Создаем заказ
+        // Проверка 2: Обязательные поля
+        $required_fields = array(
+            'billing_first_name' => 'Имя',
+            'billing_phone' => 'Телефон',
+            'billing_email' => 'Email',
+        );
+        
+        $billing_data = array();
+        $errors = array();
+        
+        // Получаем данные в зависимости от авторизации
+        if ( is_user_logged_in() ) {
+            $user_id = get_current_user_id();
+            $user_meta = get_user_meta( $user_id );
+            
+            // Проверяем обязательные поля
+            foreach ( $required_fields as $field => $label ) {
+                $value = '';
+                
+                // Сначала пытаемся взять из POST (если пользователь обновил данные)
+                if ( isset( $_POST[ $field ] ) && ! empty( $_POST[ $field ] ) ) {
+                    $value = sanitize_text_field( $_POST[ $field ] );
+                }
+                // Если нет в POST, берём из meta пользователя
+                elseif ( isset( $user_meta[ $field ][0] ) && ! empty( $user_meta[ $field ][0] ) ) {
+                    $value = $user_meta[ $field ][0];
+                }
+                // Для email пробуем user_email
+                elseif ( $field === 'billing_email' ) {
+                    $value = get_userdata( $user_id )->user_email;
+                }
+                
+                if ( empty( $value ) ) {
+                    $errors[] = 'Не заполнено поле: ' . $label;
+                } else {
+                    $billing_data[ $field ] = $value;
+                }
+            }
+            
+            // Необязательные поля
+            $optional_fields = array(
+                'billing_last_name',
+                'billing_company',
+                'billing_city',
+                'billing_address_1',
+                'billing_address_2',
+                'billing_postcode',
+            );
+            
+            foreach ( $optional_fields as $field ) {
+                if ( isset( $_POST[ $field ] ) && ! empty( $_POST[ $field ] ) ) {
+                    $billing_data[ $field ] = sanitize_text_field( $_POST[ $field ] );
+                } elseif ( isset( $user_meta[ $field ][0] ) ) {
+                    $billing_data[ $field ] = $user_meta[ $field ][0];
+                }
+            }
+            
+        } else {
+            // Для неавторизованных - СТРОГАЯ проверка POST данных
+            foreach ( $required_fields as $field => $label ) {
+                if ( empty( $_POST[ $field ] ) ) {
+                    $errors[] = 'Не заполнено поле: ' . $label;
+                } else {
+                    $value = sanitize_text_field( $_POST[ $field ] );
+                    
+                    // Дополнительная валидация
+                    if ( $field === 'billing_email' && ! is_email( $value ) ) {
+                        $errors[] = 'Некорректный email';
+                    } elseif ( $field === 'billing_phone' ) {
+                        $phone_digits = preg_replace( '/[^\d]/', '', $value );
+                        if ( strlen( $phone_digits ) < 10 ) {
+                            $errors[] = 'Номер телефона должен содержать минимум 10 цифр';
+                        }
+                    }
+                    
+                    $billing_data[ $field ] = $value;
+                }
+            }
+            
+            // Необязательные поля для гостей
+            $optional_fields = array( 'billing_last_name', 'billing_company', 'billing_city', 'billing_address_1' );
+            foreach ( $optional_fields as $field ) {
+                if ( ! empty( $_POST[ $field ] ) ) {
+                    $billing_data[ $field ] = sanitize_text_field( $_POST[ $field ] );
+                }
+            }
+        }
+        
+        // Если есть ошибки - отклоняем заказ
+        if ( ! empty( $errors ) ) {
+            wp_send_json_error( array(
+                'message' => 'Не заполнены обязательные поля',
+                'errors' => $errors
+            ) );
+            return;
+        }
+        
+        // Создаём заказ
         $order = wc_create_order();
         
         // Добавляем товары из корзины
         foreach ( $cart->get_cart() as $cart_item_key => $cart_item ) {
             $product = $cart_item['data'];
             $quantity = $cart_item['quantity'];
-            
             $order->add_product( $product, $quantity );
         }
         
-        // Устанавливаем адрес доставки и привязываем к пользователю
+        // Привязываем к пользователю
         if ( is_user_logged_in() ) {
-            $user_id = get_current_user_id();
-            $billing_data = get_user_meta( $user_id );
-            
-            // ВАЖНО: Привязываем заказ к пользователю
-            $order->set_customer_id( $user_id );
-            
-            $order->set_billing_first_name( $billing_data['billing_first_name'][0] ?? 'Админ' );
-            $order->set_billing_last_name( $billing_data['billing_last_name'][0] ?? 'Пользователь' );
-            $order->set_billing_email( $billing_data['billing_email'][0] ?? get_userdata( $user_id )->user_email );
-            $order->set_billing_phone( $billing_data['billing_phone'][0] ?? '+7 (999) 123-45-67' );
-            $order->set_billing_city( $billing_data['billing_city'][0] ?? 'Москва' );
-            $order->set_billing_address_1( $billing_data['billing_address_1'][0] ?? 'ул. Тестовая, д. 1' );
-        } else {
-            // Для неавторизованных пользователей
-            // Пытаемся найти пользователя по email из формы
-            $guest_email = isset( $_POST['billing_email'] ) ? sanitize_email( $_POST['billing_email'] ) : '';
-            
-            if ( $guest_email && email_exists( $guest_email ) ) {
-                // Если есть пользователь с таким email - привязываем к нему
-                $user = get_user_by( 'email', $guest_email );
-                if ( $user ) {
-                    $order->set_customer_id( $user->ID );
-                }
+            $order->set_customer_id( get_current_user_id() );
+        } elseif ( ! empty( $billing_data['billing_email'] ) && email_exists( $billing_data['billing_email'] ) ) {
+            // Если гость, но email уже зарегистрирован - привязываем
+            $user = get_user_by( 'email', $billing_data['billing_email'] );
+            if ( $user ) {
+                $order->set_customer_id( $user->ID );
             }
-            
-            $order->set_billing_first_name( isset( $_POST['billing_first_name'] ) ? sanitize_text_field( $_POST['billing_first_name'] ) : 'Гость' );
-            $order->set_billing_last_name( isset( $_POST['billing_last_name'] ) ? sanitize_text_field( $_POST['billing_last_name'] ) : 'Пользователь' );
-            $order->set_billing_email( $guest_email ?: 'guest@example.com' );
-            $order->set_billing_phone( isset( $_POST['billing_phone'] ) ? sanitize_text_field( $_POST['billing_phone'] ) : '+7 (999) 123-45-67' );
-            $order->set_billing_city( isset( $_POST['billing_city'] ) ? sanitize_text_field( $_POST['billing_city'] ) : 'Москва' );
-            $order->set_billing_address_1( isset( $_POST['billing_address_1'] ) ? sanitize_text_field( $_POST['billing_address_1'] ) : 'ул. Тестовая, д. 1' );
+        }
+        
+        // Устанавливаем billing данные
+        if ( ! empty( $billing_data['billing_first_name'] ) ) {
+            $order->set_billing_first_name( $billing_data['billing_first_name'] );
+        }
+        if ( ! empty( $billing_data['billing_last_name'] ) ) {
+            $order->set_billing_last_name( $billing_data['billing_last_name'] );
+        }
+        if ( ! empty( $billing_data['billing_email'] ) ) {
+            $order->set_billing_email( $billing_data['billing_email'] );
+        }
+        if ( ! empty( $billing_data['billing_phone'] ) ) {
+            $order->set_billing_phone( $billing_data['billing_phone'] );
+        }
+        if ( ! empty( $billing_data['billing_company'] ) ) {
+            $order->set_billing_company( $billing_data['billing_company'] );
+        }
+        if ( ! empty( $billing_data['billing_city'] ) ) {
+            $order->set_billing_city( $billing_data['billing_city'] );
+        }
+        if ( ! empty( $billing_data['billing_address_1'] ) ) {
+            $order->set_billing_address_1( $billing_data['billing_address_1'] );
+        }
+        if ( ! empty( $billing_data['billing_address_2'] ) ) {
+            $order->set_billing_address_2( $billing_data['billing_address_2'] );
+        }
+        if ( ! empty( $billing_data['billing_postcode'] ) ) {
+            $order->set_billing_postcode( $billing_data['billing_postcode'] );
         }
         
         // Устанавливаем способ оплаты
-        $order->set_payment_method( 'bacs' ); // Банковский перевод
-        $order->set_payment_method_title( 'По счету' );
+        $payment_method = ! empty( $_POST['payment_method'] ) ? sanitize_text_field( $_POST['payment_method'] ) : 'bacs';
+        $order->set_payment_method( $payment_method );
+        $order->set_payment_method_title( $payment_method === 'bacs' ? 'По счёту' : 'Оплата' );
+        
+        // Добавляем комментарий к заказу
+        if ( ! empty( $_POST['order_comments'] ) ) {
+            $order->set_customer_note( sanitize_textarea_field( $_POST['order_comments'] ) );
+        }
         
         // Рассчитываем итоги
         $order->calculate_totals();
@@ -2427,13 +2537,20 @@ function asker_create_order_ajax() {
         // Очищаем корзину
         $cart->empty_cart();
         
+        // Возвращаем успех
         wp_send_json_success( array(
+            'message' => 'Заказ успешно создан!',
             'order_id' => $order->get_id(),
-            'order_number' => $order->get_order_number()
+            'order_number' => $order->get_order_number(),
+            'view_url' => $order->get_view_order_url(),
+            'thankyou_url' => $order->get_checkout_order_received_url()
         ) );
         
     } catch ( Exception $e ) {
-        wp_send_json_error( $e->getMessage() );
+        wp_send_json_error( array(
+            'message' => 'Ошибка создания заказа',
+            'error' => $e->getMessage()
+        ) );
     }
 }
 add_action( 'wp_ajax_asker_create_order', 'asker_create_order_ajax' );
@@ -2985,12 +3102,12 @@ function asker_generate_username_from_email( $username, $email, $new_user_args )
 add_filter( 'woocommerce_registration_generate_username', 'asker_generate_username_from_email', 10, 3 );
 
 /**
- * Генерируем пароль автоматически при регистрации
+ * Отключаем автогенерацию пароля - пользователь вводит сам
  */
-function asker_generate_password_on_registration( $password_generated ) {
-    return true; // WooCommerce автоматически сгенерирует пароль
+function asker_disable_password_generation( $password_generated ) {
+    return false; // Используем пароль, введённый пользователем
 }
-add_filter( 'woocommerce_registration_generate_password', 'asker_generate_password_on_registration' );
+add_filter( 'woocommerce_registration_generate_password', 'asker_disable_password_generation' );
 
 /**
  * Включаем регистрацию на странице My Account
@@ -2999,6 +3116,75 @@ function asker_enable_registration() {
     return 'yes';
 }
 add_filter( 'woocommerce_enable_myaccount_registration', 'asker_enable_registration' );
+
+/**
+ * Автоматический вход после регистрации
+ */
+function asker_auto_login_after_registration( $customer_id ) {
+    // Входим автоматически после регистрации
+    wp_set_current_user( $customer_id );
+    wp_set_auth_cookie( $customer_id );
+    
+    // Добавляем сообщение об успехе
+    wc_add_notice( 'Регистрация прошла успешно! Добро пожаловать!', 'success' );
+}
+add_action( 'woocommerce_created_customer', 'asker_auto_login_after_registration' );
+
+/**
+ * Прямой выход без подтверждения
+ */
+function asker_instant_logout() {
+    if ( isset( $_GET['customer-logout'] ) && ! empty( $_GET['_wpnonce'] ) ) {
+        if ( wp_verify_nonce( $_GET['_wpnonce'], 'customer-logout' ) ) {
+            wp_logout();
+            wp_safe_redirect( home_url('/') );
+            exit;
+        }
+    }
+}
+add_action( 'template_redirect', 'asker_instant_logout', 1 );
+
+/**
+ * Включаем email уведомления WooCommerce при активации темы
+ */
+function asker_enable_woocommerce_emails() {
+    // Список email шаблонов для включения
+    $email_templates = array(
+        'new_order',                    // Новый заказ (админу)
+        'customer_processing_order',    // Заказ в обработке (клиенту)
+        'customer_completed_order',     // Заказ выполнен (клиенту)
+        'customer_invoice',             // Счёт на оплату (клиенту)
+    );
+    
+    foreach ( $email_templates as $template_id ) {
+        $settings = get_option( 'woocommerce_' . $template_id . '_settings', array() );
+        
+        // Включаем только если ещё не настроено
+        if ( ! isset( $settings['enabled'] ) || $settings['enabled'] !== 'yes' ) {
+            $settings['enabled'] = 'yes';
+            update_option( 'woocommerce_' . $template_id . '_settings', $settings );
+        }
+    }
+    
+    // Устанавливаем email отправителя, если ещё не установлен
+    $from_email = get_option( 'woocommerce_email_from_address' );
+    if ( empty( $from_email ) || $from_email === 'dev-email@wpengine.local' ) {
+        update_option( 'woocommerce_email_from_address', 'opt@asker-corp.ru' );
+    }
+    
+    $from_name = get_option( 'woocommerce_email_from_name' );
+    if ( empty( $from_name ) ) {
+        update_option( 'woocommerce_email_from_name', 'Asker' );
+    }
+}
+add_action( 'after_switch_theme', 'asker_enable_woocommerce_emails' );
+// Также выполним при инициализации, если ещё не выполнялось
+add_action( 'init', function() {
+    if ( ! get_option( 'asker_emails_enabled' ) ) {
+        asker_enable_woocommerce_emails();
+        update_option( 'asker_emails_enabled', 'yes' );
+    }
+}, 999 );
 
 /**
  * Убираем стандартное сообщение WooCommerce о политике конфиденциальности

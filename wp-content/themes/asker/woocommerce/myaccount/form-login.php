@@ -24,6 +24,9 @@ if ( ! defined( 'ABSPATH' ) ) {
         </div>
         
     <div class="auth-container">
+        <!-- Уведомления об ошибках и успехе -->
+        <?php woocommerce_output_all_notices(); ?>
+        
         <!-- Форма входа -->
         <div class="auth-form-wrapper auth-form-wrapper--login active">
             <?php do_action( 'woocommerce_before_customer_login_form' ); ?>
@@ -146,12 +149,11 @@ if ( ! defined( 'ABSPATH' ) ) {
                     <input type="email" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="email" id="reg_email" autocomplete="email" value="<?php echo ( ! empty( $_POST['email'] ) ) ? esc_attr( wp_unslash( $_POST['email'] ) ) : ''; ?>" required />
                 </div>
                 
-                <?php 
-                // Скрытые поля для username и password
-                // WooCommerce требует эти поля, но мы их не показываем пользователю
-                // Username будет сгенерирован из email на сервере
-                // Пароль будет сгенерирован автоматически
-                ?>
+                <!-- Поле пароля -->
+                <div class="form-group">
+                    <label for="reg_password">Пароль&nbsp;<span class="required">*</span></label>
+                    <input type="password" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="password" id="reg_password" autocomplete="new-password" required />
+                </div>
                 
                 <?php do_action( 'woocommerce_register_form' ); ?>
                 

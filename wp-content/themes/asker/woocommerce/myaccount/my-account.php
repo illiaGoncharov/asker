@@ -370,7 +370,7 @@ File: <?php echo __FILE__; ?>
                             </svg>
                             <span>Сфера успеха</span>
                         </div>
-                        <a href="<?php echo wp_logout_url(home_url('/')); ?>" class="logout-link">
+                        <a href="<?php echo wp_nonce_url( add_query_arg( 'customer-logout', 'true', home_url('/') ), 'customer-logout' ); ?>" class="logout-link">
                             Выйти
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                 <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
