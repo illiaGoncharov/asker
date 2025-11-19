@@ -16,7 +16,22 @@ get_header();
                 <h1 class="section__title"><?php the_title(); ?></h1>
             <?php endif; ?>
             <div class="content">
-                <?php the_content(); ?>
+                <?php 
+                // Для страницы my-account используем кастомный шаблон напрямую
+                if (is_account_page()) {
+                    $custom_template = get_template_directory() . '/woocommerce/myaccount/my-account.php';
+                    if (file_exists($custom_template)) {
+                        // Загружаем наш кастомный шаблон
+                        include $custom_template;
+                    } else {
+                        // Fallback на стандартный вывод
+                        the_content();
+                    }
+                } else {
+                    // Для остальных страниц выводим стандартный контент
+                    the_content();
+                }
+                ?>
             </div>
         </article>
     <?php endwhile; ?>

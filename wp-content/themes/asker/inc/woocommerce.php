@@ -817,6 +817,125 @@ function asker_force_content_product_template( $template, $template_name, $templ
 }
 add_filter( 'woocommerce_locate_template', 'asker_force_content_product_template', 999, 3 );
 
+/**
+ * Переопределение шаблона my-account.php
+ * 
+ * WooCommerce автоматически ищет шаблоны в теме по пути:
+ * wp-content/themes/{theme}/woocommerce/{template_path}/{template_name}
+ * 
+ * Если файл существует в правильном месте, он должен использоваться автоматически.
+ * Но иногда WooCommerce загружает контент через хук woocommerce_account_content,
+ * поэтому перехватываем оба механизма.
+ */
+function asker_force_myaccount_template( $template, $template_name, $template_path ) {
+    // Проверяем, что это шаблон my-account
+    if ( 'myaccount/my-account.php' === $template_name ) {
+        $custom_template = get_template_directory() . '/woocommerce/myaccount/my-account.php';
+        
+        if ( file_exists( $custom_template ) ) {
+            // Логируем для отладки (только для администраторов)
+            if ( current_user_can( 'administrator' ) && is_account_page() ) {
+                error_log( 'ASKER: Перехватываем через woocommerce_locate_template: ' . $custom_template );
+            }
+            return $custom_template;
+        }
+    }
+    
+    return $template;
+}
+add_filter( 'woocommerce_locate_template', 'asker_force_myaccount_template', 10, 3 );
+
+/**
+ * Заменяем стандартный вывод my-account на наш кастомный
+ * Используем хук woocommerce_account_content напрямую
+ */
+function asker_custom_account_content() {
+    $custom_template = get_template_directory() . '/woocommerce/myaccount/my-account.php';
+    
+    if ( file_exists( $custom_template ) ) {
+        // Логируем для отладки
+        if ( current_user_can( 'administrator' ) ) {
+            error_log( 'ASKER: Загружаем кастомный my-account.php через хук woocommerce_account_content' );
+        }
+        
+        include $custom_template;
+    } else {
+        // Fallback на стандартный вывод WooCommerce
+        woocommerce_account_content();
+    }
+}
+
+// Убираем стандартный вывод WooCommerce
+remove_action( 'woocommerce_account_content', 'woocommerce_account_content', 10 );
+
+// Добавляем наш вывод с приоритетом 10
+add_action( 'woocommerce_account_content', 'asker_custom_account_content', 10 );
+
+/**
+ * Перехватываем вывод шорткода [woocommerce_my_account] через фильтр
+ * Этот метод надёжнее, чем удаление и регистрация нового шорткода
+ */
+function asker_intercept_myaccount_shortcode( $output, $tag, $attr, $m ) {
+    // Проверяем, что это нужный шорткод
+    if ( $tag !== 'woocommerce_my_account' ) {
+        return $output;
+    }
+    
+    // Проверяем, что это страница my-account
+    if ( ! function_exists( 'is_account_page' ) || ! is_account_page() ) {
+        return $output;
+    }
+    
+    $custom_template = get_template_directory() . '/woocommerce/myaccount/my-account.php';
+    
+    if ( file_exists( $custom_template ) ) {
+        // Логируем для отладки
+        if ( current_user_can( 'administrator' ) ) {
+            error_log( 'ASKER: Перехватываем шорткод [woocommerce_my_account]' );
+        }
+        
+        ob_start();
+        include $custom_template;
+        return ob_get_clean();
+    }
+    
+    return $output;
+}
+// Используем фильтр do_shortcode_tag для перехвата вывода шорткода
+// Приоритет 1 чтобы сработать раньше других
+add_filter( 'do_shortcode_tag', 'asker_intercept_myaccount_shortcode', 1, 4 );
+
+/**
+ * Перехватываем вывод контента страницы через фильтр the_content
+ * Это нужно на случай, если страница my-account использует стандартный шаблон page.php
+ * и выводит контент через the_content() без шорткода
+ */
+function asker_override_myaccount_content_filter( $content ) {
+    // Проверяем, что это страница my-account
+    if ( ! function_exists( 'is_account_page' ) || ! is_account_page() ) {
+        return $content;
+    }
+    
+    // Если контент уже содержит наш шаблон (по метке), не трогаем его
+    if ( strpos( $content, 'ASKER CUSTOM TEMPLATE' ) !== false || 
+         strpos( $content, 'data-template="asker-custom-my-account"' ) !== false ) {
+        return $content;
+    }
+    
+    $custom_template = get_template_directory() . '/woocommerce/myaccount/my-account.php';
+    
+    if ( file_exists( $custom_template ) ) {
+        ob_start();
+        include $custom_template;
+        return ob_get_clean();
+    }
+    
+    return $content;
+}
+// Используем очень ранний приоритет, чтобы перехватить до всех других фильтров
+add_filter( 'the_content', 'asker_override_myaccount_content_filter', 1 );
+
+
 function asker_custom_product_card_template() {
     // Убираем стандартные хуки WooCommerce
     remove_action( 'woocommerce_before_shop_loop_item', 'woocommerce_template_loop_product_link_open', 10 );

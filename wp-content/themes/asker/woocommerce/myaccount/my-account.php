@@ -215,7 +215,14 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
 
 ?>
 
-<div class="account-page container">
+<!-- 
+==========================================
+ASKER CUSTOM TEMPLATE my-account.php LOADED
+Time: <?php echo date('Y-m-d H:i:s'); ?>
+File: <?php echo __FILE__; ?>
+==========================================
+-->
+<div class="account-page container" data-template="asker-custom-my-account">
     <?php if (is_user_logged_in()): ?>
         <?php if (isset($success_message)): ?>
             <?php echo $success_message; ?>

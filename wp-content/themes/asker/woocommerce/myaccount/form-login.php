@@ -14,7 +14,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 ?>
 
-<div class="auth-page">
+<!-- ASKER CUSTOM form-login.php LOADED: <?php echo date('Y-m-d H:i:s'); ?> -->
+<div class="auth-page" data-template="asker-custom-form-login">
     <!-- Вкладки Вход/Регистрация - вне белой карточки -->
         <div class="auth-tabs">
             <button class="auth-tab auth-tab--active" data-tab="login">Вход</button>
