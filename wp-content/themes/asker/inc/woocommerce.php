@@ -2993,6 +2993,14 @@ function asker_generate_password_on_registration( $password_generated ) {
 add_filter( 'woocommerce_registration_generate_password', 'asker_generate_password_on_registration' );
 
 /**
+ * Включаем регистрацию на странице My Account
+ */
+function asker_enable_registration() {
+    return 'yes';
+}
+add_filter( 'woocommerce_enable_myaccount_registration', 'asker_enable_registration' );
+
+/**
  * Убираем стандартное сообщение WooCommerce о политике конфиденциальности
  */
 function asker_remove_privacy_policy_text( $text ) {
