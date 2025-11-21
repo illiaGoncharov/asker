@@ -249,7 +249,7 @@ File: <?php echo __FILE__; ?>
                         </a>
                         
                         <a href="#" class="nav-item" data-tab="profile">
-                            <img src="<?php echo get_template_directory_uri(); ?>/assets/images/login/acc_general.svg" alt="Профиль" width="20" height="20">
+                            <img src="<?php echo get_template_directory_uri(); ?>/assets/images/login/acc_profile.svg" alt="Профиль" width="20" height="20">
                             <span>Профиль</span>
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                 <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -362,13 +362,33 @@ File: <?php echo __FILE__; ?>
                         </div>
                     </div>
                     
+                    <?php
+                    // Получаем данные пользователя для отображения в "Сфера успеха"
+                    $user_id = get_current_user_id();
+                    $user_company = get_user_meta( $user_id, 'billing_company', true );
+                    $user_first_name = get_user_meta( $user_id, 'first_name', true );
+                    $user_last_name = get_user_meta( $user_id, 'last_name', true );
+                    
+                    // Формируем текст для отображения
+                    $display_text = 'Сфера успеха'; // По умолчанию
+                    if ( !empty( $user_company ) ) {
+                        // Если заполнено название организации - показываем его
+                        $display_text = esc_html( $user_company );
+                    } elseif ( !empty( $user_first_name ) ) {
+                        // Иначе показываем имя пользователя
+                        $display_text = esc_html( trim( $user_first_name . ' ' . $user_last_name ) );
+                        if ( empty( trim( $display_text ) ) ) {
+                            $display_text = esc_html( $user_first_name );
+                        }
+                    }
+                    ?>
                     <div class="sidebar-footer">
                         <div class="success-sphere">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                                 <circle cx="12" cy="12" r="10" fill="currentColor"/>
                                 <path d="M9 12L11 14L15 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            <span>Сфера успеха</span>
+                            <span><?php echo $display_text; ?></span>
                         </div>
                         <a href="<?php echo wp_nonce_url( add_query_arg( 'customer-logout', 'true', home_url('/') ), 'customer-logout' ); ?>" class="logout-link">
                             Выйти

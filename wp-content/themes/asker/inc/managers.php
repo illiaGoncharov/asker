@@ -73,32 +73,28 @@ function asker_assign_manager_to_customer( $customer_id ) {
 add_action( 'woocommerce_created_customer', 'asker_assign_manager_to_customer' );
 
 /**
- * Добавляем метабокс "Персональный менеджер" на странице редактирования пользователя
+ * Добавляем секцию "Персональный менеджер" на странице редактирования пользователя
  */
-function asker_add_manager_metabox() {
-    add_meta_box(
-        'asker_manager_metabox',
-        'Персональный менеджер',
-        'asker_render_manager_metabox',
-        'user',
-        'normal',
-        'default'
-    );
-}
-add_action( 'add_meta_boxes_user', 'asker_add_manager_metabox' );
-
-function asker_render_manager_metabox( $user ) {
+function asker_render_manager_section( $user ) {
+    // Показываем только администраторам
+    if ( ! current_user_can( 'edit_users' ) ) {
+        return;
+    }
+    
     $assigned_manager_id = get_user_meta( $user->ID, 'assigned_manager_id', true );
     
     // Получаем всех менеджеров
     $managers = get_posts( array(
         'post_type' => 'manager',
         'posts_per_page' => -1,
-        'post_status' => 'publish'
+        'post_status' => 'publish',
+        'orderby' => 'title',
+        'order' => 'ASC'
     ) );
     
     wp_nonce_field( 'asker_save_manager', 'asker_manager_nonce' );
     ?>
+    <h2>Персональный менеджер</h2>
     <table class="form-table">
         <tr>
             <th><label for="assigned_manager_id">Выберите менеджера</label></th>
@@ -106,7 +102,7 @@ function asker_render_manager_metabox( $user ) {
                 <select name="assigned_manager_id" id="assigned_manager_id" style="width: 300px;">
                     <option value="">— Не назначен —</option>
                     <?php foreach ( $managers as $manager ) : ?>
-                        <option value="<?php echo $manager->ID; ?>" <?php selected( $assigned_manager_id, $manager->ID ); ?>>
+                        <option value="<?php echo esc_attr( $manager->ID ); ?>" <?php selected( $assigned_manager_id, $manager->ID ); ?>>
                             <?php echo esc_html( $manager->post_title ); ?>
                         </option>
                     <?php endforeach; ?>
@@ -117,6 +113,8 @@ function asker_render_manager_metabox( $user ) {
     </table>
     <?php
 }
+add_action( 'show_user_profile', 'asker_render_manager_section' );
+add_action( 'edit_user_profile', 'asker_render_manager_section' );
 
 function asker_save_manager_metabox( $user_id ) {
     if ( ! isset( $_POST['asker_manager_nonce'] ) || ! wp_verify_nonce( $_POST['asker_manager_nonce'], 'asker_save_manager' ) ) {
