@@ -95,7 +95,6 @@ body {
   background: var(--bg-site);
   margin: 0;
   padding: 0;
-  padding-top: 82px; /* Header height for fixed positioning */
 }
 
 /* Container - standard 1200-1440px */

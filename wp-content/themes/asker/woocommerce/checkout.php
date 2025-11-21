@@ -3,8 +3,23 @@
  * Кастомный шаблон чекаута
  */
 
-// Отладочная информация
-error_log( 'Asker: Custom checkout template loaded' );
+// РАСШИРЕННАЯ отладочная информация
+error_log( '=== ASKER CHECKOUT DEBUG ===' );
+error_log( 'Custom checkout template loaded' );
+error_log( 'Session ID: ' . ( WC()->session ? WC()->session->get_customer_id() : 'NO SESSION' ) );
+error_log( 'Cart items count: ' . ( WC()->cart ? WC()->cart->get_cart_contents_count() : 'NO CART' ) );
+error_log( 'Cart is empty: ' . ( WC()->cart && WC()->cart->is_empty() ? 'YES' : 'NO' ) );
+error_log( 'User ID: ' . get_current_user_id() );
+error_log( 'Current URL: ' . ( isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : 'UNKNOWN' ) );
+error_log( '=============================' );
+
+// Проверяем, доступен ли WooCommerce
+if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+    error_log( 'CRITICAL: WooCommerce or Cart not available!' );
+    echo '<div class="woocommerce-error">Ошибка: WooCommerce не инициализирован. Обратитесь к администратору.</div>';
+    get_footer();
+    exit;
+}
 
 get_header();
 ?>

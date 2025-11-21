@@ -802,12 +802,6 @@
   height: auto;
 }
 
-/* Удваиваем паддинги только для страницы восстановления пароля */
-.auth-page:has(.woocommerce-ResetPassword) .auth-container,
-.auth-page:has(.lost_reset_password) .auth-container {
-  padding: 80px 40px;
-}
-
 .auth-title {
   font-size: 28px;
   font-weight: 700;

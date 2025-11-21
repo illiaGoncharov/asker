@@ -1095,9 +1095,13 @@ File: <?php echo __FILE__; ?>
             </script>
     <?php else: ?>
         <?php
-        // Используем стандартный шаблон WooCommerce для формы входа
-        // Он автоматически использует наш переопределенный form-login.php
-        wc_get_template('myaccount/form-login.php');
+        // Проверяем GET параметр lost-password для формы восстановления пароля
+        if ( isset( $_GET['lost-password'] ) || isset( $_GET['reset-link-sent'] ) ) {
+            wc_get_template('myaccount/form-lost-password.php');
+        } else {
+            // Используем стандартный шаблон WooCommerce для формы входа
+            wc_get_template('myaccount/form-login.php');
+        }
         ?>
     <?php endif; ?>
 </div>

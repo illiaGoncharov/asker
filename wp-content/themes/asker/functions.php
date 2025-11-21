@@ -17,6 +17,7 @@ require_once get_template_directory() . '/inc/enqueue.php';
 require_once get_template_directory() . '/inc/customizer.php';
 require_once get_template_directory() . '/inc/acf.php';
 require_once get_template_directory() . '/inc/woocommerce.php';
+require_once get_template_directory() . '/inc/checkout-fixes.php'; // Исправления для checkout
 require_once get_template_directory() . '/inc/helpers.php';
 require_once get_template_directory() . '/inc/create-pages-helper.php';
 require_once get_template_directory() . '/inc/customer-levels.php';

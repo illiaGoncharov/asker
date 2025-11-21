@@ -6,7 +6,7 @@
 .site-header {
   background: var(--bg-white);
   border-bottom: 1px solid var(--border-gray);
-  position: fixed;
+  position: relative; /* Изменено с fixed на relative */
   top: 0;
   left: 0;
   right: 0;

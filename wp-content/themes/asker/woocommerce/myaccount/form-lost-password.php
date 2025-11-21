@@ -19,9 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
     <div class="auth-tabs">
         <span class="auth-tab auth-tab--active">Восстановление пароля</span>
     </div>
-    <p class="auth-page-description">Введите E-mail, указанный при регистрации и мы отправим вам ссылку для восстановления пароля</p>
     
     <div class="auth-container">
+        <p class="auth-page-description">Введите E-mail, указанный при регистрации и мы отправим вам ссылку для восстановления пароля</p>
         <?php
         wc_print_notices();
         
@@ -95,4 +95,3 @@ if ( ! defined( 'ABSPATH' ) ) {
         </div>
     </div>
 </div>
-

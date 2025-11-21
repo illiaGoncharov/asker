@@ -114,7 +114,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                 </div>
                 
                 <div class="auth-links">
-                    <a href="<?php echo esc_url( wp_lostpassword_url() ); ?>" class="auth-link"><?php esc_html_e( 'Забыли пароль?', 'woocommerce' ); ?></a>
+                    <a href="<?php echo esc_url( add_query_arg( 'lost-password', '1', wc_get_page_permalink( 'myaccount' ) ) ); ?>" class="auth-link"><?php esc_html_e( 'Забыли пароль?', 'woocommerce' ); ?></a>
                 </div>
                 
                 <?php wp_nonce_field( 'woocommerce-login', 'woocommerce-login-nonce' ); ?>
