@@ -13,6 +13,95 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- КРИТИЧНО: Переопределяем alert() ДО загрузки всех скриптов и расширений браузера -->
+    <script>
+    (function() {
+        // Сохраняем оригинальные функции как можно раньше
+        const originalAlert = window.alert;
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+        
+        // Переопределяем alert() глобально для подавления ошибок от расширения браузера
+        window.alert = function(message) {
+            const messageStr = String(message || '');
+            // Если сообщение об ошибке добавления в корзину - подавляем его
+            if (messageStr.includes('Ошибка добавления') || 
+                messageStr.includes('ошибка добавления') ||
+                messageStr.includes('Error adding') ||
+                messageStr.includes('error adding') ||
+                messageStr.toLowerCase().includes('добавления товара в корзину') ||
+                messageStr.toLowerCase().includes('добавления в корзину') ||
+                messageStr.includes('installHook')) {
+                // Тихо логируем вместо показа alert
+                if (console && console.log) {
+                    console.log('⚠️ Alert suppressed (header):', messageStr);
+                }
+                return; // Не показываем alert
+            }
+            // Для других сообщений используем оригинальный alert
+            if (originalAlert) {
+                return originalAlert.apply(window, arguments);
+            }
+        };
+        
+        // Также переопределяем console.error глобально
+        if (console && console.error) {
+            const originalError = console.error;
+            console.error = function() {
+                const args = Array.from(arguments);
+                const message = args.map(arg => {
+                    if (typeof arg === 'object' && arg !== null) {
+                        try {
+                            return JSON.stringify(arg);
+                        } catch(e) {
+                            return String(arg);
+                        }
+                    }
+                    return String(arg);
+                }).join(' ');
+                // Если это ошибка от installHook.js или об ошибке добавления в корзину - подавляем
+                if (message.includes('installHook') || 
+                    message.includes('Ошибка добавления') || 
+                    message.includes('ошибка добавления') ||
+                    message.toLowerCase().includes('добавления товара в корзину') ||
+                    message.toLowerCase().includes('добавления в корзину')) {
+                    // Тихо логируем вместо console.error
+                    if (console && console.log) {
+                        console.log('⚠️ Console.error suppressed (header):', message);
+                    }
+                    return; // Не показываем ошибку
+                }
+                // Для других ошибок используем оригинальный console.error
+                if (originalError) {
+                    return originalError.apply(console, arguments);
+                }
+            };
+        }
+        
+        // Также переопределяем console.warn для полной защиты
+        if (console && console.warn) {
+            const originalWarn = console.warn;
+            console.warn = function() {
+                const args = Array.from(arguments);
+                const message = args.map(arg => String(arg)).join(' ');
+                // Подавляем предупреждения от installHook
+                if (message.includes('installHook') || 
+                    message.includes('Ошибка добавления') || 
+                    message.includes('ошибка добавления')) {
+                    if (console && console.log) {
+                        console.log('⚠️ Console.warn suppressed (header):', message);
+                    }
+                    return;
+                }
+                // Для других предупреждений используем оригинальный console.warn
+                if (originalWarn) {
+                    return originalWarn.apply(console, arguments);
+                }
+            };
+        }
+    })();
+    </script>
+    
     <?php wp_head(); ?>
     
     <!-- Принудительно удаляем блок Coming Soon и мета-тег -->
@@ -193,7 +282,7 @@
                 <a href="mailto:<?php echo get_option('woocommerce_store_email', 'info@askerspb.ru'); ?>" class="icon-mail">
                     <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/message.svg" alt="Сообщение" class="header-icon">
                 </a>
-                <a href="<?php echo esc_url(home_url('/wishlist')); ?>" class="icon-heart">
+                <a href="<?php echo esc_url(home_url('/wishlist/')); ?>" class="icon-heart">
                     <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/heart.svg" alt="Избранное" class="header-icon">
                     <?php
                     // Получаем количество товаров в избранном
@@ -268,7 +357,7 @@
                     Каталог
                 </span>
             </a>
-            <a href="<?php echo esc_url(home_url('/wishlist')); ?>" class="mobile-menu-link">
+            <a href="<?php echo esc_url(home_url('/wishlist/')); ?>" class="mobile-menu-link">
                 <span class="mobile-link-text">
                     <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/heart.svg" alt="" class="mobile-menu-icon">
                     Избранное

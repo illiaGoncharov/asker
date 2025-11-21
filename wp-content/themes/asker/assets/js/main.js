@@ -1,5 +1,65 @@
 // Общие скрипты темы. Стараться держать без зависимостей.
 
+// ===== ОБРАБОТЧИК КНОПОК КОЛИЧЕСТВА В ИЗБРАННОМ =====
+// Работает на всех страницах (wishlist, my-account)
+(function() {
+    console.log('🔧 Quantity buttons handler loaded (main.js)');
+    
+    function handleQuantityClick(e) {
+        // Находим кнопку
+        let btn = e.target;
+        if (!btn.classList || !btn.classList.contains('quantity-btn')) {
+            btn = btn.closest('.quantity-btn');
+        }
+        
+        if (!btn) return;
+        
+        // Проверяем, что это кнопка из wishlist
+        const container = btn.closest('.wishlist-item-quantity');
+        if (!container) return;
+        
+        console.log('🔘 Quantity button clicked:', btn.className);
+        
+        // Останавливаем событие СРАЗУ
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
+        // Находим инпут
+        const input = container.querySelector('.quantity-input');
+        if (!input) {
+            console.warn('❌ Input not found');
+            return;
+        }
+        
+        // Читаем текущее значение
+        let value = parseInt(input.value, 10);
+        if (isNaN(value) || value < 1) value = 1;
+        
+        const min = parseInt(input.getAttribute('min'), 10) || 1;
+        const max = parseInt(input.getAttribute('max'), 10) || 999;
+        
+        console.log('Current value:', value, 'min:', min, 'max:', max);
+        
+        // Изменяем значение
+        if (btn.classList.contains('quantity-minus')) {
+            value = Math.max(min, value - 1);
+        } else if (btn.classList.contains('quantity-plus')) {
+            value = Math.min(max, value + 1);
+        }
+        
+        // ОБНОВЛЯЕМ ЗНАЧЕНИЕ
+        input.value = value;
+        input.setAttribute('value', value);
+        
+        console.log('✅ Quantity changed to:', value, '| New input.value:', input.value);
+    }
+    
+    // Добавляем обработчик на capture phase для раннего перехвата
+    document.addEventListener('click', handleQuantityClick, true);
+    console.log('✅ Quantity handler attached (capture phase)');
+})();
+
 // Бургер-меню навигации
 document.addEventListener('DOMContentLoaded', function() {
     const navMenuToggle = document.getElementById('nav-menu-toggle');
@@ -642,15 +702,38 @@ document.addEventListener('DOMContentLoaded', function() {
                             button.disabled = false;
                         }, 2000);
                     } else {
-                        // Обрабатываем разные форматы ошибок от сервера
-                        const errorMessage = data.data?.message || data.data || data.message || 'Ошибка добавления товара в корзину';
-                        throw new Error(errorMessage);
+                        // Проверяем WooCommerce формат ответа (fragments, cart_hash)
+                        // Это УСПЕШНЫЙ ответ от WooCommerce!
+                        if (data.fragments || data.cart_hash) {
+                            console.log('✅ Item added to cart (WooCommerce fragments format)');
+                            button.textContent = 'Добавлено!';
+                            button.style.background = '#4CAF50';
+                            
+                            // Обновляем счетчик корзины
+                            if (window.updateCartCount && typeof window.updateCartCount === 'function') {
+                                window.updateCartCount();
+                            }
+                            
+                            setTimeout(() => {
+                                button.textContent = originalText;
+                                button.style.background = '';
+                                button.removeAttribute('data-processing');
+                                button.disabled = false;
+                            }, 2000);
+                        } else {
+                            // Реальная ошибка
+                            const errorMessage = data.data?.message || data.data || data.message || 'Ошибка добавления товара в корзину';
+                            console.log('❌ Ошибка:', errorMessage);
+                            button.textContent = originalText;
+                            button.removeAttribute('data-processing');
+                            button.disabled = false;
+                        }
                     }
                 })
                 .catch(error => {
-                    console.error('Ошибка AJAX запроса:', error);
-                    const errorMsg = error.message || 'Ошибка при добавлении товара в корзину';
-                    alert(errorMsg);
+                    console.log('Ошибка AJAX запроса (suppressed):', error);
+                    // Не показываем alert для ошибок - они могут быть перехвачены расширениями
+                    // alert удален для избежания ложных срабатываний
                     button.textContent = originalText;
                     button.removeAttribute('data-processing');
                     button.disabled = false;

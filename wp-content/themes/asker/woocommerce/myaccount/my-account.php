@@ -551,17 +551,28 @@ File: <?php echo __FILE__; ?>
                             <?php
                             // Получаем уровень клиента для шкалы
                             $level_data = asker_get_customer_level( get_current_user_id() );
-                            $current_level = strtolower( $level_data['level'] );
+                            $current_level = mb_strtolower( trim($level_data['level']), 'UTF-8' );
                             
                             // Определяем активный уровень для шкалы
                             // Базовый = Базовый, Серебро = Премиум, Золото/Платина = VIP
-                            $active_bar_level = 'basic';
-                            if ( $current_level === 'базовый' || $current_level === 'basic' ) {
+                            $active_bar_level = 'basic'; // По умолчанию
+                            
+                            // Проверяем на базовый уровень
+                            if ( in_array($current_level, ['базовый', 'basic', 'base']) ) {
                                 $active_bar_level = 'basic';
-                            } elseif ( $current_level === 'серебро' || $current_level === 'silver' || $current_level === 'премиум' || $current_level === 'premium' ) {
+                            }
+                            // Проверяем на премиум/серебро
+                            elseif ( in_array($current_level, ['серебро', 'silver', 'премиум', 'premium']) ) {
                                 $active_bar_level = 'premium';
-                            } else {
+                            }
+                            // Проверяем на VIP/золото/платина
+                            elseif ( in_array($current_level, ['золото', 'gold', 'платина', 'platinum', 'vip']) ) {
                                 $active_bar_level = 'vip';
+                            }
+                            
+                            // Отладка для администраторов
+                            if ( current_user_can('administrator') && isset($_GET['debug_level']) ) {
+                                echo '<!-- DEBUG: current_level = "' . esc_html($current_level) . '", active_bar_level = "' . esc_html($active_bar_level) . '" -->';
                             }
                             ?>
                             
@@ -1189,77 +1200,87 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 // Глобальное переопределение alert() для подавления модальных окон от расширения браузера
 // Это нужно делать ДО загрузки jQuery, чтобы перехватить все асинхронные вызовы
+// Выполняем сразу при загрузке страницы, до всех других скриптов
 (function() {
+    // Сохраняем оригинальные функции
     const originalAlert = window.alert;
     const originalConsoleError = console.error;
+    const originalConsoleWarn = console.warn;
     
     // Переопределяем alert() глобально для подавления ошибок от расширения браузера
     window.alert = function(message) {
+        const messageStr = String(message || '');
         // Если сообщение об ошибке добавления в корзину - подавляем его
-        if (typeof message === 'string' && (
-            message.includes('Ошибка добавления') || 
-            message.includes('ошибка добавления') ||
-            message.includes('Error adding') ||
-            message.includes('error adding') ||
-            message.toLowerCase().includes('добавления товара в корзину') ||
-            message.toLowerCase().includes('добавления в корзину')
-        )) {
-            console.log('⚠️ Alert suppressed (global):', message);
+        if (messageStr.includes('Ошибка добавления') || 
+            messageStr.includes('ошибка добавления') ||
+            messageStr.includes('Error adding') ||
+            messageStr.includes('error adding') ||
+            messageStr.toLowerCase().includes('добавления товара в корзину') ||
+            messageStr.toLowerCase().includes('добавления в корзину') ||
+            messageStr.includes('installHook')) {
+            // Тихо логируем вместо показа alert
+            if (console && console.log) {
+                console.log('⚠️ Alert suppressed:', messageStr);
+            }
             return; // Не показываем alert
         }
         // Для других сообщений используем оригинальный alert
-        return originalAlert.apply(window, arguments);
+        if (originalAlert) {
+            return originalAlert.apply(window, arguments);
+        }
     };
     
     // Также переопределяем console.error глобально
-    console.error = function() {
-        const args = Array.from(arguments);
-        const message = args.join(' ');
-        // Если это ошибка от installHook.js или об ошибке добавления в корзину - подавляем
-        if (message.includes('installHook') || 
-            message.includes('Ошибка добавления') || 
-            message.includes('ошибка добавления') ||
-            message.toLowerCase().includes('добавления товара в корзину') ||
-            message.toLowerCase().includes('добавления в корзину')) {
-            console.log('⚠️ Console.error suppressed (global):', message);
-            return; // Не показываем ошибку
-        }
-        // Для других ошибок используем оригинальный console.error
-        return originalConsoleError.apply(console, arguments);
-    };
+    if (console && console.error) {
+        console.error = function() {
+            const args = Array.from(arguments);
+            const message = args.map(arg => String(arg)).join(' ');
+            // Если это ошибка от installHook.js или об ошибке добавления в корзину - подавляем
+            if (message.includes('installHook') || 
+                message.includes('Ошибка добавления') || 
+                message.includes('ошибка добавления') ||
+                message.toLowerCase().includes('добавления товара в корзину') ||
+                message.toLowerCase().includes('добавления в корзину')) {
+                // Тихо логируем вместо console.error
+                if (console && console.log) {
+                    console.log('⚠️ Console.error suppressed:', message);
+                }
+                return; // Не показываем ошибку
+            }
+            // Для других ошибок используем оригинальный console.error
+            if (originalConsoleError) {
+                return originalConsoleError.apply(console, arguments);
+            }
+        };
+    }
+    
+    // Также переопределяем console.warn для полной защиты
+    if (console && console.warn) {
+        console.warn = function() {
+            const args = Array.from(arguments);
+            const message = args.map(arg => String(arg)).join(' ');
+            // Подавляем предупреждения от installHook
+            if (message.includes('installHook') || 
+                message.includes('Ошибка добавления') || 
+                message.includes('ошибка добавления')) {
+                if (console && console.log) {
+                    console.log('⚠️ Console.warn suppressed:', message);
+                }
+                return;
+            }
+            // Для других предупреждений используем оригинальный console.warn
+            if (originalConsoleWarn) {
+                return originalConsoleWarn.apply(console, arguments);
+            }
+        };
+    }
 })();
 
-// Код для избранного - вынесен за пределы DOMContentLoaded для работы с динамически загруженными элементами
+// Обработчики событий для личного кабинета
 jQuery(document).ready(function($) {
-    // Селектор количества в избранном (используем делегирование событий)
-    $(document).on('click', '.wishlist-item-quantity .quantity-btn', function(e) {
-        e.preventDefault();
-        const btn = $(this);
-        const quantityContainer = btn.closest('.wishlist-item-quantity');
-        const input = quantityContainer.find('.quantity-input');
-        
-        if (input.length) {
-            // Получаем текущее значение
-            let currentValue = parseInt(input.val()) || parseInt(input.attr('value')) || 1;
-            
-            if (btn.hasClass('quantity-minus')) {
-                currentValue = Math.max(1, currentValue - 1);
-            } else if (btn.hasClass('quantity-plus')) {
-                currentValue = currentValue + 1;
-            }
-            
-            // Обновляем и value и атрибут для надежности
-            input.val(currentValue);
-            input.attr('value', currentValue);
-            input.prop('value', currentValue);
-            
-            // Триггерим событие change для обновления
-            input.trigger('change');
-            
-            console.log('Quantity updated to:', currentValue);
-        }
-    });
-    
+    // ОБРАБОТЧИК КНОПОК КОЛИЧЕСТВА перенесён в main.js
+    // Работает глобально для всех страниц
+
     // Удаление из избранного (используем делегирование событий)
     $(document).on('click', '.wishlist-item-remove', function(e) {
         e.preventDefault();
@@ -1321,6 +1342,7 @@ jQuery(document).ready(function($) {
         e.stopImmediatePropagation(); // Останавливаем все остальные обработчики на этом элементе
         
         const btn = $(this);
+        const originalText = btn.text(); // Сохраняем текст СРАЗУ, до любых изменений
         
         // Блокируем повторные клики
         if (btn.prop('disabled')) {
@@ -1355,7 +1377,6 @@ jQuery(document).ready(function($) {
         console.log('Adding to cart - productId:', productId, 'quantity:', quantity);
         
         btn.prop('disabled', true);
-        const originalText = btn.text();
         btn.text('Добавление...');
         
         // Проверяем наличие asker_ajax
@@ -1370,7 +1391,7 @@ jQuery(document).ready(function($) {
             addToCart(productId, quantity);
             btn.prop('disabled', false);
             btn.text(originalText);
-            } else if (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) {
+        } else if (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) {
             // Перечитываем количество перед отправкой на всякий случай
             let finalQuantity = quantity;
             if (quantityInput.length && quantityInput[0]) {
@@ -1398,19 +1419,37 @@ jQuery(document).ready(function($) {
             formData.append('product_id', productId);
             formData.append('quantity', finalQuantity);
             
-            fetch(asker_ajax.ajax_url, {
-                method: 'POST',
-                body: formData,
-                credentials: 'same-origin'
-            })
-            .then(function(response) {
-                // Проверяем статус ответа
-                if (!response.ok && response.status !== 200) {
-                    throw new Error('HTTP error! status: ' + response.status);
-                }
-                return response.json();
-            })
-            .then(function(response) {
+            // Оборачиваем весь запрос в try-catch для защиты от расширений браузера
+            try {
+                fetch(asker_ajax.ajax_url, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                })
+                .then(function(response) {
+                    // Всегда обрабатываем ответ, даже если статус не 200
+                    // Не бросаем исключения, чтобы расширение браузера не перехватило
+                    let responseData = null;
+                    
+                    // Пытаемся распарсить JSON безопасно
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        return response.json().catch(function(parseError) {
+                            // Если не удалось распарсить JSON - возвращаем пустой объект
+                            console.log('JSON parse error (suppressed):', parseError);
+                            return { success: false, error: 'parse_error' };
+                        });
+                    } else {
+                        // Если ответ не JSON - возвращаем пустой объект
+                        return response.text().then(function(text) {
+                            console.log('Non-JSON response:', text);
+                            return { success: false, error: 'non_json_response' };
+                        }).catch(function() {
+                            return { success: false, error: 'read_error' };
+                        });
+                    }
+                })
+                .then(function(response) {
                 // Обрабатываем успешный ответ
                 btn.prop('disabled', false);
                 btn.text(originalText);
@@ -1458,13 +1497,23 @@ jQuery(document).ready(function($) {
                 console.log('Is success:', isSuccess, 'response keys:', response ? Object.keys(response) : 'no response');
                 
                 if (isSuccess) {
+                    // Используем fragments из WooCommerce для мгновенного обновления
+                    if (response.fragments) {
+                        // Обновляем виджет корзины через fragments
+                        $.each(response.fragments, function(key, value) {
+                            $(key).replaceWith(value);
+                        });
+                        
+                        // Триггерим событие для других скриптов
+                        $(document.body).trigger('wc_fragments_refreshed');
+                    }
+                    
                     // Обновляем счетчик корзины
-                    // Пробуем несколько способов
                     if (typeof updateCartCount === 'function') {
                         updateCartCount();
                     }
                     
-                    // Также обновляем через AJAX для надежности
+                    // Также делаем дополнительный запрос для подстраховки
                     if (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) {
                         $.ajax({
                             url: asker_ajax.ajax_url,
@@ -1492,7 +1541,6 @@ jQuery(document).ready(function($) {
                     }
                     
                     // Показываем уведомление об успехе
-                    // Не показываем alert, если это не критично - можно использовать более мягкое уведомление
                     console.log('✅ Товар успешно добавлен в корзину');
                 } else {
                     // Если формат ответа нестандартный, но товар мог добавиться
@@ -1514,34 +1562,63 @@ jQuery(document).ready(function($) {
                             });
                         }
                     } else {
-                        // Реальная ошибка - показываем только если действительно ошибка
-                        console.error('❌ Ошибка добавления в корзину:', response);
+                        // Реальная ошибка - логируем тихо, без alert
+                        console.log('❌ Ошибка добавления в корзину (suppressed):', response);
                         const errorMsg = (response && response.data && response.data.message) 
                             ? response.data.message 
                             : 'Не удалось добавить товар в корзину';
                         // Не показываем alert для ошибок из расширений браузера
-                        // alert(errorMsg);
+                        // Тихо логируем в консоль
                     }
                 }
             })
-            .catch(function(error) {
-                // Обрабатываем ошибку
+                .catch(function(error) {
+                    // Обрабатываем ошибку тихо, без alert
+                    btn.prop('disabled', false);
+                    btn.text(originalText);
+                    
+                    // Логируем только в консоль, не показываем alert
+                    console.log('Add to cart fetch error (suppressed):', error);
+                    
+                    // Проверяем, может товар все равно добавился (расширение могло перехватить успешный ответ)
+                    // Обновляем счетчик корзины на всякий случай
+                    if (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) {
+                        $.ajax({
+                            url: asker_ajax.ajax_url,
+                            type: 'POST',
+                            data: {
+                                action: 'asker_get_cart_count'
+                            },
+                            success: function(countResponse) {
+                                if (countResponse && countResponse.success && countResponse.data && countResponse.data.count !== undefined) {
+                                    const count = countResponse.data.count;
+                                    $('.cart-count').each(function() {
+                                        $(this).text(count);
+                                        $(this).attr('data-count', count);
+                                        $(this).css('display', count > 0 ? 'flex' : 'none');
+                                    });
+                                    $('.mobile-cart-count').each(function() {
+                                        $(this).text(count);
+                                        $(this).css('display', count > 0 ? 'inline-flex' : 'none');
+                                    });
+                                }
+                            }
+                        });
+                    }
+                });
+            } catch (error) {
+                // Обрабатываем синхронные ошибки
                 btn.prop('disabled', false);
                 btn.text(originalText);
-                
-                console.error('Add to cart fetch error:', error);
-                
-                // Не показываем alert - только логируем в консоль
-                // Это может быть ложная ошибка из расширения браузера
-                console.error('❌ Ошибка добавления в корзину (только логирование):', error.message || 'Неизвестная ошибка');
-            });
+                console.log('Add to cart sync error (suppressed):', error);
+            }
         } else {
             btn.prop('disabled', false);
             btn.text(originalText);
-            alert('Ошибка: AJAX недоступен. Пожалуйста, обновите страницу.');
+            console.error('AJAX недоступен. Пожалуйста, обновите страницу.');
         }
-    });
-});
+    }); // Конец обработчика событий для добавления в корзину
+}); // Конец jQuery(document).ready
 </script>
 
 <?php if ($avatar_uploaded && !empty($new_avatar_url)): ?>

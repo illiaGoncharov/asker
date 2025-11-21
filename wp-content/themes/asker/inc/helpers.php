@@ -290,7 +290,7 @@ function asker_force_create_woocommerce_pages() {
         echo '<li><a href="' . home_url('/my-account') . '" target="_blank">Мой аккаунт</a></li>';
         echo '<li><a href="' . home_url('/cart') . '" target="_blank">Корзина</a></li>';
         echo '<li><a href="' . home_url('/checkout') . '" target="_blank">Оформление заказа</a></li>';
-        echo '<li><a href="' . home_url('/wishlist') . '" target="_blank">Избранное</a></li>';
+        echo '<li><a href="' . home_url('/wishlist/') . '" target="_blank">Избранное</a></li>';
         echo '</ul>';
     } else {
         echo '<div class="notice notice-warning"><p>WooCommerce не установлен!</p></div>';

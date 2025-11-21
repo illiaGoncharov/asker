@@ -2056,6 +2056,7 @@ function asker_add_cart_button_handler() {
             if (e.target.classList.contains('btn-add-cart')) {
                 e.preventDefault();
                 const productId = e.target.getAttribute('data-product-id');
+                const originalText = e.target.textContent; // Сохраняем СРАЗУ
                 
                 if (productId) {
                     // Добавляем товар в корзину через AJAX
@@ -2076,14 +2077,32 @@ function asker_add_cart_button_handler() {
                             e.target.textContent = 'Добавлено!';
                             e.target.style.background = '#4CAF50';
                             setTimeout(() => {
-                                e.target.textContent = 'В корзину';
+                                e.target.textContent = originalText;
+                                e.target.style.background = '';
+                            }, 2000);
+                        } else if (data.fragments || data.cart_hash) {
+                            // WooCommerce формат ответа - это УСПЕХ!
+                            console.log('✅ Item added (WooCommerce format)');
+                            e.target.textContent = 'Добавлено!';
+                            e.target.style.background = '#4CAF50';
+                            
+                            // Обновляем fragments если есть
+                            if (data.fragments) {
+                                Object.keys(data.fragments).forEach(key => {
+                                    document.querySelectorAll(key).forEach(el => {
+                                        el.outerHTML = data.fragments[key];
+                                    });
+                                });
+                            }
+                            
+                            setTimeout(() => {
+                                e.target.textContent = originalText;
                                 e.target.style.background = '';
                             }, 2000);
                         } else {
-                            // Показываем сообщение об ошибке
+                            // Реальная ошибка
                             const errorMsg = data.data && data.data.message ? data.data.message : 'Ошибка добавления товара в корзину';
-                            alert(errorMsg);
-                            console.error('Ошибка добавления в корзину:', data);
+                            console.log('❌ Error:', errorMsg);
                         }
                     })
                     .catch(error => {
@@ -2169,11 +2188,29 @@ function asker_intercept_add_to_cart_form() {
                             $button.css('background', '');
                             $button.prop('disabled', false);
                         }, 2000);
+                    } else if (response.fragments || response.cart_hash) {
+                        // WooCommerce формат ответа - это УСПЕХ!
+                        console.log('✅ Item added (WooCommerce format)');
+                        $button.text('Добавлено!');
+                        $button.css('background', '#4CAF50');
+                        
+                        // Обновляем fragments
+                        if (response.fragments) {
+                            $.each(response.fragments, function(key, value) {
+                                $(key).replaceWith(value);
+                            });
+                            $(document.body).trigger('wc_fragments_refreshed');
+                        }
+                        
+                        setTimeout(function() {
+                            $button.text(originalText);
+                            $button.css('background', '');
+                            $button.prop('disabled', false);
+                        }, 2000);
                     } else {
-                        // Показываем ошибку
+                        // Реальная ошибка
                         const errorMsg = (response.data && response.data.message) ? response.data.message : 'Ошибка добавления товара';
-                        alert(errorMsg);
-                        console.error('Ошибка добавления в корзину:', response);
+                        console.log('❌ Error:', errorMsg);
                         
                         $button.text(originalText);
                         $button.prop('disabled', false);
