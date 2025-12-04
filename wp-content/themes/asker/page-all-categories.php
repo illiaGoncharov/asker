@@ -29,15 +29,17 @@ get_header();
     <section class="categories-nav all-categories-page">
         <div class="categories-grid">
             <?php
-            // Получаем все активные категории товаров WooCommerce (как на главной)
+            // Получаем все категории товаров WooCommerce с товарами
             if (class_exists('WooCommerce')) {
-                // Пробуем разные варианты запроса
+                // Отключаем кэш для актуальных данных
                 $product_categories = get_terms(array(
-                    'taxonomy'   => 'product_cat',
-                    'hide_empty' => true, // Показываем только категории с товарами (как на главной)
-                    'orderby'    => 'menu_order',
-                    'order'      => 'ASC',
-                    'number'     => 0 // Без ограничения
+                    'taxonomy'     => 'product_cat',
+                    'hide_empty'   => true, // Только категории с товарами
+                    'orderby'      => 'menu_order',
+                    'order'        => 'ASC',
+                    'number'       => 0,
+                    'update_term_meta_cache' => true,
+                    'cache_results' => false // Отключаем кэш для актуальности
                 ));
                 
                 // Если вернулась ошибка или пусто, пробуем без menu_order
@@ -46,7 +48,8 @@ get_header();
                         'taxonomy'   => 'product_cat',
                         'hide_empty' => true,
                         'orderby'    => 'name',
-                        'order'      => 'ASC'
+                        'order'      => 'ASC',
+                        'cache_results' => false
                     ));
                 }
                 

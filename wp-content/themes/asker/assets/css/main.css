@@ -11,7 +11,7 @@
 /* Hero section with full-bleed background */
 .hero-section {
   position: relative;
-  padding: 80px 0;
+  padding: 48px 0;
 }
 
 .hero-section::before {
@@ -522,6 +522,7 @@ input[type="button"] {
 /* Навигация категорий - стандарт 1200-1440px */
 .categories-nav {
   padding: 40px 0;
+  padding-top: 90px;
   border-bottom: 1px solid var(--border-gray);
   max-width: 1200px;
   margin: 0 auto;
@@ -531,6 +532,7 @@ input[type="button"] {
 @media (min-width: 1440px) {
   .categories-nav {
     padding: 40px 0;
+    padding-top: 90px;
     max-width: 1440px;
   }
 }
@@ -538,6 +540,7 @@ input[type="button"] {
 @media (min-width: 1920px) {
   .categories-nav {
     padding: 40px 0;
+    padding-top: 90px;
     max-width: 1440px;
   }
 }
@@ -829,7 +832,7 @@ input[type="button"] {
 /* Адаптивность hero секции для больших экранов */
 @media (min-width: 1440px) {
   .hero-section {
-    padding: 100px 0;
+    padding: 56px 0;
   }
   
   /* .hero-content styles merged above */
@@ -3749,30 +3752,36 @@ body.woocommerce-account .container .section__title,
     order: 3;
   }
   
+  /* На мобильных убираем большой отступ */
+  .categories-nav {
+    padding-top: 24px;
+  }
+  
   .categories-grid {
-    gap: 30px;
+    gap: 20px;
     justify-content: flex-start;
     overflow-x: auto;
-    padding: 20px;
+    padding: 16px;
   }
   
   .category-item {
-    min-width: 80px;
-    padding: 10px 5px;
+    min-width: 70px;
+    flex-shrink: 0;
+    padding: 8px 4px;
   }
   
   .category-icon {
-    width: 80px;
-    height: 80px;
+    width: 60px;
+    height: 60px;
   }
   
   .category-icon img {
-    width: 50px;
-    height: 50px;
+    width: 36px;
+    height: 36px;
   }
   
   .category-name {
-    font-size: 12px;
+    font-size: 11px;
   }
   
   .all-categories {

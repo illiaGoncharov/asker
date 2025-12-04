@@ -25,11 +25,12 @@ $asker_categories_url = home_url('/all-categories');
         // Показываем первые 5 категорий или все, если меньше 5
         if (class_exists('WooCommerce')) {
             $product_categories = get_terms(array(
-                'taxonomy'   => 'product_cat',
-                'hide_empty' => true, // Показываем только с товарами на главной
-                'orderby'    => 'menu_order',
-                'order'      => 'ASC',
-                'number'     => 5 // Максимум 5 на главной
+                'taxonomy'      => 'product_cat',
+                'hide_empty'    => true, // Показываем только с товарами на главной
+                'orderby'       => 'menu_order',
+                'order'         => 'ASC',
+                'number'        => 5, // Максимум 5 на главной
+                'cache_results' => false // Актуальные данные без кэша
             ));
             
             if (!empty($product_categories) && !is_wp_error($product_categories)) {

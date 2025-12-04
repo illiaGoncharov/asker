@@ -6,7 +6,7 @@
 .site-header {
   background: var(--bg-white);
   border-bottom: 1px solid var(--border-gray);
-  position: relative; /* Изменено с fixed на relative */
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
@@ -15,15 +15,6 @@
   transition: box-shadow 0.3s ease, top 0.3s ease;
 }
 
-/* Исправление перекрытия WordPress admin bar */
-body.admin-bar .site-header {
-  top: 32px;
-}
-@media screen and (max-width: 782px) {
-  body.admin-bar .site-header {
-    top: 46px;
-  }
-}
 
 .site-header.scrolled {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -508,7 +499,8 @@ a.btn-catalog:hover {
   overflow-y: auto;
 }
 
-.mobile-menu.open {
+.mobile-menu.open,
+.mobile-menu.active {
   left: 0;
 }
 
@@ -525,7 +517,8 @@ a.btn-catalog:hover {
   transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-.mobile-menu-overlay.show {
+.mobile-menu-overlay.show,
+.mobile-menu-overlay.active {
   opacity: 1;
   visibility: visible;
 }
@@ -669,27 +662,87 @@ a.btn-catalog:hover {
 /* Адаптивность хедера */
 @media (max-width: 768px) {
   .header-main {
-    padding: 12px 0;
+    padding: 8px 0;
   }
   
   .header-main .container {
     flex-wrap: nowrap;
-    gap: 12px;
+    gap: 8px;
     padding: 0 12px;
   }
   
+  /* Показываем бургер кнопку на мобильных */
+  .mobile-menu-toggle {
+    display: flex;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+  }
+  
+  .mobile-menu-toggle span {
+    width: 20px;
+    height: 2px;
+  }
+  
+  /* Уменьшаем логотип */
+  .logo {
+    flex-shrink: 0;
+  }
+  
+  .logo .custom-logo {
+    width: 60px;
+    height: 18px;
+  }
+  
+  /* Скрываем бургер навигации на мобильных */
+  .nav-dropdown {
+    display: none;
+  }
+  
+  /* Уменьшаем кнопку Каталог */
+  .btn-catalog {
+    padding: 5px 10px;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+  
+  /* Скрываем десктопную навигацию */
+  .header-nav,
+  .search-bar {
+    display: none;
+  }
+  
+  /* Показываем корзину и избранное */
   .header-actions {
-    margin-left: 0;
-    gap: 8px;
+    margin-left: auto;
+    gap: 12px;
+    flex-shrink: 0;
+    padding-right: 0;
   }
   
   .header-actions .icon-phone,
   .header-actions .icon-chat,
-  .header-actions .icon-mail {
-    display: none;
+  .header-actions .icon-mail,
+  .header-actions .btn-login {
+    display: none !important;
   }
   
-  .btn-login span {
-    display: none;
+  /* Одинаковые иконки - увеличиваем размер */
+  .header-actions .icon-heart,
+  .header-actions .icon-cart {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .header-actions .icon-heart img,
+  .header-actions .icon-cart img {
+    width: 24px;
+    height: 24px;
   }
 }
