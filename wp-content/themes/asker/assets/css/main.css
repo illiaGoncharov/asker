@@ -522,17 +522,24 @@ input[type="button"] {
 /* Навигация категорий - стандарт 1200-1440px */
 .categories-nav {
   padding: 40px 0;
-  padding-top: 90px;
+  padding-top: 90px !important; /* Явно переопределяем любые возможные 120px */
   border-bottom: 1px solid var(--border-gray);
   max-width: 1200px;
   margin: 0 auto;
 }
 
 /* Адаптивность categories-nav для больших экранов */
+/* Явно переопределяем padding-top для всех размеров экранов */
+@media (min-width: 769px) {
+  .categories-nav {
+    padding-top: 120px !important;
+  }
+}
+
 @media (min-width: 1440px) {
   .categories-nav {
     padding: 40px 0;
-    padding-top: 90px;
+    padding-top: 120px !important; /* Явно переопределяем */
     max-width: 1440px;
   }
 }
@@ -540,7 +547,7 @@ input[type="button"] {
 @media (min-width: 1920px) {
   .categories-nav {
     padding: 40px 0;
-    padding-top: 90px;
+    padding-top: 120px !important; /* Явно переопределяем */
     max-width: 1440px;
   }
 }
@@ -858,12 +865,12 @@ input[type="button"] {
 
 @media (min-width: 1920px) {
   .hero-section {
-    padding: 120px 0;
+    padding: 56px 0;
   }
   
   .hero-content {
     gap: 80px;
-    min-height: 600px;
+    min-height: 500px;
   }
   
   .hero-title {

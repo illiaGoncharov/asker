@@ -690,6 +690,7 @@ a.btn-catalog:hover {
   /* Уменьшаем логотип */
   .logo {
     flex-shrink: 0;
+    margin-right: 8px; /* Отступ от логотипа */
   }
   
   .logo .custom-logo {
@@ -702,11 +703,14 @@ a.btn-catalog:hover {
     display: none;
   }
   
-  /* Уменьшаем кнопку Каталог */
+  /* Кнопка Каталог - гибкая по ширине, нормальная высота */
   .btn-catalog {
-    padding: 5px 10px;
-    font-size: 11px;
-    flex-shrink: 0;
+    padding: 6px 12px;
+    font-size: 12px;
+    flex-shrink: 1;
+    min-width: auto;
+    width: auto;
+    height: 36px; /* Нормальная высота */
   }
   
   /* Скрываем десктопную навигацию */
@@ -730,11 +734,11 @@ a.btn-catalog:hover {
     display: none !important;
   }
   
-  /* Одинаковые иконки - увеличиваем размер */
+  /* Одинаковые иконки - нормальный размер */
   .header-actions .icon-heart,
   .header-actions .icon-cart {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -744,5 +748,46 @@ a.btn-catalog:hover {
   .header-actions .icon-cart img {
     width: 24px;
     height: 24px;
+  }
+}
+
+/* Очень маленькие экраны (iPhone SE, Galaxy) */
+@media (max-width: 375px) {
+  .header-main .container {
+    gap: 6px;
+    padding: 0 8px;
+  }
+  
+  .logo {
+    margin-right: 6px;
+  }
+  
+  .logo .custom-logo {
+    width: 55px;
+    height: 16px;
+  }
+  
+  /* Кнопка Каталог - компактная но нормальная высота */
+  .btn-catalog {
+    padding: 5px 10px;
+    font-size: 11px;
+    height: 34px;
+  }
+  
+  .header-actions {
+    gap: 10px;
+  }
+  
+  /* Иконки нормального размера */
+  .header-actions .icon-heart,
+  .header-actions .icon-cart {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .header-actions .icon-heart img,
+  .header-actions .icon-cart img {
+    width: 22px;
+    height: 22px;
   }
 }
