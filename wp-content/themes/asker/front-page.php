@@ -22,16 +22,23 @@ $asker_categories_url = home_url('/all-categories');
     <div class="categories-grid">
         <?php
         // Получаем категории товаров WooCommerce для главной страницы
-        // Показываем первые 5 категорий или все, если меньше 5
+        // Используем transient кэш для производительности (2500+ товаров)
         if (class_exists('WooCommerce')) {
-            $product_categories = get_terms(array(
-                'taxonomy'      => 'product_cat',
-                'hide_empty'    => true, // Показываем только с товарами на главной
-                'orderby'       => 'menu_order',
-                'order'         => 'ASC',
-                'number'        => 5, // Максимум 5 на главной
-                'cache_results' => false // Актуальные данные без кэша
-            ));
+            $cache_key = 'asker_home_categories_v2';
+            $product_categories = get_transient($cache_key);
+            
+            if ($product_categories === false) {
+                $product_categories = get_terms(array(
+                    'taxonomy'      => 'product_cat',
+                    'hide_empty'    => true,
+                    'orderby'       => 'menu_order',
+                    'order'         => 'ASC',
+                    'number'        => 5,
+                    'parent'        => 0, // Только родительские категории - быстрее
+                ));
+                // Кэшируем на 1 час
+                set_transient($cache_key, $product_categories, HOUR_IN_SECONDS);
+            }
             
             if (!empty($product_categories) && !is_wp_error($product_categories)) {
                 foreach ($product_categories as $category) {

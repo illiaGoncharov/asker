@@ -4,6 +4,39 @@
  */
 
 /**
+ * Сброс кэша категорий и цен при изменении товаров/категорий
+ * Автоматически очищает transient кэш для оптимизации производительности
+ */
+function asker_clear_categories_cache() {
+    delete_transient('asker_home_categories_v2');
+    delete_transient('asker_all_categories_v2');
+}
+
+function asker_clear_price_cache() {
+    delete_transient('asker_price_range_v2');
+}
+
+function asker_clear_all_cache() {
+    asker_clear_categories_cache();
+    asker_clear_price_cache();
+}
+
+// Сбрасываем кэш при изменении категорий
+add_action('created_product_cat', 'asker_clear_categories_cache');
+add_action('edited_product_cat', 'asker_clear_categories_cache');
+add_action('delete_product_cat', 'asker_clear_categories_cache');
+
+// Сбрасываем кэш при изменении товаров
+add_action('woocommerce_product_import_inserted_product_object', 'asker_clear_all_cache');
+add_action('save_post_product', 'asker_clear_all_cache');
+add_action('woocommerce_update_product', 'asker_clear_price_cache');
+add_action('delete_post', function($post_id) {
+    if (get_post_type($post_id) === 'product') {
+        asker_clear_all_cache();
+    }
+});
+
+/**
  * Улучшенный поиск для WooCommerce товаров
  */
 add_action('pre_get_posts', function($query) {

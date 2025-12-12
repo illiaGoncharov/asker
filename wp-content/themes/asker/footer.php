@@ -87,21 +87,41 @@
                     <h4 class="footer__title">Каталог</h4>
                     <ul class="footer__list">
                         <?php
-                        // Динамические категории WooCommerce
-                        if (class_exists('WooCommerce')) {
-                            $product_categories = get_terms(array(
+                        // Проверяем настроенные категории из Customizer
+                        $custom_categories = array();
+                        for ( $i = 1; $i <= 5; $i++ ) {
+                            $cat_id = get_theme_mod( 'footer_category_' . $i );
+                            if ( $cat_id ) {
+                                $custom_categories[] = $cat_id;
+                            }
+                        }
+                        
+                        if ( ! empty( $custom_categories ) && class_exists( 'WooCommerce' ) ) {
+                            // Выводим выбранные в Customizer категории
+                            foreach ( $custom_categories as $cat_id ) {
+                                $category = get_term( $cat_id, 'product_cat' );
+                                if ( $category && ! is_wp_error( $category ) ) {
+                                    $category_url = get_term_link( $category );
+                                    if ( ! is_wp_error( $category_url ) ) {
+                                        echo '<li><a href="' . esc_url( $category_url ) . '" class="footer__link">' . esc_html( $category->name ) . '</a></li>';
+                                    }
+                                }
+                            }
+                        } elseif ( class_exists( 'WooCommerce' ) ) {
+                            // Fallback: автоматически выводим 5 первых категорий
+                            $product_categories = get_terms( array(
                                 'taxonomy'   => 'product_cat',
                                 'hide_empty' => true,
                                 'orderby'    => 'menu_order',
                                 'order'      => 'ASC',
-                                'number'     => 7 // Максимум 7 в футере
-                            ));
+                                'number'     => 5
+                            ) );
                             
-                            if (!empty($product_categories) && !is_wp_error($product_categories)) {
-                                foreach ($product_categories as $category) {
-                                    $category_url = get_term_link($category);
-                                    if (!is_wp_error($category_url)) {
-                                        echo '<li><a href="' . esc_url($category_url) . '" class="footer__link">' . esc_html($category->name) . '</a></li>';
+                            if ( ! empty( $product_categories ) && ! is_wp_error( $product_categories ) ) {
+                                foreach ( $product_categories as $category ) {
+                                    $category_url = get_term_link( $category );
+                                    if ( ! is_wp_error( $category_url ) ) {
+                                        echo '<li><a href="' . esc_url( $category_url ) . '" class="footer__link">' . esc_html( $category->name ) . '</a></li>';
                                     }
                                 }
                             }

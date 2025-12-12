@@ -30,27 +30,36 @@ get_header();
         <div class="categories-grid">
             <?php
             // Получаем все категории товаров WooCommerce с товарами
+            // Используем transient кэш для производительности (2500+ товаров)
             if (class_exists('WooCommerce')) {
-                // Отключаем кэш для актуальных данных
-                $product_categories = get_terms(array(
-                    'taxonomy'     => 'product_cat',
-                    'hide_empty'   => true, // Только категории с товарами
-                    'orderby'      => 'menu_order',
-                    'order'        => 'ASC',
-                    'number'       => 0,
-                    'update_term_meta_cache' => true,
-                    'cache_results' => false // Отключаем кэш для актуальности
-                ));
+                $cache_key = 'asker_all_categories_v2';
+                $product_categories = get_transient($cache_key);
                 
-                // Если вернулась ошибка или пусто, пробуем без menu_order
-                if (is_wp_error($product_categories) || empty($product_categories)) {
+                if ($product_categories === false) {
                     $product_categories = get_terms(array(
-                        'taxonomy'   => 'product_cat',
-                        'hide_empty' => true,
-                        'orderby'    => 'name',
-                        'order'      => 'ASC',
-                        'cache_results' => false
+                        'taxonomy'     => 'product_cat',
+                        'hide_empty'   => true,
+                        'orderby'      => 'menu_order',
+                        'order'        => 'ASC',
+                        'parent'       => 0, // Только родительские - быстрее
+                        'update_term_meta_cache' => true,
                     ));
+                    
+                    // Если вернулась ошибка или пусто, пробуем без menu_order
+                    if (is_wp_error($product_categories) || empty($product_categories)) {
+                        $product_categories = get_terms(array(
+                            'taxonomy'   => 'product_cat',
+                            'hide_empty' => true,
+                            'orderby'    => 'name',
+                            'order'      => 'ASC',
+                            'parent'     => 0,
+                        ));
+                    }
+                    
+                    // Кэшируем на 1 час
+                    if (!is_wp_error($product_categories)) {
+                        set_transient($cache_key, $product_categories, HOUR_IN_SECONDS);
+                    }
                 }
                 
                 if (!empty($product_categories) && !is_wp_error($product_categories)) {

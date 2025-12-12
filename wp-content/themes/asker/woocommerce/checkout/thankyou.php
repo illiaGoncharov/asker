@@ -34,7 +34,7 @@ if ( $manager_id ) {
 // Получаем статус заказа
 $order_status = $order->get_status();
 $status_labels = array(
-    'pending' => 'Ожидает оплаты',
+    'pending' => 'Заказ на проверке',
     'processing' => 'В обработке',
     'on-hold' => 'На удержании',
     'completed' => 'Завершен',
@@ -42,7 +42,11 @@ $status_labels = array(
     'refunded' => 'Возвращен',
     'failed' => 'Ошибка',
 );
-$status_label = isset( $status_labels[ $order_status ] ) ? $status_labels[ $order_status ] : ucfirst( $order_status );
+// Для только что созданного заказа показываем "Заказ на проверке"
+$status_label = 'Заказ на проверке';
+if ( $order_status !== 'pending' && isset( $status_labels[ $order_status ] ) ) {
+    $status_label = $status_labels[ $order_status ];
+}
 
 // Получаем способ оплаты
 $payment_method_title = $order->get_payment_method_title();
@@ -110,32 +114,40 @@ get_header();
                     </div>
                 </div>
                 
-                <!-- Правая колонка - что дальше -->
+                <!-- Правая колонка - что будет дальше -->
                 <div class="thankyou__next-steps">
-                    <h2 class="thankyou__section-title">Что дальше?</h2>
+                    <h2 class="thankyou__section-title">Что будет дальше?</h2>
                     
                     <div class="thankyou__steps">
                         <div class="thankyou__step">
                             <div class="thankyou__step-number">1</div>
                             <div class="thankyou__step-content">
-                                <h3>Получите счет</h3>
-                                <p>Счет будет отправлен на ваш email в течение 30 минут</p>
+                                <h3>Заказ создан</h3>
+                                <p>Мы получили Ваш заказ, менеджер проверяет наличие и цены.</p>
                             </div>
                         </div>
                         
                         <div class="thankyou__step">
                             <div class="thankyou__step-number">2</div>
                             <div class="thankyou__step-content">
-                                <h3>Оплатите счет</h3>
-                                <p>У вас есть 3 рабочих дня для оплаты</p>
+                                <h3>Отправка счета</h3>
+                                <p>Менеджер пришлет счет на оплату на почту, указанную при оформлении заказа.</p>
                             </div>
                         </div>
                         
                         <div class="thankyou__step">
                             <div class="thankyou__step-number">3</div>
                             <div class="thankyou__step-content">
-                                <h3>Получите товар</h3>
-                                <p>Доставка в течение 2-5 рабочих дней после оплаты</p>
+                                <h3>Отправка товаров</h3>
+                                <p>После оплаты счета товары по заказу будут отправлены выбранным способом доставки или подготовлены к самовывозу.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="thankyou__step">
+                            <div class="thankyou__step-number">4</div>
+                            <div class="thankyou__step-content">
+                                <h3>Трекинг</h3>
+                                <p>После отправки в ТК менеджер отправит Вам трек-номер для отслеживания.</p>
                             </div>
                         </div>
                     </div>
@@ -244,9 +256,9 @@ get_header();
                 </div>
                 
                 <ul class="thankyou__important-list">
-                    <li>Проверьте папку "Спам" если не получили счет в течение часа</li>
-                    <li>Сохраните номер заказа для отслеживания статуса</li>
-                    <li>При возникновении вопросов обращайтесь в службу поддержки</li>
+                    <li>Вы можете связаться с Вашим менеджером по контактам, указанным выше.</li>
+                    <li>Для уточнения статуса заказа назовите менеджеру номер и дату оформления.</li>
+                    <li>Иногда письма могут попадать в папку "Спам", проверьте ее.</li>
                 </ul>
             </div>
             

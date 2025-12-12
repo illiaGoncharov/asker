@@ -2869,95 +2869,53 @@ function asker_get_product_price_range() {
     }
     
     // Используем кеш для оптимизации (кеш на 1 час)
-    $cache_key = 'asker_price_range';
-    
-    // ВРЕМЕННО: очищаем кеш для отладки (раскомментировать для принудительного обновления)
-    delete_transient($cache_key);
-    
+    $cache_key = 'asker_price_range_v2';
     $cached = get_transient($cache_key);
     
     if ($cached !== false) {
         return $cached;
     }
     
-    $min_price = null;
-    $max_price = null;
+    global $wpdb;
     
-    // Получаем все опубликованные товары через WP_Query для оптимизации
-    $args = [
-        'post_type' => 'product',
-        'post_status' => 'publish',
-        'posts_per_page' => -1, // Все товары
-        'fields' => 'ids', // Только ID для оптимизации
-        'meta_query' => [
-            [
-                'key' => '_price',
-                'value' => 0,
-                'compare' => '>',
-                'type' => 'DECIMAL'
-            ]
-        ]
-    ];
+    // ОПТИМИЗАЦИЯ: Один быстрый SQL запрос вместо загрузки 2500+ товаров
+    // Получаем MIN и MAX цены напрямую из postmeta
+    $result = $wpdb->get_row("
+        SELECT 
+            MIN(CAST(pm.meta_value AS DECIMAL(10,2))) as min_price,
+            MAX(CAST(pm.meta_value AS DECIMAL(10,2))) as max_price
+        FROM {$wpdb->postmeta} pm
+        INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+        WHERE pm.meta_key = '_price'
+        AND pm.meta_value > 0
+        AND pm.meta_value != ''
+        AND p.post_type = 'product'
+        AND p.post_status = 'publish'
+    ");
     
-    $query = new WP_Query($args);
-    
-    if ($query->have_posts()) {
-        foreach ($query->posts as $product_id) {
-            $product = wc_get_product($product_id);
-            
-            if (!$product) {
-                continue;
-            }
-            
-            // Получаем цену товара (учитывает скидки и вариации)
-            $price = $product->get_price();
-            
-            // Пропускаем товары без цены или с нулевой ценой
-            if (empty($price) || floatval($price) <= 0) {
-                continue;
-            }
-            
-            $price = floatval($price);
-            
-            // Обновляем минимум и максимум
-            if ($min_price === null || $price < $min_price) {
-                $min_price = $price;
-            }
-            
-            if ($max_price === null || $price > $max_price) {
-                $max_price = $price;
-            }
-        }
+    if ($result && $result->min_price !== null && $result->max_price !== null) {
+        $min_price = floor(floatval($result->min_price) / 1000) * 1000;
+        $max_price = ceil(floatval($result->max_price) / 1000) * 1000;
         
-        wp_reset_postdata();
-    }
-    
-    // Если цены найдены, округляем до тысяч
-    if ($min_price !== null && $max_price !== null) {
-        $min_price = floor($min_price / 1000) * 1000; // Округляем вниз до тысяч
-        $max_price = ceil($max_price / 1000) * 1000; // Округляем вверх до тысяч
-        
-        // Минимум должен быть хотя бы 0
         $min_price = max(0, $min_price);
         
-        $result = [
+        $range = [
             'min' => intval($min_price),
             'max' => intval($max_price)
         ];
         
-        // Сохраняем в кеш на 1 час
-        set_transient($cache_key, $result, HOUR_IN_SECONDS);
+        // Кэшируем на 1 час
+        set_transient($cache_key, $range, HOUR_IN_SECONDS);
         
-        return $result;
+        return $range;
     }
     
-    // Значения по умолчанию, если товаров нет или цены не найдены
+    // Значения по умолчанию
     $default = [
         'min' => 0,
         'max' => 256000
     ];
     
-    // Сохраняем в кеш даже значения по умолчанию (на 5 минут)
     set_transient($cache_key, $default, 5 * MINUTE_IN_SECONDS);
     
     return $default;
@@ -3368,6 +3326,37 @@ function asker_failed_login_attempts( $username ) {
 add_action( 'wp_login_failed', 'asker_failed_login_attempts' );
 
 /**
+ * Кастомизируем сообщение об ошибке входа в WooCommerce
+ */
+function asker_custom_login_error_message( $error ) {
+    // Проверяем, что это ошибка входа
+    if ( strpos( $error, 'incorrect_password' ) !== false || strpos( $error, 'invalid_username' ) !== false || strpos( $error, 'empty_password' ) !== false ) {
+        return 'Неверное имя пользователя или пароль. Проверьте правильность введённых данных.';
+    }
+    return $error;
+}
+add_filter( 'login_errors', 'asker_custom_login_error_message' );
+
+/**
+ * Добавляем уведомление WooCommerce при неудачном входе
+ */
+function asker_add_login_failed_notice() {
+    // Проверяем, была ли попытка входа на странице My Account
+    if ( isset( $_POST['login'] ) && isset( $_POST['username'] ) && isset( $_POST['password'] ) ) {
+        // Проверяем nonce
+        if ( ! isset( $_POST['woocommerce-login-nonce'] ) || ! wp_verify_nonce( $_POST['woocommerce-login-nonce'], 'woocommerce-login' ) ) {
+            return;
+        }
+        
+        // Если мы здесь и пользователь не залогинен - значит вход не удался
+        if ( ! is_user_logged_in() ) {
+            wc_add_notice( 'Неверное имя пользователя или пароль. Пожалуйста, проверьте введённые данные и попробуйте снова.', 'error' );
+        }
+    }
+}
+add_action( 'woocommerce_before_customer_login_form', 'asker_add_login_failed_notice' );
+
+/**
  * Сбрасываем счетчик при успешном входе
  */
 function asker_reset_login_attempts( $user_login, $user ) {
@@ -3397,4 +3386,54 @@ function asker_add_lost_password_title() {
 add_action( 'woocommerce_before_lost_password_form', 'asker_add_lost_password_title', 5 );
 */
 
+/**
+ * Показываем зачёркнутую сумму в корзине если есть скидка
+ */
+function asker_show_strikethrough_total_in_cart() {
+    if ( ! is_user_logged_in() || ! function_exists( 'asker_get_total_discount' ) ) {
+        return;
+    }
+    
+    $user_id = get_current_user_id();
+    $total_discount = asker_get_total_discount( $user_id );
+    
+    if ( $total_discount <= 0 ) {
+        return;
+    }
+    
+    $cart = WC()->cart;
+    if ( ! $cart ) {
+        return;
+    }
+    
+    // Сумма без скидки (подытог)
+    $subtotal = $cart->get_subtotal();
+    // Сумма с учётом скидки
+    $total = floatval( $cart->get_total( 'edit' ) );
+    
+    // Показываем блок только если есть разница
+    if ( $subtotal > $total ) {
+        ?>
+        <div class="cart-discount-summary">
+            <div class="cart-discount-summary__original">
+                <span class="cart-discount-summary__label">Сумма без скидки:</span>
+                <span class="cart-discount-summary__price cart-discount-summary__price--strikethrough"><?php echo wc_price( $subtotal ); ?></span>
+            </div>
+            <div class="cart-discount-summary__discount">
+                <span class="cart-discount-summary__label">Ваша скидка (<?php echo esc_html( $total_discount ); ?>%):</span>
+                <span class="cart-discount-summary__price cart-discount-summary__price--discount">-<?php echo wc_price( $subtotal - $total ); ?></span>
+            </div>
+        </div>
+        <?php
+    }
+}
+add_action( 'woocommerce_before_cart_totals', 'asker_show_strikethrough_total_in_cart' );
+
+/**
+ * Редирект после успешного сброса пароля
+ */
+function asker_redirect_after_password_reset( $redirect ) {
+    return add_query_arg( 'password-reset', '1', wc_get_page_permalink( 'myaccount' ) );
+}
+add_filter( 'woocommerce_reset_password_redirect', 'asker_redirect_after_password_reset' );
 

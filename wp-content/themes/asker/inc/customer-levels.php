@@ -180,7 +180,7 @@ function asker_send_level_up_email( $user_id, $level_data ) {
 }
 
 /**
- * Применяем персональную скидку в корзине
+ * Применяем персональную скидку в корзине (уровень + индивидуальная)
  */
 function asker_apply_customer_level_discount( $cart ) {
     if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
@@ -193,21 +193,28 @@ function asker_apply_customer_level_discount( $cart ) {
     
     $user_id = get_current_user_id();
     $level_data = asker_get_customer_level( $user_id );
-    $discount_percent = $level_data['discount'];
+    $individual_discount = intval( get_user_meta( $user_id, 'individual_discount', true ) );
     
-    if ( ! $discount_percent || $discount_percent <= 0 ) {
+    // Итоговая скидка = скидка по уровню + индивидуальная
+    $total_discount_percent = $level_data['discount'] + $individual_discount;
+    
+    if ( ! $total_discount_percent || $total_discount_percent <= 0 ) {
         return;
     }
     
     // Считаем скидку от суммы товаров
     $subtotal = $cart->get_subtotal();
-    $discount_amount = $subtotal * ( $discount_percent / 100 );
+    $discount_amount = $subtotal * ( $total_discount_percent / 100 );
+    
+    // Формируем название скидки
+    $discount_label = 'Персональная скидка (' . $level_data['level'];
+    if ( $individual_discount > 0 ) {
+        $discount_label .= ' + инд.';
+    }
+    $discount_label .= ', -' . $total_discount_percent . '%)';
     
     // Применяем скидку
-    $cart->add_fee( 
-        'Персональная скидка (' . $level_data['level'] . ', -' . $discount_percent . '%)', 
-        -$discount_amount 
-    );
+    $cart->add_fee( $discount_label, -$discount_amount );
 }
 add_action( 'woocommerce_cart_calculate_fees', 'asker_apply_customer_level_discount' );
 
@@ -224,12 +231,28 @@ add_filter( 'manage_users_columns', 'asker_add_customer_level_columns' );
 
 function asker_show_customer_level_columns( $value, $column_name, $user_id ) {
     $level_data = asker_get_customer_level( $user_id );
+    $individual_discount = intval( get_user_meta( $user_id, 'individual_discount', true ) );
     
     switch ( $column_name ) {
         case 'customer_level':
             return esc_html( $level_data['level'] );
         case 'customer_discount':
-            return esc_html( $level_data['discount'] ) . '%';
+            // Показываем итоговую скидку (уровень + индивидуальная)
+            $total_discount = $level_data['discount'] + $individual_discount;
+            $output = '<strong>' . esc_html( $total_discount ) . '%</strong>';
+            
+            // Детализация
+            $details = array();
+            if ( $level_data['discount'] > 0 ) {
+                $details[] = 'уровень: ' . $level_data['discount'] . '%';
+            }
+            if ( $individual_discount > 0 ) {
+                $details[] = '<span style="color: #0073aa;">инд: ' . $individual_discount . '%</span>';
+            }
+            if ( ! empty( $details ) ) {
+                $output .= '<br><small style="color: #666;">(' . implode( ' + ', $details ) . ')</small>';
+            }
+            return $output;
         case 'total_spent':
             return wc_price( $level_data['total_spent'] );
     }
@@ -237,4 +260,80 @@ function asker_show_customer_level_columns( $value, $column_name, $user_id ) {
     return $value;
 }
 add_filter( 'manage_users_custom_column', 'asker_show_customer_level_columns', 10, 3 );
+
+/**
+ * Добавляем поле индивидуальной скидки в профиль пользователя (админка)
+ */
+function asker_add_individual_discount_field( $user ) {
+    if ( ! current_user_can( 'edit_users' ) ) {
+        return;
+    }
+    
+    $individual_discount = get_user_meta( $user->ID, 'individual_discount', true );
+    $level_data = asker_get_customer_level( $user->ID );
+    $total_discount = intval( $level_data['discount'] ) + intval( $individual_discount );
+    ?>
+    <h2>Скидки клиента</h2>
+    <table class="form-table">
+        <tr>
+            <th><label>Скидка по уровню</label></th>
+            <td>
+                <strong><?php echo esc_html( $level_data['discount'] ); ?>%</strong>
+                <span style="color: #666; margin-left: 10px;">(Уровень: <?php echo esc_html( $level_data['level'] ); ?>)</span>
+                <p class="description">Автоматически рассчитывается на основе суммы покупок: <?php echo wc_price( $level_data['total_spent'] ); ?></p>
+            </td>
+        </tr>
+        <tr>
+            <th><label for="individual_discount">Индивидуальная скидка</label></th>
+            <td>
+                <input type="number" name="individual_discount" id="individual_discount" 
+                       value="<?php echo esc_attr( $individual_discount ); ?>" 
+                       min="0" max="100" step="1" style="width: 80px;" /> %
+                <p class="description">Дополнительная скидка, назначаемая администратором вручную</p>
+            </td>
+        </tr>
+        <tr>
+            <th><label>Итоговая скидка</label></th>
+            <td>
+                <strong style="font-size: 18px; color: #0073aa;"><?php echo esc_html( $total_discount ); ?>%</strong>
+                <p class="description">Сумма скидки по уровню и индивидуальной скидки</p>
+            </td>
+        </tr>
+    </table>
+    <?php
+}
+add_action( 'show_user_profile', 'asker_add_individual_discount_field' );
+add_action( 'edit_user_profile', 'asker_add_individual_discount_field' );
+
+/**
+ * Сохраняем индивидуальную скидку
+ */
+function asker_save_individual_discount( $user_id ) {
+    if ( ! current_user_can( 'edit_user', $user_id ) ) {
+        return;
+    }
+    
+    if ( isset( $_POST['individual_discount'] ) ) {
+        $discount = intval( $_POST['individual_discount'] );
+        // Ограничиваем значение 0-100
+        $discount = max( 0, min( 100, $discount ) );
+        update_user_meta( $user_id, 'individual_discount', $discount );
+    }
+}
+add_action( 'personal_options_update', 'asker_save_individual_discount' );
+add_action( 'edit_user_profile_update', 'asker_save_individual_discount' );
+
+/**
+ * Получить итоговую скидку пользователя (уровень + индивидуальная)
+ */
+function asker_get_total_discount( $user_id ) {
+    if ( ! $user_id ) {
+        return 0;
+    }
+    
+    $level_data = asker_get_customer_level( $user_id );
+    $individual_discount = intval( get_user_meta( $user_id, 'individual_discount', true ) );
+    
+    return $level_data['discount'] + $individual_discount;
+}
 

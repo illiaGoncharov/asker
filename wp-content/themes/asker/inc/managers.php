@@ -126,9 +126,26 @@ function asker_save_manager_metabox( $user_id ) {
     }
     
     if ( isset( $_POST['assigned_manager_id'] ) ) {
-        $manager_id = intval( $_POST['assigned_manager_id'] );
-        if ( $manager_id > 0 ) {
-            update_user_meta( $user_id, 'assigned_manager_id', $manager_id );
+        $new_manager_id = intval( $_POST['assigned_manager_id'] );
+        $old_manager_id = intval( get_user_meta( $user_id, 'assigned_manager_id', true ) );
+        
+        // Если менеджер изменился - отправляем уведомления
+        if ( $new_manager_id !== $old_manager_id ) {
+            $customer = get_userdata( $user_id );
+            
+            // Отправляем уведомление старому менеджеру
+            if ( $old_manager_id > 0 ) {
+                asker_send_manager_change_notification( $old_manager_id, $customer, 'removed' );
+            }
+            
+            // Отправляем уведомление новому менеджеру
+            if ( $new_manager_id > 0 ) {
+                asker_send_manager_change_notification( $new_manager_id, $customer, 'assigned' );
+            }
+        }
+        
+        if ( $new_manager_id > 0 ) {
+            update_user_meta( $user_id, 'assigned_manager_id', $new_manager_id );
         } else {
             delete_user_meta( $user_id, 'assigned_manager_id' );
         }
@@ -136,6 +153,72 @@ function asker_save_manager_metabox( $user_id ) {
 }
 add_action( 'personal_options_update', 'asker_save_manager_metabox' );
 add_action( 'edit_user_profile_update', 'asker_save_manager_metabox' );
+
+/**
+ * Отправляем email уведомление менеджеру о смене клиента
+ * 
+ * @param int $manager_id ID менеджера (CPT)
+ * @param WP_User $customer Объект пользователя-клиента
+ * @param string $type 'assigned' или 'removed'
+ */
+function asker_send_manager_change_notification( $manager_id, $customer, $type ) {
+    $manager_email = get_field( 'manager_email', $manager_id );
+    if ( ! $manager_email || ! is_email( $manager_email ) ) {
+        return;
+    }
+    
+    $manager_name = get_the_title( $manager_id );
+    $customer_name = $customer->first_name . ' ' . $customer->last_name;
+    $customer_email = $customer->user_email;
+    $customer_phone = get_user_meta( $customer->ID, 'billing_phone', true );
+    
+    if ( $type === 'assigned' ) {
+        $subject = '👤 Вам назначен новый клиент — ' . trim( $customer_name );
+        $action_text = 'Вам назначен новый клиент';
+        $color = '#4CAF50';
+    } else {
+        $subject = '📋 Клиент переназначен другому менеджеру';
+        $action_text = 'Клиент переназначен другому менеджеру';
+        $color = '#FF9800';
+    }
+    
+    $message = '<html><body style="font-family: Arial, sans-serif;">';
+    $message .= '<div style="max-width: 600px; margin: 0 auto; background: #fff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">';
+    $message .= '<div style="background: ' . $color . '; color: #fff; padding: 20px; text-align: center;">';
+    $message .= '<h1 style="margin: 0; font-size: 20px;">' . esc_html( $action_text ) . '</h1>';
+    $message .= '</div>';
+    $message .= '<div style="padding: 30px;">';
+    $message .= '<p style="font-size: 16px;">Здравствуйте, ' . esc_html( $manager_name ) . '!</p>';
+    
+    if ( $type === 'assigned' ) {
+        $message .= '<p style="font-size: 16px;">Вам назначен новый клиент:</p>';
+    } else {
+        $message .= '<p style="font-size: 16px;">Клиент был переназначен другому менеджеру:</p>';
+    }
+    
+    $message .= '<div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">';
+    $message .= '<p style="margin: 5px 0;"><strong>Имя:</strong> ' . esc_html( trim( $customer_name ) ?: 'Не указано' ) . '</p>';
+    $message .= '<p style="margin: 5px 0;"><strong>Email:</strong> ' . esc_html( $customer_email ) . '</p>';
+    if ( $customer_phone ) {
+        $message .= '<p style="margin: 5px 0;"><strong>Телефон:</strong> ' . esc_html( $customer_phone ) . '</p>';
+    }
+    $message .= '</div>';
+    
+    if ( $type === 'assigned' ) {
+        $message .= '<p style="font-size: 14px; color: #666;">Рекомендуем связаться с клиентом для знакомства.</p>';
+    }
+    
+    $message .= '</div>';
+    $message .= '<div style="background: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #666;">';
+    $message .= '<p style="margin: 0;">&copy; ' . date('Y') . ' Asker. Уведомление системы.</p>';
+    $message .= '</div>';
+    $message .= '</div>';
+    $message .= '</body></html>';
+    
+    $headers = array( 'Content-Type: text/html; charset=UTF-8' );
+    
+    wp_mail( $manager_email, $subject, $message, $headers );
+}
 
 /**
  * Добавляем колонку "Менеджер" в список пользователей

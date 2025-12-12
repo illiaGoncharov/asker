@@ -1066,6 +1066,27 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.filter-checkbox input[type="checkbox"]').forEach(checkbox => {
         console.log('Found checkbox:', checkbox.getAttribute('data-url'));
     });
+    
+    // Обработчик раскрытия подкатегорий по клику на "+"
+    document.querySelectorAll('.filter-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const categoryItem = this.closest('.filter-category-item');
+            const subcategories = categoryItem.querySelector('.filter-subcategories');
+            
+            if (categoryItem && subcategories) {
+                categoryItem.classList.toggle('is-expanded');
+                
+                if (categoryItem.classList.contains('is-expanded')) {
+                    subcategories.style.display = 'flex';
+                } else {
+                    subcategories.style.display = 'none';
+                }
+            }
+        });
+    });
 });
 
 // Range slider для фильтра цены в shop sidebar

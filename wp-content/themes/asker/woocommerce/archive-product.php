@@ -89,37 +89,85 @@ if (!class_exists('WooCommerce')) {
                         </button>
                     </div>
 
-                    <!-- Фильтр по категориям -->
+                    <!-- Фильтр по категориям (иерархический с аккордеоном) -->
                     <div class="filter-block">
                         <h4 class="filter-block-title">Категория</h4>
                         <div class="filter-block-content">
                             <?php
-                            $product_categories = get_terms([
+                            // Получаем текущую категорию
+                            $current_cat_id = 0;
+                            $current_parent_id = 0;
+                            if (is_product_category()) {
+                                $current_term = get_queried_object();
+                                $current_cat_id = $current_term->term_id;
+                                $current_parent_id = $current_term->parent;
+                            }
+                            
+                            // Получаем родительские категории
+                            $parent_categories = get_terms([
                                 'taxonomy' => 'product_cat',
                                 'hide_empty' => true,
                                 'parent' => 0,
+                                'orderby' => 'menu_order',
+                                'order' => 'ASC',
                             ]);
 
-                            if (!empty($product_categories) && !is_wp_error($product_categories)):
-                                foreach ($product_categories as $category):
-                                    $checked = '';
-                                    $cat_url = get_term_link($category);
-                                    // Проверяем, что URL получен без ошибок
-                                    if (is_wp_error($cat_url)) {
-                                        $cat_url = '';
-                                    }
-                                    if (is_product_category() && get_queried_object_id() == $category->term_id) {
-                                        $checked = 'checked';
-                                    }
+                            if (!empty($parent_categories) && !is_wp_error($parent_categories)):
+                                foreach ($parent_categories as $parent_cat):
+                                    $parent_url = get_term_link($parent_cat);
+                                    if (is_wp_error($parent_url)) continue;
+                                    
+                                    // Проверяем, есть ли подкатегории
+                                    $subcategories = get_terms([
+                                        'taxonomy' => 'product_cat',
+                                        'hide_empty' => false,
+                                        'parent' => $parent_cat->term_id,
+                                        'orderby' => 'menu_order',
+                                        'order' => 'ASC',
+                                    ]);
+                                    $has_children = !empty($subcategories) && !is_wp_error($subcategories);
+                                    
+                                    // Проверяем, активна ли эта категория или её подкатегория
+                                    $is_current = ($current_cat_id == $parent_cat->term_id);
+                                    $is_ancestor = is_product_category() && term_is_ancestor_of($parent_cat->term_id, $current_cat_id, 'product_cat');
+                                    $checked = ($is_current || $is_ancestor) ? 'checked' : '';
+                                    $is_expanded = ($is_current || $is_ancestor || $current_parent_id == $parent_cat->term_id);
                             ?>
-                                <label class="filter-checkbox">
-                                    <input type="checkbox" 
-                                           name="category[]" 
-                                           value="<?php echo esc_attr($category->slug); ?>" 
-                                           data-url="<?php echo esc_url($cat_url); ?>"
-                                           <?php echo $checked; ?>>
-                                    <span><?php echo esc_html($category->name); ?></span>
-                                </label>
+                                <div class="filter-category-item <?php echo $has_children ? 'has-children' : ''; ?> <?php echo $is_expanded ? 'is-expanded' : ''; ?>">
+                                    <div class="filter-category-row">
+                                        <label class="filter-checkbox">
+                                            <input type="checkbox" 
+                                                   name="category[]" 
+                                                   value="<?php echo esc_attr($parent_cat->slug); ?>" 
+                                                   data-url="<?php echo esc_url($parent_url); ?>"
+                                                   <?php echo $checked; ?>>
+                                            <span><?php echo esc_html($parent_cat->name); ?></span>
+                                        </label>
+                                        <?php if ($has_children): ?>
+                                            <button type="button" class="filter-toggle-btn" aria-label="Развернуть подкатегории">
+                                                <span class="filter-toggle-icon">+</span>
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if ($has_children): ?>
+                                        <div class="filter-subcategories" <?php echo $is_expanded ? '' : 'style="display: none;"'; ?>>
+                                            <?php foreach ($subcategories as $subcat):
+                                                $sub_url = get_term_link($subcat);
+                                                if (is_wp_error($sub_url)) continue;
+                                                $sub_checked = ($current_cat_id == $subcat->term_id) ? 'checked' : '';
+                                            ?>
+                                                <label class="filter-checkbox filter-checkbox--sub">
+                                                    <input type="checkbox" 
+                                                           name="category[]" 
+                                                           value="<?php echo esc_attr($subcat->slug); ?>" 
+                                                           data-url="<?php echo esc_url($sub_url); ?>"
+                                                           <?php echo $sub_checked; ?>>
+                                                    <span><?php echo esc_html($subcat->name); ?></span>
+                                                </label>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             <?php
                                 endforeach;
                             endif;

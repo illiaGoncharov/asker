@@ -63,6 +63,21 @@ get_header();
                     <!-- Левая колонка - формы -->
                     <div class="checkout__forms">
                     
+                    <!-- Тип клиента: юр/физ лицо -->
+                    <div class="checkout__form-card">
+                        <h3 class="checkout__form-title">Тип клиента</h3>
+                        <div class="checkout__entity-toggle">
+                            <label class="checkout__radio-option checkout__radio-option--entity">
+                                <input type="radio" name="customer_type" value="legal" checked>
+                                <span>Юридическое лицо</span>
+                            </label>
+                            <label class="checkout__radio-option checkout__radio-option--entity">
+                                <input type="radio" name="customer_type" value="individual">
+                                <span>Физическое лицо</span>
+                            </label>
+                        </div>
+                    </div>
+                    
                     <!-- Контактные данные -->
                     <div class="checkout__form-card">
                         <h3 class="checkout__form-title">Контактные данные</h3>
@@ -79,10 +94,11 @@ get_header();
                                 <input type="email" name="billing_email" placeholder="E-mail*" required
                                        value="<?php echo esc_attr( get_user_meta( get_current_user_id(), 'billing_email', true ) ?: wp_get_current_user()->user_email ); ?>">
                             </div>
-                            <div class="checkout__field-group">
-                                <input type="text" name="billing_company" placeholder="Название организации"
+                            <!-- Поля для юр. лица (обязательные) -->
+                            <div class="checkout__field-group checkout__legal-fields">
+                                <input type="text" name="billing_company" id="billing_company" placeholder="Название организации*" required
                                        value="<?php echo esc_attr( get_user_meta( get_current_user_id(), 'billing_company', true ) ); ?>">
-                                <input type="text" name="billing_tax_id" placeholder="ИНН организации"
+                                <input type="text" name="billing_tax_id" id="billing_tax_id" placeholder="ИНН организации*" required
                                        value="<?php echo esc_attr( get_user_meta( get_current_user_id(), 'billing_tax_id', true ) ); ?>">
                             </div>
                         </div>
@@ -103,6 +119,17 @@ get_header();
                         
                         <!-- Поля для доставки -->
                         <div class="checkout__form-fields checkout__delivery-fields">
+                                   <!-- Выбор транспортной компании -->
+                                   <div class="checkout__field-group checkout__field-group--full">
+                                       <label for="shipping_company" class="checkout__field-label">Транспортная компания</label>
+                                       <select name="shipping_company" id="shipping_company" class="checkout__select">
+                                           <option value="">— Выберите ТК —</option>
+                                           <option value="cdek" <?php selected( get_user_meta( get_current_user_id(), 'shipping_company', true ), 'cdek' ); ?>>СДЭК</option>
+                                           <option value="pek" <?php selected( get_user_meta( get_current_user_id(), 'shipping_company', true ), 'pek' ); ?>>ПЭК</option>
+                                           <option value="dellin" <?php selected( get_user_meta( get_current_user_id(), 'shipping_company', true ), 'dellin' ); ?>>Деловые линии</option>
+                                           <option value="yandex" <?php selected( get_user_meta( get_current_user_id(), 'shipping_company', true ), 'yandex' ); ?>>Яндекс доставка</option>
+                                       </select>
+                                   </div>
                                    <div class="checkout__field-group">
                                        <input type="text" name="shipping_city" placeholder="Город"
                                               value="<?php echo esc_attr( get_user_meta( get_current_user_id(), 'shipping_city', true ) ); ?>">
@@ -225,6 +252,35 @@ get_header();
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Переключение между юр. и физ. лицом
+    const customerTypeRadios = document.querySelectorAll('input[name="customer_type"]');
+    const legalFields = document.querySelector('.checkout__legal-fields');
+    const companyInput = document.getElementById('billing_company');
+    const taxIdInput = document.getElementById('billing_tax_id');
+    
+    function updateLegalFields() {
+        const selectedType = document.querySelector('input[name="customer_type"]:checked');
+        if (selectedType && selectedType.value === 'legal') {
+            // Юр. лицо - показываем поля и делаем обязательными
+            if (legalFields) legalFields.style.display = 'flex';
+            if (companyInput) companyInput.required = true;
+            if (taxIdInput) taxIdInput.required = true;
+        } else {
+            // Физ. лицо - скрываем поля и убираем обязательность
+            if (legalFields) legalFields.style.display = 'none';
+            if (companyInput) companyInput.required = false;
+            if (taxIdInput) taxIdInput.required = false;
+        }
+    }
+    
+    // Инициализация при загрузке
+    updateLegalFields();
+    
+    // Обработчик переключения
+    customerTypeRadios.forEach(radio => {
+        radio.addEventListener('change', updateLegalFields);
+    });
+    
     // Переключение между доставкой и самовывозом
     const deliveryRadios = document.querySelectorAll('input[name="delivery_type"]');
     const deliveryFields = document.querySelector('.checkout__delivery-fields');

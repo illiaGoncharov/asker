@@ -274,8 +274,11 @@ File: <?php echo __FILE__; ?>
                     </nav>
                     
                     <?php
-                    // Получаем уровень клиента
+                    // Получаем уровень клиента и итоговую скидку
                     $level_data = asker_get_customer_level( get_current_user_id() );
+                    $total_discount = function_exists( 'asker_get_total_discount' ) 
+                        ? asker_get_total_discount( get_current_user_id() ) 
+                        : $level_data['discount'];
                     ?>
                     <div class="user-level">
                         <div class="level-info">
@@ -292,7 +295,7 @@ File: <?php echo __FILE__; ?>
                         </div>
                         <div class="discount-info">
                             <span class="discount-label">Ваша скидка:</span>
-                            <span class="discount-value"><?php echo esc_html( $level_data['discount'] ); ?>%</span>
+                            <span class="discount-value"><?php echo esc_html( $total_discount ); ?>%</span>
                         </div>
                     </div>
                     
@@ -549,8 +552,11 @@ File: <?php echo __FILE__; ?>
                             <h2>Личные данные</h2>
                             
                             <?php
-                            // Получаем уровень клиента для шкалы
+                            // Получаем уровень клиента для шкалы и итоговую скидку
                             $level_data = asker_get_customer_level( get_current_user_id() );
+                            $total_discount_profile = function_exists( 'asker_get_total_discount' ) 
+                                ? asker_get_total_discount( get_current_user_id() ) 
+                                : $level_data['discount'];
                             $current_level = mb_strtolower( trim($level_data['level']), 'UTF-8' );
                             
                             // Определяем активный уровень для шкалы
@@ -683,7 +689,7 @@ File: <?php echo __FILE__; ?>
                                             <span>VIP</span>
                                         </div>
                                     </div>
-                                    <p class="privilege-discount">Ваша скидка: <span class="discount-value"><?php echo esc_html( $level_data['discount'] ); ?>%</span> от розничной цены</p>
+                                    <p class="privilege-discount">Ваша скидка: <span class="discount-value"><?php echo esc_html( $total_discount_profile ); ?>%</span> от розничной цены</p>
                                 </div>
                             </div>
                             
@@ -1095,12 +1101,52 @@ File: <?php echo __FILE__; ?>
             </script>
     <?php else: ?>
         <?php
-        // Проверяем GET параметр lost-password для формы восстановления пароля
-        if ( isset( $_GET['lost-password'] ) || isset( $_GET['reset-link-sent'] ) ) {
-            wc_get_template('myaccount/form-lost-password.php');
+        // Проверяем параметры для формы сброса пароля (переход по ссылке из email)
+        if ( isset( $_GET['key'] ) && isset( $_GET['login'] ) ) {
+            // Форма установки нового пароля
+            $reset_key = sanitize_text_field( wp_unslash( $_GET['key'] ) );
+            $reset_login = sanitize_text_field( wp_unslash( $_GET['login'] ) );
+            
+            // Проверяем валидность ключа
+            $user = check_password_reset_key( $reset_key, $reset_login );
+            
+            if ( is_wp_error( $user ) ) {
+                // Ключ невалидный или истёк
+                wc_add_notice( 'Ссылка для сброса пароля недействительна или истекла. Запросите новую.', 'error' );
+                wc_get_template( 'myaccount/form-lost-password.php' );
         } else {
-            // Используем стандартный шаблон WooCommerce для формы входа
-            wc_get_template('myaccount/form-login.php');
+                // Показываем форму ввода нового пароля
+                wc_get_template( 'myaccount/form-reset-password.php', array(
+                    'key'   => $reset_key,
+                    'login' => $reset_login,
+                ) );
+            }
+        } elseif ( isset( $_GET['show-reset-form'] ) && isset( $_COOKIE['wp-resetpass-' . COOKIEHASH] ) ) {
+            // Альтернативный способ через cookie
+            $value = sanitize_text_field( wp_unslash( $_COOKIE['wp-resetpass-' . COOKIEHASH] ) );
+            list( $reset_login, $reset_key ) = explode( ':', $value, 2 );
+            
+            $user = check_password_reset_key( $reset_key, $reset_login );
+            
+            if ( is_wp_error( $user ) ) {
+                wc_add_notice( 'Ссылка для сброса пароля недействительна или истекла. Запросите новую.', 'error' );
+                wc_get_template( 'myaccount/form-lost-password.php' );
+            } else {
+                wc_get_template( 'myaccount/form-reset-password.php', array(
+                    'key'   => $reset_key,
+                    'login' => $reset_login,
+                ) );
+            }
+        } elseif ( isset( $_GET['lost-password'] ) || isset( $_GET['reset-link-sent'] ) ) {
+            // Форма запроса сброса пароля
+            wc_get_template( 'myaccount/form-lost-password.php' );
+        } elseif ( isset( $_GET['password-reset'] ) ) {
+            // Пароль успешно сброшен
+            wc_add_notice( 'Пароль успешно изменён. Теперь вы можете войти с новым паролем.', 'success' );
+            wc_get_template( 'myaccount/form-login.php' );
+        } else {
+            // Стандартная форма входа
+            wc_get_template( 'myaccount/form-login.php' );
         }
         ?>
     <?php endif; ?>

@@ -61,6 +61,39 @@ add_action('customize_register', function ($wp_customize) {
         'section' => 'asker_theme_settings',
         'type' => 'email',
     ]);
+    
+    // === Категории в футере ===
+    // Получаем все категории WooCommerce
+    $categories_choices = array( '' => '— Не выбрано —' );
+    if ( class_exists( 'WooCommerce' ) ) {
+        $product_categories = get_terms( array(
+            'taxonomy'   => 'product_cat',
+            'hide_empty' => false,
+            'orderby'    => 'name',
+            'order'      => 'ASC',
+        ) );
+        
+        if ( ! empty( $product_categories ) && ! is_wp_error( $product_categories ) ) {
+            foreach ( $product_categories as $category ) {
+                $categories_choices[ $category->term_id ] = $category->name;
+            }
+        }
+    }
+    
+    // Добавляем 5 настроек для категорий футера
+    for ( $i = 1; $i <= 5; $i++ ) {
+        $wp_customize->add_setting( 'footer_category_' . $i, [
+            'default' => '',
+            'sanitize_callback' => 'absint',
+        ] );
+        
+        $wp_customize->add_control( 'footer_category_' . $i, [
+            'label'   => 'Категория в футере #' . $i,
+            'section' => 'asker_theme_settings',
+            'type'    => 'select',
+            'choices' => $categories_choices,
+        ] );
+    }
 });
 
 

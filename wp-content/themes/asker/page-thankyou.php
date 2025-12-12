@@ -12,6 +12,41 @@ $order = null;
 if ($order_id) {
     $order = wc_get_order($order_id);
 }
+
+// Получаем данные менеджера
+$manager_name = '';
+$manager_email = '';
+$manager_phone = '';
+$user_email = '';
+$user_phone = '';
+
+if ( $order ) {
+    // Email и телефон из заказа
+    $user_email = $order->get_billing_email();
+    $user_phone = $order->get_billing_phone();
+    
+    // Получаем менеджера пользователя
+    $user_id = $order->get_user_id();
+    if ( $user_id ) {
+        $manager_id = get_user_meta( $user_id, 'assigned_manager_id', true );
+        if ( $manager_id ) {
+            $manager_name = get_the_title( $manager_id );
+            $manager_email = get_field( 'manager_email', $manager_id );
+            $manager_phone = get_field( 'manager_phone', $manager_id );
+        }
+    }
+}
+
+// Fallback значения если менеджер не назначен
+if ( empty( $manager_name ) ) {
+    $manager_name = 'Менеджер Asker';
+}
+if ( empty( $manager_email ) ) {
+    $manager_email = get_option( 'admin_email' );
+}
+if ( empty( $manager_phone ) ) {
+    $manager_phone = '+7 (812) 123-12-23'; // Общий телефон компании
+}
 ?>
 
 <div class="thankyou-page">
@@ -51,12 +86,12 @@ if ($order_id) {
                     
                     <div class="thankyou__detail-row">
                         <span class="thankyou__detail-label">Статус:</span>
-                        <span class="thankyou__status-badge">
+                        <span class="thankyou__status-badge thankyou__status-badge--pending">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                 <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                                <path d="M8 12L11 15L16 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                             </svg>
-                            <?php echo $order ? wc_get_order_status_name($order->get_status()) : 'Ожидает оплаты'; ?>
+                            Заказ на проверке
                         </span>
                     </div>
                     
@@ -73,29 +108,37 @@ if ($order_id) {
                 
                 <!-- Правая колонка - что дальше -->
                 <div class="thankyou__next-steps">
-                    <h2 class="thankyou__section-title">Что дальше?</h2>
+                    <h2 class="thankyou__section-title">Что будет дальше?</h2>
                     
                     <div class="thankyou__step">
                         <div class="thankyou__step-number">1</div>
                         <div class="thankyou__step-content">
-                            <h3 class="thankyou__step-title">Получите счет</h3>
-                            <p class="thankyou__step-description">Счет будет отправлен на ваш email в течение 30 минут</p>
+                            <h3 class="thankyou__step-title">Заказ создан</h3>
+                            <p class="thankyou__step-description">Мы получили Ваш заказ, менеджер проверяет наличие и цены.</p>
                         </div>
                     </div>
                     
                     <div class="thankyou__step">
                         <div class="thankyou__step-number">2</div>
                         <div class="thankyou__step-content">
-                            <h3 class="thankyou__step-title">Оплатите счет</h3>
-                            <p class="thankyou__step-description">У вас есть 3 рабочих дня для оплаты</p>
+                            <h3 class="thankyou__step-title">Отправка счета</h3>
+                            <p class="thankyou__step-description">Менеджер пришлет счет на оплату на почту, указанную при оформлении заказа.</p>
                         </div>
                     </div>
                     
                     <div class="thankyou__step">
                         <div class="thankyou__step-number">3</div>
                         <div class="thankyou__step-content">
-                            <h3 class="thankyou__step-title">Получите товар</h3>
-                            <p class="thankyou__step-description">Доставка в течение 2-5 рабочих дней после оплаты</p>
+                            <h3 class="thankyou__step-title">Отправка товаров</h3>
+                            <p class="thankyou__step-description">После оплаты счета товары по заказу будут отправлены выбранным способом доставки или подготовлены к самовывозу.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="thankyou__step">
+                        <div class="thankyou__step-number">4</div>
+                        <div class="thankyou__step-content">
+                            <h3 class="thankyou__step-title">Трекинг</h3>
+                            <p class="thankyou__step-description">После отправки в ТК менеджер отправит Вам трек-номер для отслеживания.</p>
                         </div>
                     </div>
                 </div>
@@ -117,7 +160,7 @@ if ($order_id) {
                         </div>
                         <div class="thankyou__contact-info">
                             <div class="thankyou__contact-label">Ваш менеджер</div>
-                            <div class="thankyou__contact-value">Владимир Курдов</div>
+                            <div class="thankyou__contact-value"><?php echo esc_html( $manager_name ); ?></div>
                         </div>
                     </div>
                     
@@ -130,7 +173,9 @@ if ($order_id) {
                         </div>
                         <div class="thankyou__contact-info">
                             <div class="thankyou__contact-label">Email</div>
-                            <div class="thankyou__contact-value">opt@asker-corp.ru</div>
+                            <div class="thankyou__contact-value">
+                                <a href="mailto:<?php echo esc_attr( $manager_email ); ?>"><?php echo esc_html( $manager_email ); ?></a>
+                            </div>
                         </div>
                     </div>
                     
@@ -142,7 +187,9 @@ if ($order_id) {
                         </div>
                         <div class="thankyou__contact-info">
                             <div class="thankyou__contact-label">Телефон</div>
-                            <div class="thankyou__contact-value">+7 (812) 123-12-23</div>
+                            <div class="thankyou__contact-value">
+                                <a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9+]/', '', $manager_phone ) ); ?>"><?php echo esc_html( $manager_phone ); ?></a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -160,9 +207,9 @@ if ($order_id) {
                 <div class="thankyou__important-content">
                     <h3 class="thankyou__important-title">Важная информация</h3>
                     <ul class="thankyou__important-list">
-                        <li>Проверьте папку "Спам" если не получили счет в течение часа</li>
-                        <li>Сохраните номер заказа для отслеживания статуса</li>
-                        <li>При возникновении вопросов обращайтесь в службу поддержки</li>
+                        <li>Вы можете связаться с Вашим менеджером по контактам, указанным выше.</li>
+                        <li>Для уточнения статуса заказа назовите менеджеру номер и дату оформления.</li>
+                        <li>Иногда письма могут попадать в папку "Спам", проверьте ее.</li>
                     </ul>
                 </div>
             </div>
@@ -288,13 +335,19 @@ if ($order_id) {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: #fff3cd;
-    color: #856404;
-    padding: 4px 8px;
+    background: #DBEAFE;
+    color: #1E40AF;
+    padding: 6px 12px;
     border-radius: 6px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
-    border: 1px solid #ffeaa7;
+    border: 1px solid #93C5FD;
+}
+
+.thankyou__status-badge--pending {
+    background: #FEF3C7;
+    color: #92400E;
+    border-color: #FCD34D;
 }
 
 /* Что дальше */

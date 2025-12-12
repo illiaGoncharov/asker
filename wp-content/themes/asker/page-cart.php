@@ -128,15 +128,61 @@ get_header(); ?>
                     </div>
 
                     <div class="cart-totals">
+                        <?php
+                        // Пересчитываем корзину чтобы получить fees
+                        WC()->cart->calculate_totals();
+                        
+                        // Получаем скидки (fees)
+                        $fees = WC()->cart->get_fees();
+                        $has_discount = false;
+                        $discount_amount = 0;
+                        $discount_label = '';
+                        
+                        foreach ( $fees as $fee ) {
+                            if ( $fee->amount < 0 ) {
+                                $has_discount = true;
+                                $discount_amount += abs( $fee->amount );
+                                $discount_label = $fee->name;
+                            }
+                        }
+                        
+                        // Получаем процент скидки для текущего пользователя
+                        $discount_percent = 0;
+                        if ( is_user_logged_in() && function_exists( 'asker_get_total_discount' ) ) {
+                            $discount_percent = asker_get_total_discount( get_current_user_id() );
+                        }
+                        
+                        // Если есть скидка по уровню/индивидуальная, но fees пустые — показываем всё равно
+                        if ( ! $has_discount && $discount_percent > 0 ) {
+                            $has_discount = true;
+                            $subtotal = WC()->cart->get_subtotal();
+                            $discount_amount = $subtotal * ( $discount_percent / 100 );
+                        }
+                        ?>
+                        
                         <div class="total-row">
                             <span class="total-label">Итого:</span>
-                            <span class="total-value"><?php echo WC()->cart->get_cart_subtotal(); ?></span>
+                            <span class="total-value <?php echo $has_discount ? 'total-value--strikethrough' : ''; ?>">
+                                <?php echo WC()->cart->get_cart_subtotal(); ?>
+                            </span>
                         </div>
 
+                        <?php if ( $has_discount ) : ?>
+                        <div class="total-row discount-row">
+                            <span class="total-label">
+                                Ваша скидка:
+                                <?php if ( $discount_percent > 0 ) : ?>
+                                    <strong class="discount-percent"><?php echo esc_html( $discount_percent ); ?>%</strong>
+                                <?php endif; ?>
+                            </span>
+                            <span class="total-value total-value--discount">-<?php echo wc_price( $discount_amount ); ?></span>
+                        </div>
+                        <?php endif; ?>
+
                         <?php if ( WC()->cart->get_discount_total() > 0 ) : ?>
-                        <div class="total-row discount">
-                            <span class="total-label">Скидка</span>
-                            <span class="total-value">-<?php echo wc_price( WC()->cart->get_discount_total() ); ?></span>
+                        <div class="total-row discount-row">
+                            <span class="total-label">Скидка по купону</span>
+                            <span class="total-value total-value--discount">-<?php echo wc_price( WC()->cart->get_discount_total() ); ?></span>
                         </div>
                         <?php endif; ?>
 
@@ -245,6 +291,20 @@ get_header(); ?>
     font-size: 16px;
     font-weight: 600;
     color: #111827;
+    white-space: nowrap;
+    min-width: 120px;
+}
+
+/* Не переносить цены на новую строку */
+.woocommerce-Price-amount,
+.woocommerce-Price-amount bdi,
+.amount {
+    white-space: nowrap;
+    display: inline;
+}
+
+.woocommerce-Price-currencySymbol {
+    margin-left: 4px;
 }
 
 .quantity-controls {
@@ -432,12 +492,47 @@ get_header(); ?>
     font-size: 16px;
     font-weight: 600;
     color: #111827;
+    white-space: nowrap;
 }
 
 .total-final .total-label,
 .total-final .total-value {
     font-size: 20px;
     font-weight: 700;
+}
+
+/* Стили для скидки */
+.total-value--strikethrough {
+    text-decoration: line-through;
+    color: #9CA3AF;
+    font-weight: 400;
+}
+
+.discount-row {
+    background: #F0FDF4;
+    margin: 0 -24px;
+    padding: 12px 24px;
+    border-radius: 8px;
+}
+
+.discount-row .total-label {
+    color: #059669;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.discount-percent {
+    background: #059669;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.total-value--discount {
+    color: #059669;
+    font-weight: 600;
 }
 
 .btn-checkout {
