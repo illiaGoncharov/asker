@@ -9,6 +9,7 @@
 !/.github/**
 !/CURSOR.md
 !/.cursor/**
+!/AUDIT-REPORT.md
 
 # Разрешаем wp-content и тему Asker
 !wp-content/
