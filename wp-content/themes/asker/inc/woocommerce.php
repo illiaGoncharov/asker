@@ -4,6 +4,30 @@
  */
 
 /**
+ * Убираем ненужные атрибуты из изображений товаров (alt, sizes, height)
+ * Чтобы картинки нормально растягивались и не показывали alt-текст
+ */
+function asker_clean_product_image_attributes( $attr, $attachment, $size ) {
+    // Очищаем alt для изображений товаров
+    if ( isset( $attr['alt'] ) ) {
+        $attr['alt'] = '';
+    }
+    
+    // Убираем sizes чтобы картинка растягивалась
+    if ( isset( $attr['sizes'] ) ) {
+        unset( $attr['sizes'] );
+    }
+    
+    // Убираем srcset чтобы использовался основной src
+    if ( isset( $attr['srcset'] ) ) {
+        unset( $attr['srcset'] );
+    }
+    
+    return $attr;
+}
+add_filter( 'wp_get_attachment_image_attributes', 'asker_clean_product_image_attributes', 10, 3 );
+
+/**
  * Убираем стандартные обёртки WooCommerce для страницы товара
  * Используем свой .container для единообразия с остальными страницами
  */
