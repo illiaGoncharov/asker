@@ -2030,7 +2030,7 @@ body.woocommerce ul.products li.product:hover {
   width: 100%;
   height: 222px;
   margin-bottom: 0;
-  border-radius: 8px;
+  border-radius: 16px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -2038,9 +2038,7 @@ body.woocommerce ul.products li.product:hover {
   background: #F5F6F8;
   position: relative;
   text-decoration: none;
-  box-shadow: none !important; /* Убираем тени у вложенных элементов */
-  border-radius: 40px;
-  
+  box-shadow: none;
 }
 
 .shop-product-image a {
@@ -2056,11 +2054,13 @@ body.woocommerce ul.products li.product:hover {
 .shop-product-image img,
 .woocommerce ul.products li.product img {
   margin: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: conver;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
   transition: transform 0.3s ease;
-  background: var(--bg-white)
+  background: var(--bg-white);
 }
 
 .shop-product-card:hover .shop-product-image img,
@@ -3176,13 +3176,15 @@ body.woocommerce-account .container .section__title,
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  object-fit: cover;
 }
 
 .product-image img {
-  width: 100%;
-  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
   object-fit: contain;
+  border-radius: 8px;
 }
 
 .product-title {
@@ -6107,6 +6109,38 @@ body:not(.home) .site-main {
   font-weight: 600;
   color: var(--primary-black);
   font-size: 16px;
+}
+
+/* Кнопка "Запросить скидку" */
+.request-discount-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 16px;
+  background: var(--primary-yellow);
+  color: var(--primary-black);
+  border: none;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-primary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.request-discount-btn:hover {
+  background: #e6cf00;
+  transform: translateY(-1px);
+}
+
+.request-discount-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .level-help-icon {
@@ -9238,12 +9272,103 @@ select.has-error:focus {
   background: #D1FAE5;
   border: 1px solid #6EE7B7;
   color: #065F46;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-page .woocommerce-message > * {
+  display: block;
+  margin: 0;
 }
 
 .auth-page .woocommerce-info {
   background: #DBEAFE;
   border: 1px solid #93C5FD;
   color: #1E40AF;
+}
+
+/* Скрываем кнопки внутри уведомлений WooCommerce */
+.auth-page .woocommerce-message .button,
+.auth-page .woocommerce-message a.button,
+.auth-page .woocommerce-message button,
+.auth-page .woocommerce-error .button,
+.auth-page .woocommerce-error a.button,
+.auth-page .woocommerce-error button,
+.auth-page .woocommerce-info .button,
+.auth-page .woocommerce-info a.button,
+.auth-page .woocommerce-info button {
+  display: none;
+}
+
+/* ===== ГЛОБАЛЬНЫЕ СТИЛИ УВЕДОМЛЕНИЙ WOOCOMMERCE ===== */
+/* Убираем иконки из уведомлений WooCommerce везде */
+.woocommerce-message::before,
+.woocommerce-error::before,
+.woocommerce-info::before {
+  display: none !important;
+  content: none !important;
+}
+
+/* Убираем SVG иконки внутри уведомлений */
+.woocommerce-message svg,
+.woocommerce-error svg,
+.woocommerce-info svg {
+  display: none !important;
+}
+
+/* Базовые стили уведомлений */
+.woocommerce-message,
+.woocommerce-error,
+.woocommerce-info {
+  padding: 16px 20px !important;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-family: var(--font-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.woocommerce-message {
+  background: #D1FAE5;
+  border: 1px solid #6EE7B7;
+  color: #065F46;
+}
+
+.woocommerce-error {
+  background: #FEE2E2;
+  border: 1px solid #FCA5A5;
+  color: #991B1B;
+}
+
+.woocommerce-info {
+  background: #DBEAFE;
+  border: 1px solid #93C5FD;
+  color: #1E40AF;
+}
+
+/* Убираем li маркеры внутри ошибок */
+.woocommerce-error li,
+.woocommerce-message li,
+.woocommerce-info li {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Исправляем layout уведомлений чтобы текст не наезжал */
+.auth-page .woocommerce-message,
+.auth-page .woocommerce-error,
+.auth-page .woocommerce-info {
+  position: relative;
+  padding-left: 20px !important;
+}
+
+.auth-page .woocommerce-message > *:first-child,
+.auth-page .woocommerce-error > *:first-child,
+.auth-page .woocommerce-info > *:first-child {
+  margin-top: 0;
 }
 
 /* ===== СТРАНИЦА ПРОСМОТРА ЗАКАЗА ===== */

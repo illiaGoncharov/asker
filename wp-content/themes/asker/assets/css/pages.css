@@ -780,11 +780,12 @@
 .auth-page-description {
   font-size: 14px;
   color: var(--text-gray);
-  margin: 0 0 32px 0;
+  margin: 0 auto 32px auto;
   text-align: center;
   font-family: var(--font-secondary);
   line-height: 1.5;
-  max-width: 480px;
+  max-width: 600px;
+  width: 100%;
   display: block !important;
   visibility: visible !important;
 }
@@ -823,7 +824,7 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .auth-page .auth-container .auth-form .form-group {
@@ -1229,25 +1230,39 @@
   transform: translateY(-1px);
 }
 
-/* Скрываем стандартные сообщения WooCommerce если они дублируются */
+/* Стили уведомлений WooCommerce на странице авторизации */
 .auth-page .woocommerce-error,
 .auth-page .woocommerce-message,
 .auth-page .woocommerce-info {
   margin-bottom: 20px;
-  padding: 12px 16px;
+  padding: 16px 20px;
   border-radius: 8px;
 }
 
 .auth-page .woocommerce-error {
   background: #FEE2E2;
   color: #991B1B;
-  border-left: 4px solid #DC2626;
+  border: 1px solid #FCA5A5;
 }
 
 .auth-page .woocommerce-message {
   background: #D1FAE5;
   color: #065F46;
-  border-left: 4px solid #10B981;
+  border: 1px solid #6EE7B7;
+}
+
+/* Убираем иконки в уведомлениях на auth-page */
+.auth-page .woocommerce-error::before,
+.auth-page .woocommerce-message::before,
+.auth-page .woocommerce-info::before {
+  display: none;
+  content: none;
+}
+
+.auth-page .woocommerce-error svg,
+.auth-page .woocommerce-message svg,
+.auth-page .woocommerce-info svg {
+  display: none;
 }
 
 /* ========================================
@@ -1409,4 +1424,27 @@
     width: 100%;
     align-self: stretch;
   }
+}
+
+/* Стили для формы восстановления пароля на всех устройствах */
+.auth-page .woocommerce-ResetPassword,
+.auth-page .lost_reset_password {
+  width: 100%;
+}
+
+.auth-page .woocommerce-ResetPassword .form-group,
+.auth-page .lost_reset_password .form-group {
+  width: 100%;
+  text-align: left;
+}
+
+.auth-page .woocommerce-ResetPassword .form-control,
+.auth-page .woocommerce-ResetPassword input[type="email"],
+.auth-page .woocommerce-ResetPassword .woocommerce-Input,
+.auth-page .lost_reset_password .form-control,
+.auth-page .lost_reset_password input[type="email"],
+.auth-page .lost_reset_password .woocommerce-Input {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
 }

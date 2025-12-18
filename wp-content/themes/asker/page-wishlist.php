@@ -49,7 +49,7 @@ get_header(); ?>
                                 <div class="wishlist-item">
                                     <a href="<?php echo esc_url($product_url); ?>" class="wishlist-item-image">
                                         <?php if ($product_image) : ?>
-                                            <img src="<?php echo esc_url($product_image[0]); ?>" alt="<?php echo esc_attr($product->get_name()); ?>">
+                                            <img src="<?php echo esc_url($product_image[0]); ?>" alt="">
                                         <?php else : ?>
                                             <div class="product-placeholder"><?php echo esc_html($product->get_name()); ?></div>
                                         <?php endif; ?>

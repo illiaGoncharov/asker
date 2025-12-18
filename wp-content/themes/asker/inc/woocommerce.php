@@ -1102,7 +1102,7 @@ function asker_get_wishlist_products() {
                 <div class="wishlist-item">
                     <a href="<?php echo esc_url($product_url); ?>" class="wishlist-item-image">
                         <?php if ($product_image) : ?>
-                            <img src="<?php echo esc_url($product_image[0]); ?>" alt="<?php echo esc_attr($product->get_name()); ?>">
+                            <img src="<?php echo esc_url($product_image[0]); ?>" alt="">
                         <?php else : ?>
                             <div class="product-placeholder"><?php echo esc_html($product->get_name()); ?></div>
                         <?php endif; ?>
@@ -3436,4 +3436,139 @@ function asker_redirect_after_password_reset( $redirect ) {
     return add_query_arg( 'password-reset', '1', wc_get_page_permalink( 'myaccount' ) );
 }
 add_filter( 'woocommerce_reset_password_redirect', 'asker_redirect_after_password_reset' );
+
+/**
+ * Убираем кнопку из сообщения о восстановлении пароля
+ */
+function asker_remove_reset_password_button( $message ) {
+    // Убираем все кнопки и ссылки из сообщения
+    $message = preg_replace( '/<a[^>]*class=["\'][^"\']*button[^"\']*["\'][^>]*>.*?<\/a>/i', '', $message );
+    $message = preg_replace( '/<button[^>]*>.*?<\/button>/i', '', $message );
+    return trim( $message );
+}
+add_filter( 'woocommerce_lost_password_confirmation_message', 'asker_remove_reset_password_button', 20 );
+
+/**
+ * Логируем отправку email для восстановления пароля (для отладки)
+ */
+function asker_log_password_reset_email( $user_login ) {
+    if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+        error_log( 'Asker: Password reset email requested for: ' . $user_login );
+    }
+}
+add_action( 'woocommerce_reset_password_notification', 'asker_log_password_reset_email', 10, 1 );
+
+/**
+ * Улучшаем обработку ошибок отправки email
+ * Фильтр allow_password_reset принимает ($allow, $user_id)
+ */
+function asker_handle_password_reset_email_error( $allow, $user_id ) {
+    // Если уже запрещено — возвращаем как есть
+    if ( ! $allow ) {
+        return $allow;
+    }
+    
+    // Проверяем что email существует у пользователя
+    $user = get_userdata( $user_id );
+    if ( $user && empty( $user->user_email ) ) {
+        wc_add_notice( 'Ошибка: не удалось найти email для этого пользователя.', 'error' );
+        return false;
+    }
+    
+    return $allow;
+}
+// Убрана кастомная обработка allow_password_reset — она работала неправильно
+// add_filter( 'allow_password_reset', 'asker_handle_password_reset_email_error', 10, 2 );
+
+/**
+ * Полностью перехватываем обработку сброса пароля ДО WooCommerce
+ * Показываем форму напрямую без предварительной проверки ключа
+ */
+function asker_override_password_reset_page() {
+    // Проверяем URL — ищем lost-password endpoint
+    $request_uri = $_SERVER['REQUEST_URI'];
+    $is_lost_password = ( strpos( $request_uri, 'lost-password' ) !== false );
+    
+    if ( ! $is_lost_password ) {
+        return;
+    }
+    
+    // Если есть show-reset-form или key/login — показываем форму сброса пароля
+    if ( isset( $_GET['show-reset-form'] ) || ( isset( $_GET['key'] ) && isset( $_GET['login'] ) ) ) {
+        
+        // Получаем key и login
+        $rp_key = '';
+        $rp_login = '';
+        
+        if ( isset( $_GET['key'] ) && isset( $_GET['login'] ) ) {
+            // Из URL параметров
+            $rp_key = sanitize_text_field( wp_unslash( $_GET['key'] ) );
+            $rp_login = sanitize_text_field( wp_unslash( $_GET['login'] ) );
+        } else {
+            // Из cookie
+            $cookie_name = 'wp-resetpass-' . COOKIEHASH;
+            if ( isset( $_COOKIE[ $cookie_name ] ) && strpos( $_COOKIE[ $cookie_name ], ':' ) !== false ) {
+                $value = sanitize_text_field( wp_unslash( $_COOKIE[ $cookie_name ] ) );
+                list( $rp_login, $rp_key ) = explode( ':', $value, 2 );
+            }
+        }
+        
+        if ( ! empty( $rp_key ) && ! empty( $rp_login ) ) {
+            // Выводим HTML страницу напрямую БЕЗ проверки ключа
+            // Проверка будет при отправке формы
+            
+            get_header();
+            ?>
+            <main class="site-main">
+                <div class="container section">
+                    <div class="account-page container">
+                        <div class="auth-page">
+                            <div class="auth-tabs">
+                                <span class="auth-tab auth-tab--active">Новый пароль</span>
+                            </div>
+                            <div class="auth-container">
+                                <p class="auth-page-description">Введите новый пароль для вашего аккаунта</p>
+                                
+                                <?php wc_print_notices(); ?>
+                                
+                                <form method="post" class="auth-form woocommerce-ResetPassword lost_reset_password">
+                                    <?php do_action( 'woocommerce_resetpassword_form_start' ); ?>
+                                    
+                                    <div class="form-group">
+                                        <label for="password_1">Новый пароль&nbsp;<span class="required">*</span></label>
+                                        <input type="password" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="password_1" id="password_1" autocomplete="new-password" required />
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="password_2">Подтвердите пароль&nbsp;<span class="required">*</span></label>
+                                        <input type="password" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="password_2" id="password_2" autocomplete="new-password" required />
+                                    </div>
+                                    
+                                    <?php do_action( 'woocommerce_resetpassword_form' ); ?>
+                                    
+                                    <input type="hidden" name="reset_key" value="<?php echo esc_attr( $rp_key ); ?>" />
+                                    <input type="hidden" name="reset_login" value="<?php echo esc_attr( $rp_login ); ?>" />
+                                    <input type="hidden" name="wc_reset_password" value="true" />
+                                    <?php wp_nonce_field( 'reset_password', 'woocommerce-reset-password-nonce' ); ?>
+                                    
+                                    <button type="submit" class="woocommerce-button button btn btn--primary btn--full auth-submit">Сохранить пароль</button>
+                                    
+                                    <?php do_action( 'woocommerce_resetpassword_form_end' ); ?>
+                                </form>
+                                
+                                <div class="auth-links">
+                                    <a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>" class="auth-link">← Вернуться к входу</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            <?php
+            get_footer();
+            exit; // Останавливаем дальнейшую обработку WordPress
+        }
+    }
+}
+add_action( 'template_redirect', 'asker_override_password_reset_page', 1 );
 

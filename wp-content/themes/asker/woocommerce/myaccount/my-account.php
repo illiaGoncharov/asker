@@ -297,6 +297,17 @@ File: <?php echo __FILE__; ?>
                             <span class="discount-label">Ваша скидка:</span>
                             <span class="discount-value"><?php echo esc_html( $total_discount ); ?>%</span>
                         </div>
+                        
+                        <?php 
+                        // Кнопка "Запросить скидку" - только для Базового уровня
+                        if ( $level_data['level'] === 'Базовый' ) : ?>
+                        <button type="button" class="request-discount-btn" onclick="openChatPopup()">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M8 1L10.163 5.279L15 6.017L11.5 9.421L12.326 14.219L8 12L3.674 14.219L4.5 9.421L1 6.017L5.837 5.279L8 1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Запросить скидку
+                        </button>
+                        <?php endif; ?>
                     </div>
                     
                     <?php
@@ -963,7 +974,7 @@ File: <?php echo __FILE__; ?>
                                                 <div class="wishlist-item">
                                                     <a href="<?php echo esc_url($product_url); ?>" class="wishlist-item-image">
                                                         <?php if ($product_image) : ?>
-                                                            <img src="<?php echo esc_url($product_image[0]); ?>" alt="<?php echo esc_attr($product->get_name()); ?>">
+                                                            <img src="<?php echo esc_url($product_image[0]); ?>" alt="">
                                                         <?php else : ?>
                                                             <div class="product-placeholder"><?php echo esc_html($product->get_name()); ?></div>
                                                         <?php endif; ?>
@@ -1101,41 +1112,33 @@ File: <?php echo __FILE__; ?>
             </script>
     <?php else: ?>
         <?php
-        // Проверяем параметры для формы сброса пароля (переход по ссылке из email)
+        // Обработка сброса пароля БЕЗ предварительной проверки ключа
+        // Проверка ключа происходит при отправке формы в WooCommerce
         if ( isset( $_GET['key'] ) && isset( $_GET['login'] ) ) {
-            // Форма установки нового пароля
+            // Показываем форму сброса пароля — проверка будет при сабмите
             $reset_key = sanitize_text_field( wp_unslash( $_GET['key'] ) );
             $reset_login = sanitize_text_field( wp_unslash( $_GET['login'] ) );
             
-            // Проверяем валидность ключа
-            $user = check_password_reset_key( $reset_key, $reset_login );
+            wc_get_template( 'myaccount/form-reset-password.php', array(
+                'key'   => $reset_key,
+                'login' => $reset_login,
+            ) );
+        } elseif ( isset( $_GET['show-reset-form'] ) ) {
+            // Переход через cookie
+            $cookie_name = 'wp-resetpass-' . COOKIEHASH;
             
-            if ( is_wp_error( $user ) ) {
-                // Ключ невалидный или истёк
-                wc_add_notice( 'Ссылка для сброса пароля недействительна или истекла. Запросите новую.', 'error' );
-                wc_get_template( 'myaccount/form-lost-password.php' );
-        } else {
-                // Показываем форму ввода нового пароля
+            if ( isset( $_COOKIE[ $cookie_name ] ) && strpos( $_COOKIE[ $cookie_name ], ':' ) !== false ) {
+                $value = sanitize_text_field( wp_unslash( $_COOKIE[ $cookie_name ] ) );
+                list( $reset_login, $reset_key ) = explode( ':', $value, 2 );
+                
+                // Показываем форму сброса пароля — проверка будет при сабмите
                 wc_get_template( 'myaccount/form-reset-password.php', array(
                     'key'   => $reset_key,
                     'login' => $reset_login,
                 ) );
-            }
-        } elseif ( isset( $_GET['show-reset-form'] ) && isset( $_COOKIE['wp-resetpass-' . COOKIEHASH] ) ) {
-            // Альтернативный способ через cookie
-            $value = sanitize_text_field( wp_unslash( $_COOKIE['wp-resetpass-' . COOKIEHASH] ) );
-            list( $reset_login, $reset_key ) = explode( ':', $value, 2 );
-            
-            $user = check_password_reset_key( $reset_key, $reset_login );
-            
-            if ( is_wp_error( $user ) ) {
-                wc_add_notice( 'Ссылка для сброса пароля недействительна или истекла. Запросите новую.', 'error' );
-                wc_get_template( 'myaccount/form-lost-password.php' );
             } else {
-                wc_get_template( 'myaccount/form-reset-password.php', array(
-                    'key'   => $reset_key,
-                    'login' => $reset_login,
-                ) );
+                wc_add_notice( 'Ссылка для сброса пароля недействительна или истекла. Запросите новую.', 'error' );
+                wc_get_template( 'myaccount/form-lost-password.php' );
             }
         } elseif ( isset( $_GET['lost-password'] ) || isset( $_GET['reset-link-sent'] ) ) {
             // Форма запроса сброса пароля

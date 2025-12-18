@@ -39,8 +39,8 @@ if ( ! defined( 'ABSPATH' ) ) {
             
             <?php do_action( 'woocommerce_resetpassword_form' ); ?>
             
-            <input type="hidden" name="reset_key" value="<?php echo esc_attr( $args['key'] ); ?>" />
-            <input type="hidden" name="reset_login" value="<?php echo esc_attr( $args['login'] ); ?>" />
+            <input type="hidden" name="reset_key" value="<?php echo esc_attr( isset( $args['key'] ) ? $args['key'] : ( isset( $key ) ? $key : '' ) ); ?>" />
+            <input type="hidden" name="reset_login" value="<?php echo esc_attr( isset( $args['login'] ) ? $args['login'] : ( isset( $login ) ? $login : '' ) ); ?>" />
             <input type="hidden" name="wc_reset_password" value="true" />
             <?php wp_nonce_field( 'reset_password', 'woocommerce-reset-password-nonce' ); ?>
             
