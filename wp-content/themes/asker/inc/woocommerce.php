@@ -4,23 +4,12 @@
  */
 
 /**
- * Убираем ненужные атрибуты из изображений товаров (alt, sizes, height)
- * Чтобы картинки нормально растягивались и не показывали alt-текст
+ * Убираем alt текст из изображений товаров
  */
 function asker_clean_product_image_attributes( $attr, $attachment, $size ) {
-    // Очищаем alt для изображений товаров
+    // Очищаем только alt
     if ( isset( $attr['alt'] ) ) {
         $attr['alt'] = '';
-    }
-    
-    // Убираем sizes чтобы картинка растягивалась
-    if ( isset( $attr['sizes'] ) ) {
-        unset( $attr['sizes'] );
-    }
-    
-    // Убираем srcset чтобы использовался основной src
-    if ( isset( $attr['srcset'] ) ) {
-        unset( $attr['srcset'] );
     }
     
     return $attr;
