@@ -51,7 +51,7 @@ get_header(); ?>
                                         <?php if ($product_image) : ?>
                                             <img src="<?php echo esc_url($product_image[0]); ?>" alt="">
                                         <?php else : ?>
-                                            <div class="product-placeholder"><?php echo esc_html($product->get_name()); ?></div>
+                                            <div class="product-placeholder"></div>
                                         <?php endif; ?>
                                     </a>
                                     <div class="wishlist-item-info">
