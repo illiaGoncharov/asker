@@ -62,6 +62,19 @@ add_action('customize_register', function ($wp_customize) {
         'type' => 'email',
     ]);
     
+    // Изображение товара по умолчанию (placeholder)
+    $wp_customize->add_setting('default_product_image', [
+        'default' => '',
+        'sanitize_callback' => 'absint',
+    ]);
+    
+    $wp_customize->add_control(new WP_Customize_Media_Control($wp_customize, 'default_product_image', [
+        'label' => 'Изображение товара по умолчанию',
+        'description' => 'Картинка для товаров без фотографии',
+        'section' => 'asker_theme_settings',
+        'mime_type' => 'image',
+    ]));
+    
     // === Категории в футере ===
     // Получаем все категории WooCommerce
     $categories_choices = array( '' => '— Не выбрано —' );

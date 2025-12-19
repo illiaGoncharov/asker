@@ -1,18 +1,7 @@
 {
   "key": "group_customer_levels",
-  "title": "Настройки Asker",
+  "title": "Уровни клиентов",
   "fields": [
-    {
-      "key": "field_default_product_image",
-      "label": "Изображение товара по умолчанию",
-      "name": "default_product_image",
-      "type": "image",
-      "instructions": "Изображение, которое будет отображаться для товаров без фотографии",
-      "required": 0,
-      "return_format": "url",
-      "preview_size": "medium",
-      "library": "all"
-    },
     {
       "key": "field_levels_config",
       "label": "Настройка уровней",

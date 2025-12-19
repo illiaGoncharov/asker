@@ -106,30 +106,20 @@ function asker_get_term_thumbnail_url($term_id, $size = 'medium') {
 }
 
 /**
- * Получить URL изображения товара по умолчанию из настроек Asker
+ * Получить URL изображения товара по умолчанию из Customizer
  * Если не задано - возвращает стандартный placeholder WooCommerce
  * 
  * @param string $size Размер изображения (thumbnail, medium, large, full)
  * @return string URL изображения
  */
 function asker_get_default_product_image($size = 'medium') {
-    $default_image = get_field('default_product_image', 'option');
+    // Берём из Customizer
+    $image_id = get_theme_mod('default_product_image');
     
-    if ($default_image) {
-        // Если ACF вернул URL
-        if (is_string($default_image)) {
-            return $default_image;
-        }
-        // Если ACF вернул ID
-        if (is_numeric($default_image)) {
-            $img_url = wp_get_attachment_image_url($default_image, $size);
-            if ($img_url) {
-                return $img_url;
-            }
-        }
-        // Если ACF вернул массив
-        if (is_array($default_image) && isset($default_image['url'])) {
-            return $default_image['url'];
+    if ($image_id) {
+        $img_url = wp_get_attachment_image_url($image_id, $size);
+        if ($img_url) {
+            return $img_url;
         }
     }
     

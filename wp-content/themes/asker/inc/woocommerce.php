@@ -4,17 +4,34 @@
  */
 
 /**
- * Убираем alt текст из изображений товаров
+ * Заменяем placeholder WooCommerce на картинку из Customizer
  */
-function asker_clean_product_image_attributes( $attr, $attachment, $size ) {
-    // Очищаем только alt
-    if ( isset( $attr['alt'] ) ) {
-        $attr['alt'] = '';
+function asker_custom_placeholder_img_src( $src, $size = 'woocommerce_thumbnail' ) {
+    $image_id = get_theme_mod( 'default_product_image' );
+    if ( $image_id ) {
+        $img_url = wp_get_attachment_image_url( $image_id, $size );
+        if ( $img_url ) {
+            return $img_url;
+        }
     }
-    
-    return $attr;
+    return $src;
 }
-add_filter( 'wp_get_attachment_image_attributes', 'asker_clean_product_image_attributes', 10, 3 );
+add_filter( 'woocommerce_placeholder_img_src', 'asker_custom_placeholder_img_src', 10, 2 );
+
+/**
+ * Заменяем HTML placeholder изображения
+ */
+function asker_custom_placeholder_img( $html, $size, $dimensions ) {
+    $image_id = get_theme_mod( 'default_product_image' );
+    if ( $image_id ) {
+        $img_url = wp_get_attachment_image_url( $image_id, $size );
+        if ( $img_url ) {
+            return '<img src="' . esc_url( $img_url ) . '" alt="" class="woocommerce-placeholder wp-post-image" />';
+        }
+    }
+    return $html;
+}
+add_filter( 'woocommerce_placeholder_img', 'asker_custom_placeholder_img', 10, 3 );
 
 /**
  * Убираем стандартные обёртки WooCommerce для страницы товара
@@ -175,6 +192,39 @@ add_action('init', 'asker_force_woocommerce_russian', 1);
 // add_theme_support('wc-product-gallery-zoom');
 // add_theme_support('wc-product-gallery-lightbox');
 // add_theme_support('wc-product-gallery-slider');
+
+/**
+ * Добавляем поле "Ссылка на Ozon" в админку товара
+ */
+function asker_add_ozon_link_field() {
+    woocommerce_wp_text_input( array(
+        'id'          => '_ozon_link',
+        'label'       => 'Ссылка на Ozon',
+        'placeholder' => 'https://ozon.ru/product/...',
+        'desc_tip'    => true,
+        'description' => 'Ссылка на этот товар на Ozon (если есть)',
+    ) );
+}
+add_action( 'woocommerce_product_options_general_product_data', 'asker_add_ozon_link_field' );
+
+/**
+ * Сохраняем поле "Ссылка на Ozon"
+ */
+function asker_save_ozon_link_field( $post_id ) {
+    $ozon_link = isset( $_POST['_ozon_link'] ) ? esc_url_raw( $_POST['_ozon_link'] ) : '';
+    update_post_meta( $post_id, '_ozon_link', $ozon_link );
+}
+add_action( 'woocommerce_process_product_meta', 'asker_save_ozon_link_field' );
+
+/**
+ * Получить ссылку на Ozon для товара
+ */
+function asker_get_ozon_link( $product_id = null ) {
+    if ( ! $product_id ) {
+        $product_id = get_the_ID();
+    }
+    return get_post_meta( $product_id, '_ozon_link', true );
+}
 
 /**
  * Убедиться, что сессия WooCommerce инициализирована

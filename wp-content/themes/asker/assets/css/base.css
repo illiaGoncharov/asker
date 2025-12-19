@@ -89,7 +89,7 @@ a {
   transition: color 0.2s ease;
 }
 
-a:hover:not(.btn):not(.btn-catalog):not(.btn-login):not(.nav-item):not(.nav-menu-item) {
+a:hover:not(.btn):not(.btn-catalog):not(.btn-login):not(.nav-item):not(.nav-menu-item):not(.ozon-link-btn) {
   color: var(--primary-yellow);
 }
 

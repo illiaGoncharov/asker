@@ -140,6 +140,15 @@ if ( ! $product ) {
 				<?php do_action( 'woocommerce_after_add_to_cart_button' ); ?>
 			</form>
 
+			<?php 
+			// Кнопка "Купить на Ozon" если есть ссылка
+			$ozon_link = asker_get_ozon_link( $product->get_id() );
+			if ( $ozon_link ) : ?>
+				<a href="<?php echo esc_url( $ozon_link ); ?>" target="_blank" rel="noopener noreferrer" class="ozon-link-btn">
+					Купить на <span class="ozon-text">OZON</span>
+				</a>
+			<?php endif; ?>
+
 			<!-- Краткое описание товара (дубликат названия) -->
 			<div class="product-short-desc">
 				<?php echo esc_html( $product->get_name() ); ?>
