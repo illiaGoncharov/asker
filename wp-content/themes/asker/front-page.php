@@ -21,23 +21,32 @@ $asker_categories_url = home_url('/all-categories');
 <section class="categories-nav">
     <div class="categories-grid">
         <?php
-        // Получаем категории товаров WooCommerce для главной страницы
-        // Используем transient кэш для производительности (2500+ товаров)
+        // Получаем категории для главной страницы
+        // Приоритет: ACF поле featured_categories, иначе автоматически первые 5
         if (class_exists('WooCommerce')) {
-            $cache_key = 'asker_home_categories_v2';
-            $product_categories = get_transient($cache_key);
             
-            if ($product_categories === false) {
-                $product_categories = get_terms(array(
-                    'taxonomy'      => 'product_cat',
-                    'hide_empty'    => true,
-                    'orderby'       => 'menu_order',
-                    'order'         => 'ASC',
-                    'number'        => 5,
-                    'parent'        => 0, // Только родительские категории - быстрее
-                ));
-                // Кэшируем на 1 час
-                set_transient($cache_key, $product_categories, HOUR_IN_SECONDS);
+            // Сначала проверяем ACF поле
+            $acf_categories = function_exists('get_field') ? get_field('featured_categories') : null;
+            
+            if (!empty($acf_categories) && is_array($acf_categories)) {
+                // Используем выбранные в ACF категории
+                $product_categories = $acf_categories;
+            } else {
+                // Fallback: автоматически первые 5 родительских категорий
+                $cache_key = 'asker_home_categories_v2';
+                $product_categories = get_transient($cache_key);
+                
+                if ($product_categories === false) {
+                    $product_categories = get_terms(array(
+                        'taxonomy'      => 'product_cat',
+                        'hide_empty'    => true,
+                        'orderby'       => 'menu_order',
+                        'order'         => 'ASC',
+                        'number'        => 5,
+                        'parent'        => 0,
+                    ));
+                    set_transient($cache_key, $product_categories, HOUR_IN_SECONDS);
+                }
             }
             
             if (!empty($product_categories) && !is_wp_error($product_categories)) {
@@ -133,15 +142,25 @@ $contact_form_shortcode = function_exists('get_field') ? (string) get_field('con
 
 ?>
 
-<!-- Hero секция -->
-<section class="hero-section">
+<!-- Hero секция с фоновым изображением -->
+<section class="hero-section hero-section--fullbg">
+    <div class="hero-background">
+        <?php if (!empty($hero_image['ID'])) : ?>
+            <?php echo wp_get_attachment_image((int) $hero_image['ID'], 'full', false, ['class' => 'hero-bg-image']); ?>
+        <?php else : ?>
+            <img class="hero-bg-image" src="<?php echo get_template_directory_uri(); ?>/assets/images/hero/hero_2.png" alt="Склад запчастей">
+        <?php endif; ?>
+        <div class="hero-overlay"></div>
+    </div>
     <div class="container">
         <div class="hero-content">
             <div class="hero-text">
+                <span class="hero-badge">Выгодные оптовые цены</span>
+                
                 <?php if ($hero_title) : ?>
                     <h1 class="hero-title"><?php echo esc_html($hero_title); ?></h1>
                 <?php else : ?>
-                    <h1 class="hero-title">Комплектующие для бытовой техники</h1>
+                    <h1 class="hero-title">Комплектующие для<br>бытовой техники</h1>
                 <?php endif; ?>
                 
                 <?php if ($hero_subtitle) : ?>
@@ -152,23 +171,16 @@ $contact_form_shortcode = function_exists('get_field') ? (string) get_field('con
                 
                 <div class="hero-buttons">
                     <?php if ($hero_cta_text && $hero_cta_link) : ?>
-                        <a class="btn btn--secondary" href="<?php echo esc_url($hero_cta_link); ?>"><?php echo esc_html($hero_cta_text); ?></a>
+                        <a class="btn btn--white-outline" href="<?php echo esc_url($hero_cta_link); ?>"><?php echo esc_html($hero_cta_text); ?></a>
                     <?php else : ?>
-                        <a class="btn btn--secondary" href="<?php echo esc_url(home_url('/shop')); ?>">Оформить заказ</a>
+                        <a class="btn btn--white-outline" href="<?php echo esc_url(home_url('/shop')); ?>">Оформить заказ</a>
                     <?php endif; ?>
                     <?php if ($hero_cta2_text && $hero_cta2_link) : ?>
-                        <a class="btn btn--outline" href="<?php echo esc_url($hero_cta2_link); ?>"><?php echo esc_html($hero_cta2_text); ?></a>
+                        <a class="btn btn--yellow-outline" href="<?php echo esc_url($hero_cta2_link); ?>"><?php echo esc_html($hero_cta2_text); ?></a>
                     <?php else : ?>
-                        <a class="btn btn--outline" href="<?php echo esc_url(home_url('/contact')); ?>">Получить скидку</a>
+                        <a class="btn btn--yellow-outline" href="<?php echo esc_url(home_url('/contact')); ?>">Получить скидку</a>
                     <?php endif; ?>
                 </div>
-            </div>
-            <div class="hero-image">
-                <?php if (!empty($hero_image['ID'])) : ?>
-                    <?php echo wp_get_attachment_image((int) $hero_image['ID'], 'large'); ?>
-                <?php else : ?>
-                    <img src="https://via.placeholder.com/500x400/e5e7eb/1a1a1a?text=Склад+запчастей" alt="Склад запчастей">
-                <?php endif; ?>
             </div>
         </div>
     </div>

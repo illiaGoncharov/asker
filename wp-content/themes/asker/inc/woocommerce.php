@@ -34,6 +34,30 @@ function asker_custom_placeholder_img( $html, $size, $dimensions ) {
 add_filter( 'woocommerce_placeholder_img', 'asker_custom_placeholder_img', 10, 3 );
 
 /**
+ * Отключаем обрезку (crop) для миниатюр товаров в каталоге
+ * Картинки будут сохранять оригинальные пропорции
+ */
+function asker_disable_thumbnail_cropping() {
+    // Отключаем crop для woocommerce_thumbnail (каталог)
+    add_image_size( 'woocommerce_thumbnail', 300, 300, false );
+    add_image_size( 'woocommerce_catalog', 300, 300, false );
+}
+add_action( 'after_setup_theme', 'asker_disable_thumbnail_cropping', 99 );
+
+/**
+ * Убираем настройку cropping из WooCommerce Customizer
+ */
+function asker_wc_thumbnail_cropping( $cropping ) {
+    return 'uncropped';
+}
+add_filter( 'woocommerce_get_image_size_thumbnail', function( $size ) {
+    $size['width']  = 300;
+    $size['height'] = 0; // 0 = пропорционально
+    $size['crop']   = false;
+    return $size;
+});
+
+/**
  * Убираем стандартные обёртки WooCommerce для страницы товара
  * Используем свой .container для единообразия с остальными страницами
  */
@@ -3010,9 +3034,10 @@ function asker_price_filter_query($query) {
         return;
     }
     
-    // Убеждаемся, что товары публичные и доступны всем
-    $query->set('post_status', 'publish');
+    // Устанавливаем post_type и post_status (WooCommerce иногда не делает этого)
+    // Важно: не трогаем tax_query — он уже установлен WordPress для категории
     $query->set('post_type', 'product');
+    $query->set('post_status', 'publish');
     
     // Фильтр по цене применяется ТОЛЬКО если есть GET параметры
     $min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? floatval($_GET['min_price']) : null;

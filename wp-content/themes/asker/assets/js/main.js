@@ -3,8 +3,6 @@
 // ===== ОБРАБОТЧИК КНОПОК КОЛИЧЕСТВА В ИЗБРАННОМ =====
 // Работает на всех страницах (wishlist, my-account)
 (function() {
-    console.log('🔧 Quantity buttons handler loaded (main.js)');
-    
     function handleQuantityClick(e) {
         // Находим кнопку
         let btn = e.target;
@@ -18,8 +16,6 @@
         const container = btn.closest('.wishlist-item-quantity');
         if (!container) return;
         
-        console.log('🔘 Quantity button clicked:', btn.className);
-        
         // Останавливаем событие СРАЗУ
         e.preventDefault();
         e.stopPropagation();
@@ -27,10 +23,7 @@
         
         // Находим инпут
         const input = container.querySelector('.quantity-input');
-        if (!input) {
-            console.warn('❌ Input not found');
-            return;
-        }
+        if (!input) return;
         
         // Читаем текущее значение
         let value = parseInt(input.value, 10);
@@ -38,8 +31,6 @@
         
         const min = parseInt(input.getAttribute('min'), 10) || 1;
         const max = parseInt(input.getAttribute('max'), 10) || 999;
-        
-        console.log('Current value:', value, 'min:', min, 'max:', max);
         
         // Изменяем значение
         if (btn.classList.contains('quantity-minus')) {
@@ -51,13 +42,10 @@
         // ОБНОВЛЯЕМ ЗНАЧЕНИЕ
         input.value = value;
         input.setAttribute('value', value);
-        
-        console.log('✅ Quantity changed to:', value, '| New input.value:', input.value);
     }
     
     // Добавляем обработчик на capture phase для раннего перехвата
     document.addEventListener('click', handleQuantityClick, true);
-    console.log('✅ Quantity handler attached (capture phase)');
 })();
 
 // Бургер-меню навигации
@@ -641,11 +629,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Проверяем Content-Type перед парсингом JSON
                     const contentType = response.headers.get('content-type');
                     if (!contentType || !contentType.includes('application/json')) {
-                        // Если не JSON, читаем как текст для отладки
-                        return response.text().then(text => {
-                            console.error('Ожидался JSON, получен:', text.substring(0, 200));
-                            throw new Error('Ответ не в формате JSON');
-                        });
+                        // Если не JSON - выбрасываем ошибку
+                        throw new Error('Ответ не в формате JSON');
                     }
                     return response.json();
                 })
@@ -682,7 +667,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 jQuery(document.body).trigger('added_to_cart', [fragments, cartHash, $button]);
                             } catch (e) {
                                 // Игнорируем ошибки WooCommerce скриптов
-                                console.warn('Ошибка в WooCommerce событии (игнорируем):', e);
                             }
                         }
                         
@@ -705,7 +689,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Проверяем WooCommerce формат ответа (fragments, cart_hash)
                         // Это УСПЕШНЫЙ ответ от WooCommerce!
                         if (data.fragments || data.cart_hash) {
-                            console.log('✅ Item added to cart (WooCommerce fragments format)');
                             button.textContent = 'Добавлено!';
                             button.style.background = '#4CAF50';
                             
@@ -722,8 +705,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             }, 2000);
                         } else {
                             // Реальная ошибка
-                            const errorMessage = data.data?.message || data.data || data.message || 'Ошибка добавления товара в корзину';
-                            console.log('❌ Ошибка:', errorMessage);
                             button.textContent = originalText;
                             button.removeAttribute('data-processing');
                             button.disabled = false;
@@ -731,9 +712,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 })
                 .catch(error => {
-                    console.log('Ошибка AJAX запроса (suppressed):', error);
-                    // Не показываем alert для ошибок - они могут быть перехвачены расширениями
-                    // alert удален для избежания ложных срабатываний
+                    // Тихая обработка ошибок - могут быть вызваны расширениями браузера
                     button.textContent = originalText;
                     button.removeAttribute('data-processing');
                     button.disabled = false;
@@ -790,7 +769,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Если счетчики не найдены - это нормально, не нужно пытаться снова
             
         } catch (error) {
-            console.error('❌ Error updating wishlist counter:', error);
+            // Тихая обработка ошибок счетчика избранного
         }
     }
     
@@ -1003,17 +982,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Фильтры каталога - переход по категориям (с делегированием событий для динамических элементов)
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Filter script loaded'); // Для отладки
-    
     // Обработчик изменения чекбокса
     function handleCategoryChange(checkbox) {
         const url = checkbox.getAttribute('data-url');
-        console.log('Checkbox changed:', checkbox.checked, 'URL:', url); // Для отладки
         
-        if (!url) {
-            console.error('No URL found for checkbox');
-            return;
-        }
+        if (!url) return;
         
         if (checkbox.checked) {
             // Снимаем отметку с других чекбоксов
@@ -1023,13 +996,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
             // Переходим на страницу категории
-            console.log('Navigating to:', url);
             window.location.href = url;
         } else {
             // Если снята галочка - возвращаемся в общий каталог
             const resetBtn = document.querySelector('.filter-reset-btn');
             if (resetBtn && resetBtn.href) {
-                console.log('Resetting to shop page:', resetBtn.href);
                 window.location.href = resetBtn.href;
             }
         }
@@ -1063,9 +1034,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Инициализация для уже существующих элементов
-    document.querySelectorAll('.filter-checkbox input[type="checkbox"]').forEach(checkbox => {
-        console.log('Found checkbox:', checkbox.getAttribute('data-url'));
-    });
+    // Чекбоксы категорий найдены и готовы к работе
     
     // Обработчик раскрытия подкатегорий по клику на "+"
     document.querySelectorAll('.filter-toggle-btn').forEach(btn => {
@@ -1334,13 +1303,11 @@ function initAccountTabs() {
 // Функция обновления вкладки "Избранное"
 function updateWishlistTab() {
     if (typeof jQuery === 'undefined' || typeof asker_ajax === 'undefined') {
-        console.warn('⚠️ jQuery или asker_ajax не доступен');
         return;
     }
     
     const $wishlistContainer = jQuery('.wishlist-products');
     if (!$wishlistContainer.length) {
-        console.warn('⚠️ Контейнер избранного не найден');
         return;
     }
     
@@ -1625,7 +1592,6 @@ if (document.readyState === 'loading') {
                 const $btn2 = $(this);
                 const timeoutId = setTimeout(function() {
                     if ($btn2.hasClass('loading')) {
-                        console.warn('⚠️ Таймаут: принудительно убираем loading с кнопки');
                         clearLoadingState($btn2);
                     }
                 }, 5000); // 5 секунд максимум
@@ -1637,10 +1603,9 @@ if (document.readyState === 'loading') {
         // Устанавливаем таймаут на случай, если событие added_to_cart не сработает
         const timeoutId = setTimeout(function() {
             if ($btn.hasClass('loading')) {
-                console.warn('⚠️ Таймаут: принудительно убираем loading с кнопки');
                 clearLoadingState($btn);
             }
-        }, 5000); // 5 секунд максимум (уменьшили с 10)
+        }, 5000); // 5 секунд максимум
         
         // Сохраняем ID таймаута в data атрибут
         $btn.data('loading-timeout', timeoutId);
@@ -1733,7 +1698,6 @@ if (document.readyState === 'loading') {
         setTimeout(function() {
             $('.add_to_cart_button.loading').each(function() {
                 const $btn = $(this);
-                console.log('🧹 Очистка loading после обновления фрагментов WooCommerce');
                 clearLoadingState($btn);
                 
                 // Восстанавливаем текст если нужно
@@ -1765,7 +1729,6 @@ if (document.readyState === 'loading') {
                     
                     // Если запрос завершился, но кнопка все еще в loading больше 2 секунд - очищаем
                     if (loadingTime > 2000) {
-                        console.log('🧹 Очистка loading после завершения AJAX запроса');
                         clearLoadingState($btn);
                         
                         const originalText = $btn.data('original-text') || 'В корзину';
@@ -1807,7 +1770,6 @@ if (document.readyState === 'loading') {
     $(document).ready(function() {
         $('.add_to_cart_button.loading').each(function() {
             const $btn = $(this);
-            console.warn('🧹 Найдена залипшая кнопка, очищаем состояние');
             clearLoadingState($btn);
         });
     });
@@ -1821,7 +1783,6 @@ if (document.readyState === 'loading') {
             
             // Если кнопка в состоянии loading больше 6 секунд - принудительно очищаем
             if (loadingTime > 6000) {
-                console.warn('🧹 Принудительная очистка залипшей кнопки (была в loading ' + Math.round(loadingTime / 1000) + ' секунд)');
                 clearLoadingState($btn);
                 
                 // Восстанавливаем текст кнопки

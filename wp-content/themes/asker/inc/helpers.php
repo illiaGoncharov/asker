@@ -4,6 +4,80 @@
  */
 
 /**
+ * Исправление visibility товаров (hidden → visible)
+ * Запуск: добавить ?fix_visibility=1 к любому URL (только для админов)
+ * Обрабатывает по 100 товаров за раз, автоматически продолжает
+ */
+add_action('init', function() {
+    if (!isset($_GET['fix_visibility']) || !current_user_can('manage_options')) {
+        return;
+    }
+    
+    // Увеличиваем лимиты
+    @set_time_limit(300);
+    @ini_set('memory_limit', '512M');
+    
+    $batch_size = 100;
+    $offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
+    $total_fixed = isset($_GET['total']) ? intval($_GET['total']) : 0;
+    
+    // Получаем порцию товаров со скрытой видимостью
+    $hidden_products = get_posts([
+        'post_type' => 'product',
+        'post_status' => 'publish',
+        'numberposts' => $batch_size,
+        'offset' => $offset,
+        'fields' => 'ids',
+        'tax_query' => [[
+            'taxonomy' => 'product_visibility',
+            'field' => 'slug',
+            'terms' => ['exclude-from-catalog', 'exclude-from-search'],
+            'operator' => 'IN',
+        ]],
+    ]);
+    
+    $fixed_in_batch = 0;
+    foreach ($hidden_products as $product_id) {
+        $product = wc_get_product($product_id);
+        if ($product && $product->get_catalog_visibility() !== 'visible') {
+            $product->set_catalog_visibility('visible');
+            $product->save();
+            $fixed_in_batch++;
+        }
+    }
+    
+    $total_fixed += $fixed_in_batch;
+    
+    // Если есть ещё товары — автоматически продолжаем
+    if (count($hidden_products) === $batch_size) {
+        $next_url = add_query_arg([
+            'fix_visibility' => 1,
+            'offset' => $offset + $batch_size,
+            'total' => $total_fixed,
+        ], home_url('/'));
+        
+        wp_die(
+            '<h1>⏳ Обработка...</h1>' .
+            '<p>Обработано в этой порции: <strong>' . $fixed_in_batch . '</strong></p>' .
+            '<p>Всего исправлено: <strong>' . $total_fixed . '</strong></p>' .
+            '<p>Автоматическое продолжение через 1 сек...</p>' .
+            '<script>setTimeout(function(){ window.location.href = "' . esc_url($next_url) . '"; }, 1000);</script>',
+            'Visibility Fix - Processing',
+            ['response' => 200]
+        );
+    }
+    
+    // Готово
+    wp_die(
+        '<h1>✅ Visibility исправлен</h1>' .
+        '<p>Всего обновлено товаров: <strong>' . $total_fixed . '</strong></p>' .
+        '<p><a href="' . esc_url(home_url('/')) . '">← На главную</a></p>',
+        'Visibility Fix - Complete',
+        ['response' => 200]
+    );
+});
+
+/**
  * Сброс кэша категорий и цен при изменении товаров/категорий
  * Автоматически очищает transient кэш для оптимизации производительности
  */
