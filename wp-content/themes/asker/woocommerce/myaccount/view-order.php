@@ -10,8 +10,17 @@
 defined( 'ABSPATH' ) || exit;
 
 // Получаем заказ
+if ( ! isset( $order ) || ! $order ) {
+    // Пробуем получить из query_vars
+    global $wp;
+    if ( isset( $wp->query_vars['view-order'] ) ) {
+        $order_id = absint( $wp->query_vars['view-order'] );
+        $order = wc_get_order( $order_id );
+    }
+}
+
 if ( ! $order ) {
-    wc_print_notice( __( 'Заказ не найден', 'woocommerce' ), 'error' );
+    echo '<div class="container"><div class="woocommerce-error">Заказ не найден</div></div>';
     return;
 }
 
@@ -76,6 +85,7 @@ $shipping_company_name = isset( $shipping_companies[ $shipping_company ] ) ? $sh
 $tracking_number = $order->get_meta( '_tracking_number' );
 ?>
 
+<div class="container">
 <div class="view-order-page">
     
     <!-- Заголовок -->
@@ -354,7 +364,4 @@ $tracking_number = $order->get_meta( '_tracking_number' );
         </div>
     </div>
 </div>
-
-
-
-
+</div>

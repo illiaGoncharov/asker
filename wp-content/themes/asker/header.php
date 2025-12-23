@@ -273,14 +273,11 @@
                 </form>
             </div>
             <div class="header-actions">
-                <a href="tel:<?php echo get_option('woocommerce_store_phone', '+7 (812) 123-45-67'); ?>" class="icon-phone">
-                    <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/phone.svg" alt="Телефон" class="header-icon">
+                <a href="https://t.me/Ararat007_7" target="_blank" class="icon-chat">
+                    <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/chat.svg" alt="Telegram" class="header-icon">
                 </a>
-                <a href="#" class="icon-chat" onclick="openChatPopup(); return false;">
-                    <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/chat.svg" alt="Чат" class="header-icon">
-                </a>
-                <a href="mailto:<?php echo get_option('woocommerce_store_email', 'info@askerspb.ru'); ?>" class="icon-mail">
-                    <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/message.svg" alt="Сообщение" class="header-icon">
+                <a href="#" class="icon-mail" onclick="openContactFormPopup(); return false;">
+                    <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/message.svg" alt="Обратная связь" class="header-icon">
                 </a>
                 <a href="<?php echo esc_url(home_url('/wishlist/')); ?>" class="icon-heart">
                     <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/heart.svg" alt="Избранное" class="header-icon">
@@ -401,17 +398,13 @@
         </nav>
         <div class="mobile-menu-contacts">
             <h4>Контакты</h4>
-            <a href="tel:<?php echo get_option('woocommerce_store_phone', '+7 (812) 123-45-67'); ?>" class="mobile-contact-link">
-                <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/phone.svg" alt="" class="mobile-contact-icon">
-                <span><?php echo get_option('woocommerce_store_phone', '+7 (812) 123-45-67'); ?></span>
-            </a>
             <a href="mailto:<?php echo get_option('woocommerce_store_email', 'info@askerspb.ru'); ?>" class="mobile-contact-link">
                 <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/message.svg" alt="" class="mobile-contact-icon">
                 <span><?php echo get_option('woocommerce_store_email', 'info@askerspb.ru'); ?></span>
             </a>
-            <a href="#" class="mobile-contact-link" onclick="openChatPopup(); document.querySelector('.mobile-menu-close').click(); return false;">
+            <a href="https://t.me/Ararat007_7" target="_blank" class="mobile-contact-link" onclick="document.querySelector('.mobile-menu-close').click();">
                 <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/chat.svg" alt="" class="mobile-contact-icon">
-                <span>Онлайн-чат</span>
+                <span>Telegram</span>
             </a>
         </div>
     </div>

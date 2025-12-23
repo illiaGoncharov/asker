@@ -31,15 +31,15 @@ get_header();
                             <p><a href="mailto:opt@asker-corp.ru">opt@asker-corp.ru</a></p>
                         </div>
                         <div class="contact-info__item">
-                            <strong>Телефон:</strong>
-                            <p><a href="tel:+79311099476">+7 (931) 109-94-76</a></p>
+                            <strong>Telegram:</strong>
+                            <p><a href="https://t.me/Ararat007_7" target="_blank">@Ararat007_7</a></p>
                         </div>
                         <div class="contact-info__item">
                             <strong>Режим работы:</strong>
                             <p>ПН-ПТ с 9:00 до 18:00</p>
                         </div>
                     </div>
-                    <button type="button" class="contact-card__button contact-card__button--chat" onclick="openChatPopup(); return false;">Написать директору</button>
+                    <a href="https://t.me/Ararat007_7" target="_blank" class="contact-card__button contact-card__button--chat">Написать директору</a>
                 </div>
 
                 <!-- Форма обратной связи -->

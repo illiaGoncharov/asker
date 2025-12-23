@@ -36,6 +36,19 @@ add_action('customize_register', function ($wp_customize) {
         'type' => 'text',
     ]);
     
+    // Шорткод формы обратной связи (попап в хедере)
+    $wp_customize->add_setting('popup_form_shortcode', [
+        'default' => '',
+        'sanitize_callback' => 'sanitize_text_field',
+    ]);
+    
+    $wp_customize->add_control('popup_form_shortcode', [
+        'label' => 'Шорткод формы для попапа',
+        'description' => 'Форма обратной связи (имя, телефон, email). Шорткод CF7.',
+        'section' => 'asker_theme_settings',
+        'type' => 'text',
+    ]);
+    
     // API ключ Яндекс.Карт
     $wp_customize->add_setting('yandex_map_api_key', [
         'default' => '',

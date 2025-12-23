@@ -1,57 +1,15 @@
 /**
- * Функции для хедера: чат, счетчики корзины и избранного
+ * Функции для хедера: чат, счетчики корзины и избранного, форма обратной связи
  */
 
-// Функция открытия попапа чата
+// Функция открытия попапа чата (устаревшая, оставлена для совместимости)
 function openChatPopup() {
-    // Проверяем, что DOM загружен
-    if (typeof document === 'undefined' || !document.body) {
-        console.error('DOM не загружен');
-        return;
-    }
-    
-    // Создаем попап
-    const popup = document.createElement('div');
-    popup.className = 'chat-popup';
-    popup.innerHTML = `
-        <div class="chat-popup-content">
-            <div class="chat-popup-header">
-                <h3>Связаться с нами</h3>
-                <button class="chat-popup-close" onclick="closeChatPopup()">&times;</button>
-            </div>
-            <div class="chat-popup-body">
-                <p>Выберите удобный способ связи:</p>
-                <div class="chat-options">
-                    <a href="https://t.me/askerspb" target="_blank" class="chat-option telegram">
-                        <span class="chat-icon">📱</span>
-                        <span>Telegram</span>
-                    </a>
-                    <a href="https://wa.me/78121234567" target="_blank" class="chat-option whatsapp">
-                        <span class="chat-icon">💬</span>
-                        <span>WhatsApp</span>
-                    </a>
-                    <a href="#" class="chat-option live-chat" onclick="startLiveChat(); return false;">
-                        <span class="chat-icon">💬</span>
-                        <span>Живой чат</span>
-                    </a>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(popup);
-    
-    // Анимация появления
-    setTimeout(() => {
-        popup.classList.add('show');
-    }, 10);
+    // Перенаправляем на Telegram
+    window.open('https://t.me/Ararat007_7', '_blank');
 }
 
-// Функция закрытия попапа чата
+// Функция закрытия попапа чата (устаревшая, оставлена для совместимости)
 function closeChatPopup() {
-    if (typeof document === 'undefined') {
-        return;
-    }
     const popup = document.querySelector('.chat-popup');
     if (popup) {
         popup.classList.remove('show');
@@ -61,12 +19,83 @@ function closeChatPopup() {
     }
 }
 
-// Функция запуска живого чата
+// Функция запуска живого чата (устаревшая, оставлена для совместимости)
 function startLiveChat() {
-    // Здесь можно интегрировать с сервисом живого чата
-    alert('Функция живого чата будет доступна в ближайшее время');
-    closeChatPopup();
+    window.open('https://t.me/Ararat007_7', '_blank');
 }
+
+// Функция открытия попапа формы обратной связи (CF7)
+function openContactFormPopup() {
+    // Проверяем, есть ли уже попап - если да, показываем его
+    var existingPopup = document.querySelector('.contact-form-popup');
+    if (existingPopup) {
+        existingPopup.classList.add('show');
+        return;
+    }
+    
+    // Получаем форму CF7 из скрытого контейнера
+    var formTemplate = document.getElementById('popup-contact-form-template');
+    var formContent = '';
+    
+    if (formTemplate && formTemplate.innerHTML.trim()) {
+        formContent = formTemplate.innerHTML;
+    } else {
+        // Фолбэк - сообщение со ссылкой на Telegram
+        formContent = '<p class="popup-form-notice">Форма не настроена.<br><br><a href="https://t.me/Ararat007_7" target="_blank" class="popup-tg-link">Написать в Telegram</a></p>';
+    }
+    
+    // Создаем попап
+    var popup = document.createElement('div');
+    popup.className = 'contact-form-popup show'; // Сразу добавляем show
+    popup.id = 'contact-form-popup';
+    
+    popup.innerHTML = 
+        '<div class="contact-form-popup-content">' +
+            '<div class="contact-form-popup-header">' +
+                '<h3>Обратная связь</h3>' +
+                '<button type="button" class="contact-form-popup-close" onclick="closeContactFormPopup()">&times;</button>' +
+            '</div>' +
+            '<div class="contact-form-popup-body">' +
+                formContent +
+            '</div>' +
+        '</div>';
+    
+    document.body.appendChild(popup);
+    
+    // Инициализируем CF7 для новой формы
+    if (typeof wpcf7 !== 'undefined' && wpcf7.init) {
+        var cf7Form = popup.querySelector('.wpcf7');
+        if (cf7Form) {
+            wpcf7.init(cf7Form);
+        }
+    }
+    
+    // Фокус на первое поле
+    var firstInput = popup.querySelector('input[type="text"], input[type="email"], input[type="tel"]');
+    if (firstInput) {
+        setTimeout(function() {
+            firstInput.focus();
+        }, 100);
+    }
+}
+
+// Функция закрытия попапа формы обратной связи
+function closeContactFormPopup() {
+    const popup = document.querySelector('.contact-form-popup');
+    if (popup) {
+        popup.classList.remove('show');
+        setTimeout(() => {
+            popup.remove();
+        }, 300);
+    }
+}
+
+// СРАЗУ экспортируем функции для onclick в HTML
+window.openContactFormPopup = openContactFormPopup;
+window.closeContactFormPopup = closeContactFormPopup;
+window.openChatPopup = openChatPopup;
+window.closeChatPopup = closeChatPopup;
+window.startLiveChat = startLiveChat;
 
 // Функция обновления счетчика корзины
 function updateCartCount() {
@@ -186,8 +215,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Закрытие попапа по клику вне его
     document.addEventListener('click', function(e) {
-        const popup = document.querySelector('.chat-popup');
-        if (popup && e.target === popup) {
+        // Закрытие попапа формы обратной связи
+        const contactPopup = document.querySelector('.contact-form-popup');
+        if (contactPopup && e.target === contactPopup) {
+            closeContactFormPopup();
+        }
+        // Закрытие старого попапа чата (для совместимости)
+        const chatPopup = document.querySelector('.chat-popup');
+        if (chatPopup && e.target === chatPopup) {
             closeChatPopup();
         }
     });
@@ -195,6 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Закрытие попапа по Escape
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
+            closeContactFormPopup();
             closeChatPopup();
         }
     });
@@ -204,5 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
 window.openChatPopup = openChatPopup;
 window.closeChatPopup = closeChatPopup;
 window.startLiveChat = startLiveChat;
+window.openContactFormPopup = openContactFormPopup;
+window.closeContactFormPopup = closeContactFormPopup;
 window.updateCartCount = updateCartCount;
 window.updateWishlistCount = updateWishlistCount;

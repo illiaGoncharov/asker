@@ -34,9 +34,8 @@
 
 /* Общий контейнер для контентных страниц */
 .content-page {
-  max-width: 900px;
-  /* margin: 0 auto; */
-  padding: 32px 20px 64px;
+  max-width: 100%;
+  padding: 32px 0 64px;
   line-height: 1.7;
   color: #1a1a1a;
 }
@@ -102,6 +101,7 @@
   max-width: inherit;
   display: flex;
   justify-content: space-between;
+  gap: 32px;
 }
 
 .contact-page__left, 
@@ -115,7 +115,13 @@
   }
 
   .content-page--contacts {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .contact-page__left, 
+  .contact-page__right {
+    width: 100%;
   }
 
   .content-page__features {

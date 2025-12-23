@@ -213,6 +213,27 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
     }
 }
 
+// Проверяем WooCommerce endpoints - если мы на специальном endpoint, выводим его
+global $wp;
+
+// Если view-order endpoint - показываем шаблон просмотра заказа
+if ( isset( $wp->query_vars['view-order'] ) && $wp->query_vars['view-order'] ) {
+    $order_id = absint( $wp->query_vars['view-order'] );
+    $order = wc_get_order( $order_id );
+    
+    // Проверяем, что заказ принадлежит текущему пользователю
+    if ( $order && $order->get_user_id() === get_current_user_id() ) {
+        wc_get_template( 'myaccount/view-order.php', array( 'order' => $order, 'order_id' => $order_id ) );
+        return;
+    } else {
+        wc_print_notice( __( 'Недостаточно прав для просмотра этого заказа', 'woocommerce' ), 'error' );
+        return;
+    }
+}
+
+// Если orders endpoint - показываем список заказов (обрабатываем далее в нашем шаблоне)
+// Если edit-account endpoint - показываем редактирование аккаунта (обрабатываем далее)
+// Если lost-password endpoint - показываем форму восстановления (обрабатывается WooCommerce)
 ?>
 
 <!-- 

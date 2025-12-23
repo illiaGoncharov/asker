@@ -403,16 +403,29 @@ function asker_override_homepage_template( $template ) {
         return $template;
     }
     
-    // Проверяем главную страницу (более агрессивная проверка)
-    $is_home = is_front_page() || is_home();
-    if ( ! $is_home ) {
-        // Проверяем по URL
-        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
-        $request_uri = rtrim( $request_uri, '/' );
-        $is_home = ( $request_uri === '' || $request_uri === '/' || $request_uri === '/index.php' );
+    // ВАЖНО: НЕ перехватываем страницу блога
+    // is_home() = true для страницы записей (блог)
+    // is_front_page() = true для главной страницы
+    if ( is_home() && ! is_front_page() ) {
+        // Это страница блога, не перехватываем
+        return $template;
     }
     
-    if ( $is_home ) {
+    // Также проверяем по URL - не перехватываем /blog
+    $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+    if ( stripos( $request_uri, '/blog' ) !== false ) {
+        return $template;
+    }
+    
+    // Проверяем главную страницу
+    $is_homepage = is_front_page();
+    if ( ! $is_homepage ) {
+        // Проверяем по URL
+        $request_uri_clean = rtrim( $request_uri, '/' );
+        $is_homepage = ( $request_uri_clean === '' || $request_uri_clean === '/' || $request_uri_clean === '/index.php' );
+    }
+    
+    if ( $is_homepage ) {
         // Если есть front-page.php, используем его ВСЕГДА
         $front_page_template = get_template_directory() . '/front-page.php';
         if ( file_exists( $front_page_template ) ) {

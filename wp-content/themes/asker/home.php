@@ -1,14 +1,8 @@
 <?php
 /**
- * Фолбэк-шаблон. Используется для архивов/блога при отсутствии спец-шаблонов.
- * Для главной страницы используется front-page.php
+ * Шаблон страницы блога (страница записей)
+ * Используется когда в Настройки → Чтение выбрана "Страница записей"
  */
-
-// Если это главная страница - загружаем front-page.php
-if ( is_front_page() && ! is_home() ) {
-    get_template_part('front-page');
-    return;
-}
 
 get_header();
 ?>
@@ -31,6 +25,14 @@ get_header();
                             <div class="post-card__image">
                                 <?php the_post_thumbnail('medium_large'); ?>
                             </div>
+                        <?php else : ?>
+                            <div class="post-card__image post-card__image--placeholder">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <polyline points="21 15 16 10 5 21"/>
+                                </svg>
+                            </div>
                         <?php endif; ?>
                         <div class="post-card__content">
                             <h2 class="post-card__title"><?php the_title(); ?></h2>
@@ -41,8 +43,15 @@ get_header();
                 </article>
             <?php endwhile; ?>
         </div>
+        
         <div class="pagination">
-            <?php the_posts_pagination(); ?>
+            <?php 
+            the_posts_pagination(array(
+                'mid_size' => 2,
+                'prev_text' => '← Назад',
+                'next_text' => 'Вперёд →',
+            )); 
+            ?>
         </div>
     <?php else : ?>
         <div class="no-posts">
@@ -52,8 +61,4 @@ get_header();
 </div>
 
 <?php get_footer(); ?>
-
-
-
-
 
