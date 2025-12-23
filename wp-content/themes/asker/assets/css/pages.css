@@ -587,7 +587,8 @@
     cursor: pointer;
 }
 
-.contact-card__button:hover {
+.contact-card__button:hover,
+.contact-card__button--chat:hover {
     background: var(--primary-yellow);
     color: var(--primary-black);
 }

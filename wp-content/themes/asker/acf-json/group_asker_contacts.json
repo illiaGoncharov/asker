@@ -8,17 +8,20 @@
       "name": "contact_form_shortcode",
       "type": "text",
       "instructions": "Вставьте сюда шорткод формы Contact Form 7, например: [contact-form-7 id=\"123\"]",
-      "required": 0
+      "required": 0,
+      "placeholder": "[contact-form-7 id=\"123\"]",
+      "default_value": "",
+      "maxlength": "",
+      "prepend": "",
+      "append": "",
+      "wrapper": {
+        "width": "",
+        "class": "",
+        "id": ""
+      }
     }
   ],
   "location": [
-    [
-      {
-        "param": "page",
-        "operator": "==",
-        "value": "12"
-      }
-    ],
     [
       {
         "param": "page_template",
@@ -27,12 +30,14 @@
       }
     ]
   ],
+  "menu_order": 0,
   "position": "normal",
   "style": "default",
   "label_placement": "top",
   "instruction_placement": "label",
+  "hide_on_screen": "",
   "active": true,
   "description": "Поля страницы контактов",
-  "modified": 1729423200
+  "modified": 1735689600
 }
 

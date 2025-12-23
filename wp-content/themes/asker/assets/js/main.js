@@ -1905,10 +1905,11 @@ if (typeof jQuery !== 'undefined') {
             e.preventDefault();
             e.stopPropagation();
             
-            if (typeof openChatPopup === 'function') {
-                openChatPopup();
-            } else if (typeof window.openChatPopup === 'function') {
-                window.openChatPopup();
+            // Открываем попап с формой обратной связи
+            if (typeof openContactFormPopup === 'function') {
+                openContactFormPopup();
+            } else if (typeof window.openContactFormPopup === 'function') {
+                window.openContactFormPopup();
             }
         });
     });
@@ -1961,5 +1962,24 @@ document.addEventListener('DOMContentLoaded', function() {
             top: 0,
             behavior: 'smooth'
         });
+    });
+});
+
+// Обработчик клика на иконку поиска в шапке
+document.addEventListener('DOMContentLoaded', function() {
+    // Используем делегирование событий для надёжности
+    document.addEventListener('click', function(e) {
+        const searchIcon = e.target.closest('.search-icon');
+        if (searchIcon) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Находим форму поиска
+            const searchForm = searchIcon.closest('.search-bar')?.querySelector('form');
+            if (searchForm) {
+                // Отправляем форму поиска
+                searchForm.submit();
+            }
+        }
     });
 });

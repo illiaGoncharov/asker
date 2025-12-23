@@ -152,9 +152,8 @@ get_header();
                         <div class="checkout__form-fields checkout__pickup-fields" style="display: none;">
                             <div class="checkout__pickup-info">
                                 <h4>Адрес склада для самовывоза:</h4>
-                                <p><strong>г. Москва, ул. Промышленная, д. 15, стр. 2</strong></p>
-                                <p>Время работы: Пн-Пт 9:00-18:00, Сб 10:00-16:00</p>
-                                <p>Телефон: +7 (495) 123-45-67</p>
+                                <p><strong>Санкт-Петербург, ул. Карпатская д. 16</strong></p>
+                                <p>Время работы: Пн-Пт: 09.00 - 18.00</p>
                             </div>
                             <div class="checkout__field-group">
                                 <input type="text" name="pickup_contact_person" placeholder="Контактное лицо для получения">
