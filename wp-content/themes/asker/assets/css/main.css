@@ -2666,6 +2666,7 @@ body.woocommerce-shop .woocommerce ul.products li.product .button,
   display: flex;
   flex-direction: column;
   position: relative;
+  align-self: start;
 }
 
 /* Название товара */
@@ -4337,6 +4338,359 @@ body.woocommerce-account .container .section__title,
   
   .post-card__title {
     font-size: 16px;
+  }
+}
+
+/* ===== ОТДЕЛЬНАЯ СТАТЬЯ БЛОГА ===== */
+
+/* Контент страницы (для статей и информационных страниц) */
+.content-page {
+  max-width: 800px;
+  line-height: 1.7;
+  font-size: 16px;
+  color: var(--text-dark);
+  font-family: var(--font-secondary);
+}
+
+.content-page h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 32px 0 16px;
+  color: var(--primary-black);
+  font-family: var(--font-primary);
+}
+
+.content-page h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 24px 0 12px;
+  color: var(--primary-black);
+  font-family: var(--font-primary);
+}
+
+.content-page h4 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 20px 0 10px;
+  color: var(--primary-black);
+  font-family: var(--font-primary);
+}
+
+.content-page p {
+  margin: 0 0 16px;
+}
+
+.content-page ul,
+.content-page ol {
+  margin: 0 0 16px;
+  padding-left: 24px;
+}
+
+.content-page li {
+  margin-bottom: 8px;
+}
+
+.content-page a {
+  color: var(--primary-yellow);
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.content-page a:hover {
+  color: #e6c200;
+}
+
+.content-page img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin: 16px 0;
+}
+
+.content-page blockquote {
+  margin: 24px 0;
+  padding: 16px 24px;
+  background: var(--bg-light);
+  border-left: 4px solid var(--primary-yellow);
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+  color: var(--text-gray);
+}
+
+.content-page table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 24px 0;
+}
+
+.content-page th,
+.content-page td {
+  padding: 12px 16px;
+  border: 1px solid var(--border-gray);
+  text-align: left;
+}
+
+.content-page th {
+  background: var(--bg-light);
+  font-weight: 600;
+}
+
+/* Статья блога */
+.single-post {
+  margin-bottom: 48px;
+}
+
+.single-post__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: var(--text-gray);
+  font-family: var(--font-secondary);
+}
+
+.single-post__date,
+.single-post__category {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.single-post__date svg,
+.single-post__category svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.single-post__category a {
+  color: var(--text-gray);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.single-post__category a:hover {
+  color: var(--primary-yellow);
+}
+
+.single-post__image {
+  margin-bottom: 32px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.single-post__image img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Теги статьи */
+.single-post__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-gray);
+}
+
+.single-post__tags-label {
+  font-size: 14px;
+  color: var(--text-gray);
+  font-family: var(--font-secondary);
+}
+
+.single-post__tag {
+  display: inline-block;
+  padding: 6px 12px;
+  background: var(--bg-light);
+  border-radius: 20px;
+  font-size: 13px;
+  color: var(--text-dark);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-family: var(--font-secondary);
+}
+
+.single-post__tag:hover {
+  background: var(--primary-yellow);
+  color: var(--primary-black);
+}
+
+/* Навигация между статьями */
+.post-navigation {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border-gray);
+}
+
+.post-navigation__link {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: var(--bg-light);
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.post-navigation__link:hover {
+  background: var(--bg-white);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.post-navigation__link--prev {
+  justify-content: flex-start;
+}
+
+.post-navigation__link--next {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.post-navigation__link--empty {
+  background: transparent;
+}
+
+.post-navigation__arrow {
+  font-size: 24px;
+  color: var(--primary-yellow);
+  font-weight: 600;
+}
+
+.post-navigation__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.post-navigation__label {
+  font-size: 12px;
+  color: var(--text-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: var(--font-secondary);
+}
+
+.post-navigation__title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--primary-black);
+  font-family: var(--font-primary);
+  line-height: 1.3;
+}
+
+/* Адаптивность для статьи блога */
+@media (max-width: 768px) {
+  .content-page {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  
+  .content-page h2 {
+    font-size: 20px;
+    margin: 24px 0 12px;
+  }
+  
+  .content-page h3 {
+    font-size: 18px;
+    margin: 20px 0 10px;
+  }
+  
+  .content-page h4 {
+    font-size: 16px;
+  }
+  
+  .single-post__meta {
+    gap: 16px;
+    font-size: 13px;
+  }
+  
+  .single-post__image {
+    margin-bottom: 24px;
+    border-radius: 12px;
+  }
+  
+  .single-post__tags {
+    margin-top: 24px;
+    padding-top: 20px;
+  }
+  
+  .post-navigation {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-top: 32px;
+    padding-top: 24px;
+  }
+  
+  .post-navigation__link {
+    padding: 16px;
+  }
+  
+  .post-navigation__link--next {
+    text-align: left;
+    justify-content: flex-start;
+  }
+  
+  .post-navigation__arrow {
+    font-size: 20px;
+  }
+  
+  .post-navigation__title {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-page {
+    font-size: 14px;
+  }
+  
+  .content-page h2 {
+    font-size: 18px;
+  }
+  
+  .content-page h3 {
+    font-size: 16px;
+  }
+  
+  .content-page blockquote {
+    padding: 12px 16px;
+    margin: 16px 0;
+  }
+  
+  .single-post__meta {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .single-post__tags {
+    gap: 6px;
+  }
+  
+  .single-post__tag {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  
+  .post-navigation__link {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .post-navigation__label {
+    font-size: 11px;
+  }
+  
+  .post-navigation__title {
+    font-size: 13px;
   }
 }
 
