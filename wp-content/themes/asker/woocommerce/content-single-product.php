@@ -92,8 +92,8 @@ if ( ! $product ) {
 				</div>
 			<?php endif; ?>
 
-			<!-- Кнопка чата (желтая кнопка справа вверху) -->
-			<button class="product-chat-btn" aria-label="Нашли дешевле?">
+			<!-- Кнопка "Нашли дешевле" - открывает попап с формой -->
+			<button type="button" class="product-chat-btn" aria-label="Нашли дешевле?" onclick="openContactFormPopup(); return false;">
 				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
 					<path d="M2 10C2 5.58172 5.58172 2 10 2C14.4183 2 18 5.58172 18 10C18 14.4183 14.4183 18 10 18H2V10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 				</svg>

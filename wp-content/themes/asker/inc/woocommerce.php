@@ -4,6 +4,70 @@
  */
 
 /**
+ * Разрешаем добавлять товары в корзину даже если нет в наличии
+ * Менеджеры потом подтверждают или заменяют товары
+ */
+add_filter( 'woocommerce_is_purchasable', '__return_true', 10 );
+add_filter( 'woocommerce_variation_is_purchasable', '__return_true', 10 );
+
+// Отключаем проверку наличия на складе при добавлении в корзину
+add_filter( 'woocommerce_product_is_in_stock', '__return_true', 10 );
+
+// Разрешаем backorders (предзаказы) для всех товаров
+add_filter( 'woocommerce_product_backorders_allowed', '__return_true', 10, 2 );
+
+// Убираем сообщение "нет в наличии" с кнопки
+add_filter( 'woocommerce_get_availability', function( $availability, $product ) {
+    // Если товар не в наличии - показываем "Под заказ" вместо "Нет в наличии"
+    if ( ! $product->is_in_stock() || $product->get_stock_quantity() <= 0 ) {
+        $availability['availability'] = 'Под заказ';
+        $availability['class'] = 'on-backorder';
+    }
+    return $availability;
+}, 10, 2 );
+
+/**
+ * Удаляем дублирующиеся WooCommerce notices
+ * Предотвращает показ одного и того же сообщения несколько раз
+ */
+function asker_remove_duplicate_notices() {
+    if ( ! function_exists( 'wc_get_notices' ) ) {
+        return;
+    }
+    
+    $notice_types = array( 'error', 'success', 'notice' );
+    
+    foreach ( $notice_types as $type ) {
+        $notices = wc_get_notices( $type );
+        if ( ! empty( $notices ) && is_array( $notices ) ) {
+            $unique_notices = array();
+            $seen_messages = array();
+            
+            foreach ( $notices as $notice ) {
+                $message = is_array( $notice ) ? $notice['notice'] : $notice;
+                $message_hash = md5( $message );
+                
+                if ( ! isset( $seen_messages[ $message_hash ] ) ) {
+                    $seen_messages[ $message_hash ] = true;
+                    $unique_notices[] = $notice;
+                }
+            }
+            
+            // Очищаем и добавляем только уникальные
+            wc_clear_notices( $type );
+            foreach ( $unique_notices as $notice ) {
+                $message = is_array( $notice ) ? $notice['notice'] : $notice;
+                $data = is_array( $notice ) && isset( $notice['data'] ) ? $notice['data'] : array();
+                wc_add_notice( $message, $type, $data );
+            }
+        }
+    }
+}
+add_action( 'woocommerce_before_single_product', 'asker_remove_duplicate_notices', 5 );
+add_action( 'woocommerce_before_cart', 'asker_remove_duplicate_notices', 5 );
+add_action( 'woocommerce_before_checkout_form', 'asker_remove_duplicate_notices', 5 );
+
+/**
  * Заменяем placeholder WooCommerce на картинку из Customizer
  */
 function asker_custom_placeholder_img_src( $src, $size = 'woocommerce_thumbnail' ) {
@@ -20,6 +84,7 @@ add_filter( 'woocommerce_placeholder_img_src', 'asker_custom_placeholder_img_src
 
 /**
  * Заменяем HTML placeholder изображения
+ * Используем картинку из Customizer без текста alt
  */
 function asker_custom_placeholder_img( $html, $size, $dimensions ) {
     $image_id = get_theme_mod( 'default_product_image' );
@@ -29,9 +94,21 @@ function asker_custom_placeholder_img( $html, $size, $dimensions ) {
             return '<img src="' . esc_url( $img_url ) . '" alt="" class="woocommerce-placeholder wp-post-image" />';
         }
     }
-    return $html;
+    // Если нет картинки в Customizer - белый placeholder без текста
+    return '<img src="data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 300 300\'%3E%3Crect fill=\'%23f5f5f5\' width=\'300\' height=\'300\'/%3E%3C/svg%3E" alt="" class="woocommerce-placeholder wp-post-image" />';
 }
 add_filter( 'woocommerce_placeholder_img', 'asker_custom_placeholder_img', 10, 3 );
+
+/**
+ * Убираем название товара из alt placeholder изображения
+ */
+add_filter( 'woocommerce_product_get_image', function( $image, $product, $size, $attr, $placeholder, $image_type ) {
+    // Если это placeholder - убираем alt
+    if ( strpos( $image, 'woocommerce-placeholder' ) !== false ) {
+        $image = preg_replace( '/alt="[^"]*"/', 'alt=""', $image );
+    }
+    return $image;
+}, 10, 6 );
 
 /**
  * Отключаем обрезку (crop) для миниатюр товаров в каталоге

@@ -30,12 +30,23 @@ if ( $related_products ) : ?>
             ?>
                 <div class="product-card">
                     <button class="favorite-btn" data-product-id="<?php echo esc_attr( $product_id ); ?>"></button>
-                    <a href="<?php echo esc_url( $product_url ); ?>">
-                        <?php if ( $product_image ) : ?>
-                            <img class="product-image" src="<?php echo esc_url( $product_image[0] ); ?>" alt="<?php echo esc_attr( $product->get_name() ); ?>">
-                        <?php else : ?>
-                            <div class="product-placeholder"><?php echo esc_html( $product->get_name() ); ?></div>
-                        <?php endif; ?>
+                    <a href="<?php echo esc_url( $product_url ); ?>" class="product-image-link">
+                        <div class="product-image">
+                            <?php if ( $product_image ) : ?>
+                                <img src="<?php echo esc_url( $product_image[0] ); ?>" alt="<?php echo esc_attr( $product->get_name() ); ?>">
+                            <?php else : 
+                                // Используем placeholder из настроек или SVG заглушку
+                                $placeholder_id = get_theme_mod( 'default_product_image' );
+                                if ( $placeholder_id ) {
+                                    $placeholder_url = wp_get_attachment_image_url( $placeholder_id, 'medium' );
+                                    if ( $placeholder_url ) {
+                                        echo '<img src="' . esc_url( $placeholder_url ) . '" alt="">';
+                                    }
+                                } else {
+                                    echo '<img src="data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 300 300\'%3E%3Crect fill=\'%23f5f5f5\' width=\'300\' height=\'300\'/%3E%3C/svg%3E" alt="">';
+                                }
+                            endif; ?>
+                        </div>
                     </a>
                     <h3 class="product-title">
                         <a href="<?php echo esc_url( $product_url ); ?>"><?php echo esc_html( $product->get_name() ); ?></a>
