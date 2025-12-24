@@ -320,9 +320,9 @@ File: <?php echo __FILE__; ?>
                         </div>
                         
                         <?php 
-                        // Кнопка "Запросить скидку" - только для Базового уровня
+                        // Кнопка "Запросить скидку" - только для Базового уровня, открывает форму обратной связи
                         if ( $level_data['level'] === 'Базовый' ) : ?>
-                        <button type="button" class="request-discount-btn" onclick="openChatPopup()">
+                        <button type="button" class="request-discount-btn" onclick="openContactFormPopup()">
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M8 1L10.163 5.279L15 6.017L11.5 9.421L12.326 14.219L8 12L3.674 14.219L4.5 9.421L1 6.017L5.837 5.279L8 1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
