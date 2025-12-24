@@ -17,6 +17,11 @@ $blog_query = new WP_Query( array(
     'orderby'        => 'date',
     'order'          => 'DESC',
 ) );
+
+// DEBUG: Временно показываем информацию о запросе (удалить после отладки)
+if ( current_user_can( 'administrator' ) ) {
+    echo '<!-- DEBUG: Found ' . $blog_query->found_posts . ' posts, Query: ' . $blog_query->request . ' -->';
+}
 ?>
 
 <div class="container">
