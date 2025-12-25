@@ -20,7 +20,8 @@ add_action('wp_enqueue_scripts', function () {
         // main.css для пользовательских стилей
         $main_css_path = get_template_directory() . '/assets/css/main.css';
         if (file_exists($main_css_path) && is_readable($main_css_path)) {
-            $main_css_version = filemtime($main_css_path) ?: time();
+            // Агрессивный cache-bust: filemtime + размер файла
+            $main_css_version = filemtime($main_css_path) . '.' . filesize($main_css_path);
             wp_enqueue_style(
                 'asker-main',
                 get_template_directory_uri() . '/assets/css/main.css',

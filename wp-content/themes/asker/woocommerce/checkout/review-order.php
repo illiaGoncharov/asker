@@ -8,52 +8,128 @@
  */
 
 defined( 'ABSPATH' ) || exit;
-
-do_action( 'woocommerce_checkout_before_order_review' );
 ?>
 
-<div id="order_review" class="woocommerce-checkout-review-order">
-    
-    <?php do_action( 'woocommerce_checkout_order_review' ); ?>
-    
-    <!-- Сводка заказа -->
-    <div class="checkout__order-totals">
-        <div class="checkout__total-row">
-            <span class="checkout__total-label">Итого:</span>
-            <span class="checkout__total-value"><?php wc_cart_totals_subtotal_html(); ?></span>
-        </div>
-        
-        <?php if ( WC()->cart->get_discount_total() > 0 ) : ?>
-        <div class="checkout__total-row checkout__total-row--discount">
-            <span class="checkout__total-label">Скидка:</span>
-            <span class="checkout__total-value">-<?php echo wc_price( WC()->cart->get_discount_total() ); ?></span>
-        </div>
+<!-- Список товаров -->
+<table class="shop_table woocommerce-checkout-review-order-table">
+    <thead>
+        <tr>
+            <th class="product-name"><?php esc_html_e( 'Product', 'woocommerce' ); ?></th>
+            <th class="product-total"><?php esc_html_e( 'Subtotal', 'woocommerce' ); ?></th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php
+        do_action( 'woocommerce_review_order_before_cart_contents' );
+
+        foreach ( WC()->cart->get_cart() as $cart_item_key => $cart_item ) {
+            $_product = apply_filters( 'woocommerce_cart_item_product', $cart_item['data'], $cart_item, $cart_item_key );
+
+            if ( $_product && $_product->exists() && $cart_item['quantity'] > 0 && apply_filters( 'woocommerce_checkout_cart_item_visible', true, $cart_item, $cart_item_key ) ) {
+                ?>
+                <tr class="<?php echo esc_attr( apply_filters( 'woocommerce_cart_item_class', 'cart_item', $cart_item, $cart_item_key ) ); ?>">
+                    <td class="product-name">
+                        <?php echo wp_kses_post( apply_filters( 'woocommerce_cart_item_name', $_product->get_name(), $cart_item, $cart_item_key ) ) . '&nbsp;'; ?>
+                        <?php echo apply_filters( 'woocommerce_checkout_cart_item_quantity', ' <strong class="product-quantity">' . sprintf( '&times;&nbsp;%s', $cart_item['quantity'] ) . '</strong>', $cart_item, $cart_item_key ); ?>
+                        <?php echo wc_get_formatted_cart_item_data( $cart_item ); ?>
+                    </td>
+                    <td class="product-total">
+                        <?php echo apply_filters( 'woocommerce_cart_item_subtotal', WC()->cart->get_product_subtotal( $_product, $cart_item['quantity'] ), $cart_item, $cart_item_key ); ?>
+                    </td>
+                </tr>
+                <?php
+            }
+        }
+
+        do_action( 'woocommerce_review_order_after_cart_contents' );
+        ?>
+    </tbody>
+    <tfoot>
+        <tr class="cart-subtotal">
+            <th><?php esc_html_e( 'Subtotal', 'woocommerce' ); ?></th>
+            <td><?php wc_cart_totals_subtotal_html(); ?></td>
+        </tr>
+
+        <?php foreach ( WC()->cart->get_coupons() as $code => $coupon ) : ?>
+            <tr class="cart-discount coupon-<?php echo esc_attr( sanitize_title( $code ) ); ?>">
+                <th><?php wc_cart_totals_coupon_label( $coupon ); ?></th>
+                <td><?php wc_cart_totals_coupon_html( $coupon ); ?></td>
+            </tr>
+        <?php endforeach; ?>
+
+        <?php if ( WC()->cart->needs_shipping() && WC()->cart->show_shipping() ) : ?>
+            <?php do_action( 'woocommerce_review_order_before_shipping' ); ?>
+            <?php wc_cart_totals_shipping_html(); ?>
+            <?php do_action( 'woocommerce_review_order_after_shipping' ); ?>
+        <?php endif; ?>
+
+        <?php foreach ( WC()->cart->get_fees() as $fee ) : ?>
+            <tr class="fee">
+                <th><?php echo esc_html( $fee->name ); ?></th>
+                <td><?php wc_cart_totals_fee_html( $fee ); ?></td>
+            </tr>
+        <?php endforeach; ?>
+
+        <?php if ( wc_tax_enabled() && ! WC()->cart->display_prices_including_tax() ) : ?>
+            <?php if ( 'itemized' === get_option( 'woocommerce_tax_total_display' ) ) : ?>
+                <?php foreach ( WC()->cart->get_tax_totals() as $code => $tax ) : ?>
+                    <tr class="tax-rate tax-rate-<?php echo esc_attr( sanitize_title( $code ) ); ?>">
+                        <th><?php echo esc_html( $tax->label ); ?></th>
+                        <td><?php echo wp_kses_post( $tax->formatted_amount ); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php else : ?>
+                <tr class="tax-total">
+                    <th><?php echo esc_html( WC()->countries->tax_or_vat() ); ?></th>
+                    <td><?php wc_cart_totals_taxes_total_html(); ?></td>
+                </tr>
+            <?php endif; ?>
         <?php endif; ?>
         
-        <div class="checkout__total-row">
-            <span class="checkout__total-label">Способ оплаты:</span>
-            <span class="checkout__total-value">По счету</span>
-        </div>
-        
-        <div class="checkout__total-row checkout__total-row--final">
-            <span class="checkout__total-label">К оплате:</span>
-            <span class="checkout__total-value"><?php wc_cart_totals_order_total_html(); ?></span>
-        </div>
-    </div>
+        <?php do_action( 'woocommerce_review_order_before_order_total' ); ?>
+
+        <tr class="order-total">
+            <th><?php esc_html_e( 'Total', 'woocommerce' ); ?></th>
+            <td><?php wc_cart_totals_order_total_html(); ?></td>
+        </tr>
+
+        <?php do_action( 'woocommerce_review_order_after_order_total' ); ?>
+    </tfoot>
+</table>
+
+<?php do_action( 'woocommerce_review_order_before_payment' ); ?>
+
+<div id="payment" class="woocommerce-checkout-payment">
+    <?php if ( WC()->cart->needs_payment() ) : ?>
+        <ul class="wc_payment_methods payment_methods methods">
+            <?php
+            if ( ! empty( $available_gateways = WC()->payment_gateways->get_available_payment_gateways() ) ) {
+                foreach ( $available_gateways as $gateway ) {
+                    wc_get_template( 'checkout/payment-method.php', array( 'gateway' => $gateway ) );
+                }
+            } else {
+                echo '<li class="woocommerce-notice woocommerce-notice--info woocommerce-info">' . apply_filters( 'woocommerce_no_available_payment_methods_message', WC()->customer->get_billing_country() ? esc_html__( 'Sorry, it seems that there are no available payment methods for your state. Please contact us if you require assistance or wish to make alternate arrangements.', 'woocommerce' ) : esc_html__( 'Please fill in your details above to see available payment methods.', 'woocommerce' ) ) . '</li>';
+            }
+            ?>
+        </ul>
+    <?php endif; ?>
     
-    <!-- Кнопка подтверждения -->
-    <div class="checkout__submit">
-        <button type="submit" class="checkout__submit-btn" name="woocommerce_checkout_place_order" id="place_order" value="<?php esc_attr_e( 'Place order', 'woocommerce' ); ?>" data-value="<?php esc_attr_e( 'Place order', 'woocommerce' ); ?>">
-            Подтвердить заказ
-        </button>
+    <div class="form-row place-order">
+        <noscript>
+            <?php esc_html_e( 'Since your browser does not support JavaScript, or it is disabled, please ensure you click the <em>Update Totals</em> button before placing your order. You may be charged more than the amount stated above if you fail to do so.', 'woocommerce' ); ?>
+            <br/><button type="submit" class="button alt" name="woocommerce_checkout_update_totals" value="<?php esc_attr_e( 'Update totals', 'woocommerce' ); ?>"><?php esc_html_e( 'Update totals', 'woocommerce' ); ?></button>
+        </noscript>
+
+        <?php wc_get_template( 'checkout/terms.php' ); ?>
+
+        <?php do_action( 'woocommerce_review_order_before_submit' ); ?>
+
+        <?php echo apply_filters( 'woocommerce_order_button_html', '<button type="submit" class="button alt checkout__submit-btn" name="woocommerce_checkout_place_order" id="place_order" value="' . esc_attr( 'Подтвердить заказ' ) . '" data-value="' . esc_attr( 'Подтвердить заказ' ) . '">Подтвердить заказ</button>' ); ?>
+
+        <?php do_action( 'woocommerce_review_order_after_submit' ); ?>
+
+        <?php wp_nonce_field( 'woocommerce-process_checkout', 'woocommerce-process-checkout-nonce' ); ?>
     </div>
-    
-    <!-- Дополнительная информация -->
-    <div class="checkout__order-info">
-        <p class="checkout__info-text">НДС включен в стоимость товаров</p>
-        <p class="checkout__info-text">Стоимость доставки рассчитывается отдельно</p>
-    </div>
-    
 </div>
 
-<?php do_action( 'woocommerce_checkout_after_order_review' ); ?>
+<?php do_action( 'woocommerce_review_order_after_payment' ); ?>

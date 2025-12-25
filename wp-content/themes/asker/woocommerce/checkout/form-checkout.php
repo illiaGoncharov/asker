@@ -25,7 +25,7 @@ do_action( 'woocommerce_checkout_before_customer_details' );
 </div>
 
 <!-- Правая колонка - сводка заказа -->
-<div class="woocommerce-checkout-review-order">
+<div class="checkout__order-summary">
     
     <?php do_action( 'woocommerce_checkout_before_order_review' ); ?>
     

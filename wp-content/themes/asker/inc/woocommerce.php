@@ -2026,7 +2026,9 @@ function asker_disable_checkout_ajax() {
                                 if (data.success) {
                                     window.location.href = '<?php echo home_url( '/thankyou/' ); ?>?order=' + data.data.order_id;
                                 } else {
-                                    alert('Ошибка создания заказа: ' + data.data);
+                                    // data.data может быть объектом с message, или строкой
+                                    var errorMsg = (data.data && data.data.message) ? data.data.message : (typeof data.data === 'string' ? data.data : 'Неизвестная ошибка');
+                                    alert('Ошибка создания заказа: ' + errorMsg);
                                 }
                             });
                         } else {

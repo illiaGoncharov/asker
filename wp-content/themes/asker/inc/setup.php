@@ -3,6 +3,9 @@
  * Инициализация темы: поддержка возможностей, меню, локализация.
  */
 
+// Отключаем Admin Bar на фронтенде (может вызывать 500 на checkout)
+add_filter('show_admin_bar', '__return_false');
+
 add_action('after_setup_theme', function () {
     // Принудительно устанавливаем русский язык для WordPress и WooCommerce
     if ( !get_option('WPLANG') ) {

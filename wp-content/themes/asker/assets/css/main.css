@@ -1,5 +1,14 @@
 /* Custom styles for Asker theme */
 
+/* Переопределяем стили WordPress Recovery Mode */
+html body {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: var(--bg-site, #fff);
+}
+
 /* Import base styles and modules */
 @import url('base.css');
 @import url('header.css');
@@ -9946,11 +9955,22 @@ body.thankyou-modal-open {
   max-width: 100%;
 }
 
-.woocommerce-checkout .checkout-grid .checkout {
+/* Форма чекаута - сетка из двух колонок */
+.woocommerce-checkout .checkout-grid .woocommerce-checkout-form,
+.woocommerce-checkout .checkout-grid > form.checkout {
   display: grid;
   grid-template-columns: 1fr 400px;
   gap: 40px;
   align-items: start;
+}
+
+/* Адаптивность для формы */
+@media (max-width: 1024px) {
+  .woocommerce-checkout .checkout-grid .woocommerce-checkout-form,
+  .woocommerce-checkout .checkout-grid > form.checkout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
 }
 
 /* Левая колонка - формы */
