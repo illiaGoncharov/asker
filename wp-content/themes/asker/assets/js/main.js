@@ -333,11 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Сразу обновляем счетчик локально
             if (typeof updateWishlistCounter === 'function') {
-                if (typeof updateWishlistCounter === 'function') {
-                    updateWishlistCounter();
-                } else if (typeof updateWishlistCount === 'function') {
-                    updateWishlistCount();
-                }
+                updateWishlistCounter();
             } else if (typeof updateWishlistCount === 'function') {
                 updateWishlistCount();
             }
@@ -353,16 +349,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         action_type: wasFavorite ? 'remove' : 'add'
                     },
                     success: function(response) {
-                        // Обновляем счетчик всегда
+                        // Обновляем счетчик
                         if (typeof updateWishlistCounter === 'function') {
-                if (typeof updateWishlistCounter === 'function') {
-                    updateWishlistCounter();
-                } else if (typeof updateWishlistCount === 'function') {
-                    updateWishlistCount();
-                }
-            } else if (typeof updateWishlistCount === 'function') {
-                updateWishlistCount();
-            }
+                            updateWishlistCounter();
+                        } else if (typeof updateWishlistCount === 'function') {
+                            updateWishlistCount();
+                        }
                         
                         // Если удалили из избранного и вкладка "Избранное" видна - обновляем список
                         if (wasFavorite) {
@@ -382,14 +374,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     error: function(xhr, status, error) {
                         // При ошибке AJAX всё равно обновляем счетчик
                         if (typeof updateWishlistCounter === 'function') {
-                if (typeof updateWishlistCounter === 'function') {
-                    updateWishlistCounter();
-                } else if (typeof updateWishlistCount === 'function') {
-                    updateWishlistCount();
-                }
-            } else if (typeof updateWishlistCount === 'function') {
-                updateWishlistCount();
-            }
+                            updateWishlistCounter();
+                        } else if (typeof updateWishlistCount === 'function') {
+                            updateWishlistCount();
+                        }
                         
                         // И обновляем список если в ЛК
                         const $wishlistTab = jQuery('#wishlist');
@@ -406,11 +394,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Обновляем счетчик в хедере
             if (typeof updateWishlistCounter === 'function') {
-                if (typeof updateWishlistCounter === 'function') {
-                    updateWishlistCounter();
-                } else if (typeof updateWishlistCount === 'function') {
-                    updateWishlistCount();
-                }
+                updateWishlistCounter();
             } else if (typeof updateWishlistCount === 'function') {
                 updateWishlistCount();
             }
@@ -488,79 +472,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
         
-        // Обновляем счетчик при загрузке
-        if (typeof updateWishlistCount === 'function') {
-            updateWishlistCount();
-        }
-        if (typeof updateCartCount === 'function') {
-            updateCartCount();
-        }
-        
-        // Дополнительная проверка через небольшую задержку
-        setTimeout(() => {
-            if (typeof updateWishlistCounter === 'function') {
-                if (typeof updateWishlistCounter === 'function') {
-                if (typeof updateWishlistCounter === 'function') {
-                    updateWishlistCounter();
-                } else if (typeof updateWishlistCount === 'function') {
-                    updateWishlistCount();
-                }
-            } else if (typeof updateWishlistCount === 'function') {
-                updateWishlistCount();
-            }
-            } else if (typeof updateWishlistCount === 'function') {
-                updateWishlistCount();
-            }
-            if (typeof updateCartCounter === 'function') {
-                updateCartCounter();
-            } else if (typeof updateCartCount === 'function') {
-                updateCartCount();
-            }
-        }, 100);
-        
-        // Еще одна проверка через большую задержку для надежности
-        setTimeout(() => {
-            if (typeof updateWishlistCounter === 'function') {
-                if (typeof updateWishlistCounter === 'function') {
-                if (typeof updateWishlistCounter === 'function') {
-                    updateWishlistCounter();
-                } else if (typeof updateWishlistCount === 'function') {
-                    updateWishlistCount();
-                }
-            } else if (typeof updateWishlistCount === 'function') {
-                updateWishlistCount();
-            }
-            } else if (typeof updateWishlistCount === 'function') {
-                updateWishlistCount();
-            }
-            if (typeof updateCartCounter === 'function') {
-                updateCartCounter();
-            } else if (typeof updateCartCount === 'function') {
-                updateCartCount();
-            }
-        }, 500);
-        
-        // Периодически обновляем счетчики (каждые 10 секунд, чтобы не мигало)
-        setInterval(() => {
-            if (typeof updateWishlistCounter === 'function') {
-                if (typeof updateWishlistCounter === 'function') {
-                if (typeof updateWishlistCounter === 'function') {
-                    updateWishlistCounter();
-                } else if (typeof updateWishlistCount === 'function') {
-                    updateWishlistCount();
-                }
-            } else if (typeof updateWishlistCount === 'function') {
-                updateWishlistCount();
-            }
-            } else if (typeof updateWishlistCount === 'function') {
-                updateWishlistCount();
-            }
-            if (typeof updateCartCounter === 'function') {
-                updateCartCounter();
-            } else if (typeof updateCartCount === 'function') {
-                updateCartCount();
-            }
-        }, 10000);
+        // Счётчики обновляются при загрузке в header-functions.js
+        // и при событиях WooCommerce (added_to_cart, removed_from_cart)
         
         // Функционал кнопок "В корзину" - используем делегирование событий
         // Обработка через addEventListener с делегированием для динамически добавляемых кнопок
@@ -753,11 +666,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 counter.style.display = count > 0 ? 'flex' : 'none';
             }
             
-            // Также вызываем серверную синхронизацию если функция доступна
-            if (typeof updateWishlistCount === 'function') {
-                updateWishlistCount();
-            }
-            
             // Обновляем мобильный счетчик
             const mobileWishlistCount = document.querySelector('.mobile-wishlist-count');
             if (mobileWishlistCount) {
@@ -823,41 +731,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // WooCommerce сам управляет корзиной через свои AJAX-запросы
-    // Мы слушаем события и обновляем счетчик
-    
-    // Дополнительная инициализация при полной загрузке страницы
-    window.addEventListener('load', function() {
-        setTimeout(() => {
-            if (typeof updateWishlistCounter === 'function') {
-                if (typeof updateWishlistCounter === 'function') {
-                    updateWishlistCounter();
-                } else if (typeof updateWishlistCount === 'function') {
-                    updateWishlistCount();
-                }
-            } else if (typeof updateWishlistCount === 'function') {
-                updateWishlistCount();
-            }
-            updateCartCounter();
-        }, 200);
-    });
-    
-    // Обработчик для изменения видимости страницы (когда пользователь возвращается на вкладку)
-    document.addEventListener('visibilitychange', function() {
-        if (!document.hidden) {
-            setTimeout(() => {
-                if (typeof updateWishlistCounter === 'function') {
-                if (typeof updateWishlistCounter === 'function') {
-                    updateWishlistCounter();
-                } else if (typeof updateWishlistCount === 'function') {
-                    updateWishlistCount();
-                }
-            } else if (typeof updateWishlistCount === 'function') {
-                updateWishlistCount();
-            }
-                updateCartCounter();
-            }, 100);
-        }
-    });
+    // Счётчики обновляются при событиях и при загрузке в header-functions.js
     
 
     // Функция очистки корзины на сервере
