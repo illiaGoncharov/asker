@@ -42,14 +42,18 @@ get_header();
                 <div class="contact-form-card">
                     <h2 class="contact-form-card__title">Обратная связь</h2>
                     <?php 
-                    // Получаем шорткод формы из ACF для текущей страницы (страницы контактов)
-                    $contact_form_shortcode = function_exists('get_field') ? (string) get_field('contact_form_shortcode') : '';
+                    // Шорткод формы: сначала из Customizer, fallback на ACF
+                    $contact_form_shortcode = get_theme_mod('contacts_form_shortcode', '');
+                    if (empty($contact_form_shortcode) && function_exists('get_field')) {
+                        $contact_form_shortcode = (string) get_field('contact_form_shortcode');
+                    }
+                    
                     if ($contact_form_shortcode) : 
                         echo do_shortcode($contact_form_shortcode);
                     else : 
                     ?>
-                        <p class="form-placeholder" style="padding: 20px; background: #f5f5f5; border-radius: 8px; color: #666;">
-                            Добавьте шорткод формы Contact Form 7 в ACF настройках этой страницы (поле "Шорткод контактной формы")
+                        <p class="form-placeholder">
+                            Добавьте шорткод формы в Внешний вид → Настроить → Настройки Asker
                         </p>
                     <?php endif; ?>
                 </div>

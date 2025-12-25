@@ -30,6 +30,7 @@ require_once get_template_directory() . '/inc/schema.php';
 require_once get_template_directory() . '/inc/image-optimization.php';
 require_once get_template_directory() . '/inc/spam-protection.php';
 require_once get_template_directory() . '/inc/hide-post-types.php'; // Скрытие неиспользуемых типов постов
+require_once get_template_directory() . '/inc/admin-test-order.php'; // Страница генерации тестового заказа
 
 /**
  * КРИТИЧНО: Принудительно загружаем front-page.php для главной

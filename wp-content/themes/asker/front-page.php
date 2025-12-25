@@ -138,7 +138,11 @@ $hero_cta2_link   = function_exists('get_field') ? (string) get_field('hero_cta2
 $hero_image       = function_exists('get_field') ? get_field('hero_image') : null; // массив ACF image
 $featured_cats    = function_exists('get_field') ? asker_to_array(get_field('featured_categories')) : [];
 $featured_products= function_exists('get_field') ? asker_to_array(get_field('featured_products')) : [];
-$contact_form_shortcode = function_exists('get_field') ? (string) get_field('contact_form_shortcode') : '';
+// Шорткод формы: сначала из Customizer, fallback на ACF
+$contact_form_shortcode = get_theme_mod('homepage_form_shortcode', '');
+if (empty($contact_form_shortcode) && function_exists('get_field')) {
+    $contact_form_shortcode = (string) get_field('contact_form_shortcode');
+}
 
 ?>
 
@@ -381,7 +385,7 @@ $contact_form_shortcode = function_exists('get_field') ? (string) get_field('con
                     <?php echo do_shortcode($contact_form_shortcode); ?>
                 <?php else : ?>
                     <p class="form-placeholder">
-                        Добавьте шорткод формы в ACF главной страницы
+                        Добавьте шорткод формы в Внешний вид → Настроить → Настройки Asker
                     </p>
                 <?php endif; ?>
             </div>

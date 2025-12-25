@@ -46,17 +46,35 @@ if ( empty( $product ) || ! $product->is_visible() ) {
 					<?php echo $product->get_price_html(); ?>
 				</div>
 
-			<!-- Кнопка "В корзину" -->
+			<!-- Кнопка "В корзину" с счётчиком -->
 			<div class="shop-product-actions">
 				<?php
-				// Простая кнопка "В корзину" без quantity-wrapper (только на странице товара)
+				// Получаем количество этого товара в корзине
+				$cart_qty = 0;
+				if ( function_exists( 'WC' ) && WC()->cart ) {
+					foreach ( WC()->cart->get_cart() as $cart_item ) {
+						if ( $cart_item['product_id'] == $product->get_id() ) {
+							$cart_qty = $cart_item['quantity'];
+							break;
+						}
+					}
+				}
+				
+				// Кнопка с бейджем количества
+				$btn_class = 'button product_type_' . esc_attr( $product->get_type() ) . ' add_to_cart_button ajax_add_to_cart';
+				if ( $cart_qty > 0 ) {
+					$btn_class .= ' has-items';
+				}
+				
 				echo sprintf(
-					'<a href="%s" data-quantity="1" class="button product_type_%s add_to_cart_button ajax_add_to_cart" data-product_id="%s" data-product_sku="%s" aria-label="%s" rel="nofollow">В корзину</a>',
+					'<a href="%s" data-quantity="1" class="%s" data-product_id="%s" data-product_sku="%s" aria-label="%s" rel="nofollow"><span class="btn-text">В корзину</span><span class="btn-cart-count" data-count="%d">%d</span></a>',
 					esc_url( $product->add_to_cart_url() ),
-					esc_attr( $product->get_type() ),
+					esc_attr( $btn_class ),
 					esc_attr( $product->get_id() ),
 					esc_attr( $product->get_sku() ),
-					esc_attr( $product->add_to_cart_description() )
+					esc_attr( $product->add_to_cart_description() ),
+					$cart_qty,
+					$cart_qty
 				);
 				?>
 			</div>

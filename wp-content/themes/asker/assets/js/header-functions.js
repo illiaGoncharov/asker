@@ -62,11 +62,27 @@ function openContactFormPopup() {
     
     document.body.appendChild(popup);
     
-    // Инициализируем CF7 для новой формы
-    if (typeof wpcf7 !== 'undefined' && wpcf7.init) {
-        var cf7Form = popup.querySelector('.wpcf7');
-        if (cf7Form) {
-            wpcf7.init(cf7Form);
+    // Инициализируем CF7 для новой формы (поддержка разных версий CF7)
+    var cf7Form = popup.querySelector('.wpcf7');
+    if (cf7Form) {
+        // CF7 5.4+ использует wpcf7.init()
+        if (typeof wpcf7 !== 'undefined') {
+            if (typeof wpcf7.init === 'function') {
+                wpcf7.init(cf7Form);
+            } else if (typeof wpcf7.initForm === 'function') {
+                // Старые версии CF7
+                wpcf7.initForm(cf7Form.querySelector('form'));
+            }
+        }
+        
+        // Также триггерим событие для CF7
+        var cf7Event = new CustomEvent('wpcf7:init', { detail: { form: cf7Form } });
+        document.dispatchEvent(cf7Event);
+        
+        // Принудительно добавляем обработчик отправки если CF7 не инициализирован
+        var form = cf7Form.querySelector('form');
+        if (form && !form.hasAttribute('data-cf7-initialized')) {
+            form.setAttribute('data-cf7-initialized', 'true');
         }
     }
     

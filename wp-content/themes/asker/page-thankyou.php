@@ -238,6 +238,104 @@ if ( empty( $manager_phone ) ) {
         <div class="thankyou__footer-message">
             <p>Спасибо, что выбрали наш магазин! Мы ценим ваше доверие.</p>
         </div>
+        
+        <?php
+        // Отладочный блок - только для залогиненных администраторов
+        if ( is_user_logged_in() && current_user_can( 'administrator' ) && $order ) :
+        ?>
+        <div class="thankyou__debug" id="debug-panel">
+            <div class="thankyou__debug-header" onclick="document.getElementById('debug-content').classList.toggle('show')">
+                <h3>🔧 Отладочная информация (только для админа)</h3>
+                <span class="debug-toggle">▼</span>
+            </div>
+            <div class="thankyou__debug-content" id="debug-content">
+                
+                <!-- Основная информация о заказе -->
+                <div class="debug-section">
+                    <h4>Основные данные заказа</h4>
+                    <table class="debug-table">
+                        <tr><td>Order ID:</td><td><strong><?php echo $order->get_id(); ?></strong></td></tr>
+                        <tr><td>Order Number:</td><td><?php echo $order->get_order_number(); ?></td></tr>
+                        <tr><td>Status:</td><td><code><?php echo $order->get_status(); ?></code></td></tr>
+                        <tr><td>User ID:</td><td><?php echo $order->get_user_id() ?: 'Guest'; ?></td></tr>
+                        <tr><td>Date Created:</td><td><?php echo $order->get_date_created() ? $order->get_date_created()->format('Y-m-d H:i:s') : 'N/A'; ?></td></tr>
+                        <tr><td>Date Modified:</td><td><?php echo $order->get_date_modified() ? $order->get_date_modified()->format('Y-m-d H:i:s') : 'N/A'; ?></td></tr>
+                        <tr><td>Total:</td><td><?php echo $order->get_formatted_order_total(); ?></td></tr>
+                        <tr><td>Payment Method:</td><td><?php echo $order->get_payment_method_title(); ?> (<?php echo $order->get_payment_method(); ?>)</td></tr>
+                        <tr><td>Customer Note:</td><td><?php echo $order->get_customer_note() ?: '—'; ?></td></tr>
+                    </table>
+                </div>
+                
+                <!-- Billing данные -->
+                <div class="debug-section">
+                    <h4>Billing данные</h4>
+                    <table class="debug-table">
+                        <tr><td>Name:</td><td><?php echo $order->get_billing_first_name() . ' ' . $order->get_billing_last_name(); ?></td></tr>
+                        <tr><td>Company:</td><td><?php echo $order->get_billing_company() ?: '—'; ?></td></tr>
+                        <tr><td>Email:</td><td><?php echo $order->get_billing_email(); ?></td></tr>
+                        <tr><td>Phone:</td><td><?php echo $order->get_billing_phone(); ?></td></tr>
+                        <tr><td>Address:</td><td><?php echo $order->get_billing_address_1() . ' ' . $order->get_billing_address_2(); ?></td></tr>
+                        <tr><td>City:</td><td><?php echo $order->get_billing_city(); ?></td></tr>
+                        <tr><td>Postcode:</td><td><?php echo $order->get_billing_postcode(); ?></td></tr>
+                    </table>
+                </div>
+                
+                <!-- Товары в заказе -->
+                <div class="debug-section">
+                    <h4>Товары в заказе (<?php echo count( $order->get_items() ); ?>)</h4>
+                    <table class="debug-table debug-table--items">
+                        <thead>
+                            <tr><th>ID</th><th>Название</th><th>SKU</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ( $order->get_items() as $item_id => $item ) : 
+                            $product = $item->get_product();
+                        ?>
+                            <tr>
+                                <td><?php echo $product ? $product->get_id() : 'N/A'; ?></td>
+                                <td><?php echo $item->get_name(); ?></td>
+                                <td><code><?php echo $product ? $product->get_sku() : '—'; ?></code></td>
+                                <td><?php echo $item->get_quantity(); ?></td>
+                                <td><?php echo wc_price( $item->get_subtotal() / $item->get_quantity() ); ?></td>
+                                <td><?php echo wc_price( $item->get_total() ); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Мета-данные заказа -->
+                <div class="debug-section">
+                    <h4>Мета-данные заказа</h4>
+                    <details>
+                        <summary>Показать все мета-поля (<?php echo count( $order->get_meta_data() ); ?>)</summary>
+                        <pre class="debug-meta"><?php 
+                            $meta_data = [];
+                            foreach ( $order->get_meta_data() as $meta ) {
+                                $meta_data[ $meta->key ] = $meta->value;
+                            }
+                            echo esc_html( print_r( $meta_data, true ) ); 
+                        ?></pre>
+                    </details>
+                </div>
+                
+                <!-- Ссылки -->
+                <div class="debug-section debug-actions">
+                    <a href="<?php echo admin_url( 'post.php?post=' . $order->get_id() . '&action=edit' ); ?>" class="debug-btn" target="_blank">
+                        📝 Открыть заказ в админке
+                    </a>
+                    <a href="<?php echo admin_url( 'admin.php?page=wc-orders&action=edit&id=' . $order->get_id() ); ?>" class="debug-btn" target="_blank">
+                        📋 WooCommerce Orders (HPOS)
+                    </a>
+                    <?php if ( $order->get_user_id() ) : ?>
+                    <a href="<?php echo admin_url( 'user-edit.php?user_id=' . $order->get_user_id() ); ?>" class="debug-btn" target="_blank">
+                        👤 Профиль пользователя
+                    </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -588,6 +686,138 @@ if ( empty( $manager_phone ) ) {
     
     .thankyou__title {
         font-size: 20px;
+    }
+}
+
+/* ===== ОТЛАДОЧНЫЙ БЛОК (только для админов) ===== */
+.thankyou__debug {
+    background: #1e1e1e;
+    border-radius: 12px;
+    margin-top: 40px;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+}
+
+.thankyou__debug-header {
+    background: #2d2d2d;
+    padding: 16px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #444;
+}
+
+.thankyou__debug-header h3 {
+    margin: 0;
+    color: #ffc107;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.thankyou__debug-header .debug-toggle {
+    color: #888;
+    transition: transform 0.3s;
+}
+
+.thankyou__debug-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.thankyou__debug-content.show {
+    max-height: 2000px;
+    padding: 20px;
+}
+
+.debug-section {
+    margin-bottom: 24px;
+}
+
+.debug-section h4 {
+    color: #4fc3f7;
+    font-size: 13px;
+    margin: 0 0 12px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.debug-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.debug-table td, .debug-table th {
+    padding: 8px 12px;
+    border-bottom: 1px solid #333;
+    color: #ddd;
+    text-align: left;
+}
+
+.debug-table td:first-child {
+    color: #888;
+    width: 140px;
+}
+
+.debug-table code {
+    background: #333;
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: #4caf50;
+}
+
+.debug-table--items th {
+    background: #2d2d2d;
+    color: #888;
+    font-weight: 500;
+}
+
+.debug-meta {
+    background: #252525;
+    padding: 12px;
+    border-radius: 6px;
+    color: #aaa;
+    font-size: 11px;
+    max-height: 300px;
+    overflow: auto;
+    margin-top: 8px;
+}
+
+.debug-section details summary {
+    color: #888;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.debug-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.debug-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: #333;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 13px;
+    transition: background 0.2s;
+}
+
+.debug-btn:hover {
+    background: #444;
+    color: #ffc107;
+}
+
+@media print {
+    .thankyou__debug {
+        display: none;
     }
 }
 </style>

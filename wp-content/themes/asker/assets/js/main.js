@@ -684,7 +684,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             button.style.background = '';
                             button.removeAttribute('data-processing');
                             button.disabled = false;
-                        }, 2000);
+                        }, 3500);
                     } else {
                         // Проверяем WooCommerce формат ответа (fragments, cart_hash)
                         // Это УСПЕШНЫЙ ответ от WooCommerce!
@@ -702,7 +702,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 button.style.background = '';
                                 button.removeAttribute('data-processing');
                                 button.disabled = false;
-                            }, 2000);
+                            }, 3500);
                         } else {
                             // Реальная ошибка
                             button.textContent = originalText;
@@ -1629,49 +1629,65 @@ if (document.readyState === 'loading') {
         // Удаляем все появившиеся элементы .added_to_cart или .wc-forward
         setTimeout(function() {
             $('.shop-product-card .added_to_cart, .shop-product-card .wc-forward, .product-card .added_to_cart, .product-card .wc-forward').remove();
-            $('.add_to_cart_button.added').removeClass('added').text('В корзину');
+            // Восстанавливаем текст кнопки с учётом новой структуры
+            $('.add_to_cart_button.added').each(function() {
+                const $btn = $(this);
+                $btn.removeClass('added');
+                const $btnText = $btn.find('.btn-text');
+                if ($btnText.length) {
+                    $btnText.text('В корзину');
+                }
+            });
         }, 100);
         
         // Товар успешно добавлен - убираем состояние загрузки
         let $btn = $($button);
+        
+        // Функция обновления бейджа количества
+        function updateButtonBadge($button) {
+            const $badge = $button.find('.btn-cart-count');
+            if ($badge.length) {
+                const currentCount = parseInt($badge.attr('data-count') || '0', 10);
+                const newCount = currentCount + 1;
+                $badge.attr('data-count', newCount).text(newCount);
+                $button.addClass('has-items');
+                // Анимация пульса
+                $badge.removeClass('pulse');
+                setTimeout(function() { $badge.addClass('pulse'); }, 10);
+            }
+        }
         
         // Если кнопка не передана, ищем все кнопки в состоянии loading
         if (!$btn || !$btn.length) {
             $('.add_to_cart_button.loading').each(function() {
                 const $btn2 = $(this);
                 clearLoadingState($btn2);
+                updateButtonBadge($btn2);
                 
-                const originalText = $btn2.text().trim() || 'В корзину';
-                $btn2.text('Добавлено!').css({
-                    'background-color': '#4CAF50',
-                    'opacity': '1'
-                });
-                
-                setTimeout(function() {
-                    $btn2.text(originalText).css({
-                        'background-color': '',
-                        'opacity': ''
-                    });
-                }, 2000);
+                // Обновляем текст через span или напрямую
+                const $btnText = $btn2.find('.btn-text');
+                if ($btnText.length) {
+                    $btnText.text('Добавлено!');
+                    setTimeout(function() { $btnText.text('В корзину'); }, 3500);
+                } else {
+                    $btn2.text('Добавлено!');
+                    setTimeout(function() { $btn2.text('В корзину'); }, 3500);
+                }
             });
         } else {
             // Убираем класс loading
             clearLoadingState($btn);
+            updateButtonBadge($btn);
             
-            // Показываем краткое уведомление
-            const originalText = $btn.text().trim() || 'В корзину';
-            $btn.text('Добавлено!').css({
-                'background-color': '#4CAF50',
-                'opacity': '1'
-            });
-            
-            // Возвращаем исходное состояние через 2 секунды
-            setTimeout(function() {
-                $btn.text(originalText).css({
-                    'background-color': '',
-                    'opacity': ''
-                });
-            }, 2000);
+            // Обновляем текст через span или напрямую
+            const $btnText = $btn.find('.btn-text');
+            if ($btnText.length) {
+                $btnText.text('Добавлено!');
+                setTimeout(function() { $btnText.text('В корзину'); }, 3500);
+            } else {
+                $btn.text('Добавлено!');
+                setTimeout(function() { $btn.text('В корзину'); }, 3500);
+            }
         }
         
         // Обновляем счетчик корзины

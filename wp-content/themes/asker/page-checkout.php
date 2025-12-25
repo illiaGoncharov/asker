@@ -30,19 +30,19 @@ get_header();
         if ( function_exists( 'WC' ) && WC()->cart && ! WC()->cart->is_empty() ) :
             // Корзина не пуста - показываем форму чекаута
             ?>
-            <div class="woocommerce">
+            <div class="woocommerce checkout-grid">
                 <form name="checkout" method="post" class="checkout woocommerce-checkout" action="<?php echo esc_url( wc_get_checkout_url() ); ?>" enctype="multipart/form-data">
                     
                     <!-- Левая колонка - формы -->
-                    <div class="woocommerce-checkout">
+                    <div class="checkout__forms">
                         <?php do_action( 'woocommerce_checkout_billing' ); ?>
                         <?php do_action( 'woocommerce_checkout_shipping' ); ?>
                     </div>
                     
                     <!-- Правая колонка - сводка заказа -->
-                    <div class="woocommerce-checkout-review-order">
+                    <div class="checkout__order-summary">
                         <h3><?php esc_html_e( 'Ваш заказ', 'woocommerce' ); ?></h3>
-                        <div id="order_review" class="woocommerce-checkout-review-order">
+                        <div id="order_review" class="checkout__order-review">
                             <?php do_action( 'woocommerce_checkout_order_review' ); ?>
                         </div>
                     </div>
