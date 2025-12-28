@@ -9,12 +9,51 @@
 
 defined( 'ABSPATH' ) || exit;
 
-// Получаем заказ
-$order_id = get_query_var( 'order-received' );
+// Получаем заказ несколькими способами
+global $wp;
+$order_id = 0;
+
+// Способ 1: из query_vars
+if ( isset( $wp->query_vars['order-received'] ) ) {
+    $order_id = absint( $wp->query_vars['order-received'] );
+}
+
+// Способ 2: из GET параметра
+if ( ! $order_id && isset( $_GET['order'] ) ) {
+    $order_id = absint( $_GET['order'] );
+}
+
+// Способ 3: из order-received query var
+if ( ! $order_id ) {
+    $order_id = absint( get_query_var( 'order-received' ) );
+}
+
+// Логируем для отладки
+error_log( 'THANKYOU PAGE: order_id = ' . $order_id );
+error_log( 'THANKYOU PAGE: REQUEST_URI = ' . $_SERVER['REQUEST_URI'] );
+
 $order = $order_id ? wc_get_order( $order_id ) : false;
 
 if ( ! $order ) {
-    wp_redirect( wc_get_page_permalink( 'shop' ) );
+    error_log( 'THANKYOU PAGE: Order not found, showing message' );
+    // Не редиректим, показываем сообщение
+    get_header();
+    ?>
+    <div class="thankyou-page">
+        <div class="container">
+            <div class="thankyou__card">
+                <div class="thankyou__header">
+                    <h1 class="thankyou__title">Заказ оформлен</h1>
+                    <p class="thankyou__subtitle">Спасибо за ваш заказ! Детали были отправлены на вашу почту.</p>
+                </div>
+                <div class="thankyou__actions">
+                    <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="thankyou__btn thankyou__btn--primary">Вернуться на главную</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php
+    get_footer();
     exit;
 }
 
@@ -26,9 +65,13 @@ $manager_phone = '';
 $manager_email = '';
 
 if ( $manager_id ) {
-    $manager_name = get_field( 'manager_name', $manager_id );
-    $manager_phone = get_field( 'manager_phone', $manager_id );
-    $manager_email = get_field( 'manager_email', $manager_id );
+    // Менеджер — это пост (CPT), имя берём из post_title
+    $manager_post = get_post( $manager_id );
+    if ( $manager_post ) {
+        $manager_name = $manager_post->post_title;
+        $manager_phone = get_field( 'manager_phone', $manager_id );
+        $manager_email = get_field( 'manager_email', $manager_id );
+    }
 }
 
 // Получаем статус заказа
@@ -56,6 +99,183 @@ if ( ! $payment_method_title ) {
 
 get_header();
 ?>
+
+<style>
+/* Уменьшаем расстояния в секции "Что будет дальше" */
+.thankyou__steps {
+    gap: 12px;
+}
+.thankyou__step {
+    padding: 12px 16px;
+    gap: 12px;
+}
+.thankyou__step-number {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+}
+.thankyou__step-content h3 {
+    font-size: 15px;
+    margin-bottom: 2px;
+}
+.thankyou__step-content p {
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* Стили для печати */
+@media print {
+    /* Скрываем ВСЁ кроме thankyou-page */
+    body > *:not(.thankyou-page) {
+        display: none;
+    }
+    
+    /* Явно скрываем хедер и футер */
+    .site-header,
+    .header-main,
+    .footer,
+    .footer__content,
+    .footer__bottom,
+    header,
+    footer,
+    .thankyou__important-info,
+    .thankyou__actions,
+    .thankyou__footer-message,
+    .cookie-banner,
+    .callback-form,
+    .mobile-menu,
+    .mobile-menu-header,
+    nav {
+        display: none;
+        visibility: hidden;
+        height: 0;
+        overflow: hidden;
+    }
+    
+    /* Показываем только thankyou-page */
+    .thankyou-page {
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+    }
+    
+    /* Убираем фоны и тени для печати */
+    body,
+    html,
+    .thankyou-page,
+    .thankyou__card {
+        background: white;
+        box-shadow: none;
+        margin: 0;
+        padding: 0;
+    }
+    
+    /* Контейнер на всю ширину */
+    .container {
+        max-width: 100%;
+        padding: 0 20px;
+        margin: 0;
+    }
+    
+    /* Основные стили для печатной версии */
+    .thankyou__card {
+        padding: 20px;
+        border: none;
+    }
+    
+    .thankyou__header {
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #333;
+    }
+    
+    .thankyou__success-icon {
+        display: none;
+    }
+    
+    .thankyou__title {
+        font-size: 22px;
+        color: #000;
+    }
+    
+    .thankyou__subtitle {
+        color: #333;
+    }
+    
+    .thankyou__section-title {
+        font-size: 16px;
+        margin-bottom: 10px;
+        color: #000;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 5px;
+    }
+    
+    /* Двухколоночный layout для печати */
+    .thankyou__content {
+        display: flex;
+        gap: 30px;
+    }
+    
+    .thankyou__order-details,
+    .thankyou__next-steps {
+        flex: 1;
+    }
+    
+    /* Товары в заказе */
+    .thankyou__order-items {
+        margin-top: 20px;
+        page-break-inside: avoid;
+    }
+    
+    .thankyou__item {
+        padding: 8px 0;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .thankyou__item-image {
+        display: none;
+    }
+    
+    /* Контактная информация */
+    .thankyou__contact-info {
+        margin-top: 20px;
+        page-break-inside: avoid;
+    }
+    
+    .thankyou__contact-cards {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .thankyou__contact-card {
+        flex: 1;
+        min-width: 120px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        background: #f9f9f9;
+    }
+    
+    .thankyou__contact-icon {
+        display: none;
+    }
+    
+    /* Ссылки для печати */
+    a {
+        color: #000;
+        text-decoration: none;
+    }
+    
+    /* Убираем разрывы страниц внутри блоков */
+    .thankyou__order-details,
+    .thankyou__next-steps,
+    .thankyou__contact-info {
+        page-break-inside: avoid;
+    }
+}
+</style>
 
 <div class="thankyou-page">
     <div class="container">
@@ -184,34 +404,48 @@ get_header();
                 </div>
             </div>
             
-            <!-- Контактная информация -->
+            <!-- Контактная информация (менеджер или контакты по умолчанию) -->
             <div class="thankyou__contact-info">
                 <h2 class="thankyou__section-title">Контактная информация</h2>
                 
+                <?php
+                // Контакты по умолчанию (если нет менеджера)
+                $default_phone = '+7 (931) 109 94 76';
+                $default_email = 'sales@asker-corp.ru';
+                
+                // Определяем что показывать
+                $show_manager = ! empty( $manager_name );
+                $contact_phone = $show_manager && $manager_phone ? $manager_phone : $default_phone;
+                $contact_email = $show_manager && $manager_email ? $manager_email : $default_email;
+                $contact_title = $show_manager ? 'Ваш менеджер' : 'Отдел продаж';
+                $contact_name = $show_manager ? $manager_name : 'Asker Parts';
+                ?>
+                
                 <div class="thankyou__contact-cards">
-                    <?php if ( $manager_name ) : ?>
                     <div class="thankyou__contact-card">
                         <div class="thankyou__contact-icon">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                                <path d="M12 2a10 10 0 0 0-10 10c0 1.5.5 3 1.5 4.5L12 22l8.5-5.5c1-1.5 1.5-3 1.5-4.5A10 10 0 0 0 12 2z"/>
-                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2"/>
+                                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
                             </svg>
                         </div>
                         <div class="thankyou__contact-details">
-                            <h3>Ваш менеджер</h3>
-                            <p><?php echo esc_html( $manager_name ); ?></p>
-                            <?php if ( $manager_phone ) : ?>
-                                <p class="thankyou__contact-meta"><?php echo esc_html( $manager_phone ); ?></p>
-                            <?php endif; ?>
-                            <?php if ( $manager_email ) : ?>
-                                <p class="thankyou__contact-meta">
-                                    <a href="mailto:<?php echo esc_attr( $manager_email ); ?>"><?php echo esc_html( $manager_email ); ?></a>
-                                </p>
-                            <?php endif; ?>
+                            <h3><?php echo esc_html( $contact_title ); ?></h3>
+                            <p><?php echo esc_html( $contact_name ); ?></p>
                         </div>
                     </div>
-                    <?php endif; ?>
+                    
+                    <div class="thankyou__contact-card">
+                        <div class="thankyou__contact-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </div>
+                        <div class="thankyou__contact-details">
+                            <h3>Телефон</h3>
+                            <p><a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9+]/', '', $contact_phone ) ); ?>"><?php echo esc_html( $contact_phone ); ?></a></p>
+                        </div>
+                    </div>
                     
                     <div class="thankyou__contact-card">
                         <div class="thankyou__contact-icon">
@@ -222,23 +456,9 @@ get_header();
                         </div>
                         <div class="thankyou__contact-details">
                             <h3>Email</h3>
-                            <p><a href="mailto:<?php echo esc_attr( $order->get_billing_email() ); ?>"><?php echo esc_html( $order->get_billing_email() ); ?></a></p>
+                            <p><a href="mailto:<?php echo esc_attr( $contact_email ); ?>"><?php echo esc_html( $contact_email ); ?></a></p>
                         </div>
                     </div>
-                    
-                    <?php if ( $order->get_billing_phone() ) : ?>
-                    <div class="thankyou__contact-card">
-                        <div class="thankyou__contact-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor" stroke-width="2"/>
-                            </svg>
-                        </div>
-                        <div class="thankyou__contact-details">
-                            <h3>Телефон</h3>
-                            <p><a href="tel:<?php echo esc_attr( $order->get_billing_phone() ); ?>"><?php echo esc_html( $order->get_billing_phone() ); ?></a></p>
-                        </div>
-                    </div>
-                    <?php endif; ?>
                 </div>
             </div>
             

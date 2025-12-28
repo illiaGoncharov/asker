@@ -34,7 +34,8 @@ function asker_validate_checkout_honeypot( $data, $errors ) {
 add_action( 'woocommerce_after_checkout_validation', 'asker_validate_checkout_honeypot', 5, 2 );
 
 /**
- * Rate limiting для чекаута (максимум 3 попытки за 5 минут с одного IP)
+ * Rate limiting для чекаута (максимум 100 попыток за 5 минут с одного IP)
+ * TODO: Вернуть на 3 после тестирования!
  */
 function asker_checkout_rate_limit( $data, $errors ) {
     $ip_address = asker_get_client_ip();
@@ -44,8 +45,8 @@ function asker_checkout_rate_limit( $data, $errors ) {
     if ( $attempts === false ) {
         // Первая попытка
         set_transient( $transient_key, 1, 5 * MINUTE_IN_SECONDS );
-    } elseif ( $attempts >= 3 ) {
-        // Превышен лимит попыток
+    } elseif ( $attempts >= 100 ) {
+        // Превышен лимит попыток (100 для тестирования, потом вернуть на 3!)
         $errors->add( 'rate_limit', 'Слишком много попыток оформления заказа. Пожалуйста, подождите несколько минут и попробуйте снова.' );
     } else {
         // Увеличиваем счетчик

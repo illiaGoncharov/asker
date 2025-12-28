@@ -1,10 +1,14 @@
 <?php
 /**
+ * Template Name: Оформление заказа
  * Кастомный шаблон чекаута
  */
 
-// Отладочная информация
-error_log( 'Asker: Custom checkout template loaded' );
+// Если это страница order-received — загружаем thankyou шаблон
+if ( is_wc_endpoint_url( 'order-received' ) ) {
+    wc_get_template( 'checkout/thankyou.php' );
+    exit;
+}
 
 get_header();
 ?>

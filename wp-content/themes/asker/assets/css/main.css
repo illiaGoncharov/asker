@@ -9014,7 +9014,8 @@ body.woocommerce-checkout .site-footer {
 /* ===== КЛАССИЧЕСКИЙ ЧЕКАУТ WOOCOMMERCE ===== */
 
 /* Основной контейнер классического чекаута */
-.woocommerce-checkout {
+.woocommerce-checkout,
+.checkout-page {
   background: #F5F6F8;
   min-height: 100vh;
   padding: 0;

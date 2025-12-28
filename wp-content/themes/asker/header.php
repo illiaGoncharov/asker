@@ -157,6 +157,42 @@
             nonce: '<?php echo esc_js(wp_create_nonce('asker_ajax_nonce')); ?>'
         };
     }
+    
+    // Передаём шорткод формы обратной связи (Contact Form 7)
+    <?php
+    // Пробуем получить шорткод из разных источников
+    $cf7_shortcode = '';
+    
+    // 1. Из ACF опций (если настроено)
+    if ( function_exists( 'get_field' ) ) {
+        $cf7_shortcode = get_field( 'contact_form_shortcode', 'option' );
+    }
+    
+    // 2. Из настроек кастомайзера
+    if ( empty( $cf7_shortcode ) ) {
+        $cf7_shortcode = get_theme_mod( 'footer_form_shortcode', '' );
+    }
+    
+    // 3. Из ACF страницы контактов
+    if ( empty( $cf7_shortcode ) ) {
+        $contacts_page = get_page_by_path( 'contacts' );
+        if ( $contacts_page && function_exists( 'get_field' ) ) {
+            $cf7_shortcode = get_field( 'contact_form_shortcode', $contacts_page->ID );
+        }
+    }
+    
+    // 4. Fallback — ищем первую форму CF7
+    if ( empty( $cf7_shortcode ) && class_exists( 'WPCF7_ContactForm' ) ) {
+        $forms = WPCF7_ContactForm::find( array( 'posts_per_page' => 1 ) );
+        if ( ! empty( $forms ) ) {
+            $cf7_shortcode = '[contact-form-7 id="' . $forms[0]->id() . '"]';
+        }
+    }
+    
+    if ( ! empty( $cf7_shortcode ) ) :
+    ?>
+    var cf7_form_shortcode = '<?php echo do_shortcode( wp_kses_post( $cf7_shortcode ) ); ?>';
+    <?php endif; ?>
     </script>
     <script src="<?php echo get_template_directory_uri(); ?>/assets/js/header-functions.js"></script>
     

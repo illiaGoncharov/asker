@@ -74,7 +74,23 @@ get_header(); ?>
                                             <input type="number" class="quantity-input" value="1" min="1" data-product-id="<?php echo esc_attr($product_id); ?>">
                                             <button class="quantity-btn quantity-plus" data-product-id="<?php echo esc_attr($product_id); ?>">+</button>
                                         </div>
-                                        <button class="wishlist-item-add-cart btn-add-cart add_to_cart_button" data-product-id="<?php echo esc_attr($product_id); ?>">В корзину</button>
+                                        <?php
+                                        // Получаем количество этого товара в корзине
+                                        $cart_qty = 0;
+                                        if ( function_exists( 'WC' ) && WC()->cart ) {
+                                            foreach ( WC()->cart->get_cart() as $cart_item ) {
+                                                if ( $cart_item['product_id'] == $product_id ) {
+                                                    $cart_qty = $cart_item['quantity'];
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        $btn_class = 'wishlist-item-add-cart btn-add-cart add_to_cart_button';
+                                        if ( $cart_qty > 0 ) {
+                                            $btn_class .= ' has-items';
+                                        }
+                                        ?>
+                                        <button class="<?php echo esc_attr( $btn_class ); ?>" data-product-id="<?php echo esc_attr($product_id); ?>"><span class="btn-text">В корзину</span><span class="btn-cart-count" data-count="<?php echo esc_attr( $cart_qty ); ?>"><?php echo esc_html( $cart_qty ); ?></span></button>
                                     </div>
                                 </div>
                             <?php

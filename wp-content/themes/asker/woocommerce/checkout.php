@@ -3,6 +3,12 @@
  * Кастомный шаблон чекаута
  */
 
+// Если это страница order-received — загружаем thankyou шаблон
+if ( is_wc_endpoint_url( 'order-received' ) ) {
+    wc_get_template( 'checkout/thankyou.php' );
+    exit;
+}
+
 // РАСШИРЕННАЯ отладочная информация
 error_log( '=== ASKER CHECKOUT DEBUG ===' );
 error_log( 'Custom checkout template loaded' );
@@ -24,7 +30,7 @@ if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
 get_header();
 ?>
 
-<div class="woocommerce-checkout">
+<div class="checkout-page woocommerce-checkout" data-custom-checkout="true">
     <div class="container">
         
         <!-- Хлебные крошки -->
@@ -58,6 +64,22 @@ get_header();
             <form class="checkout__form" method="post" action="<?php echo esc_url( wc_get_checkout_url() ); ?>" enctype="multipart/form-data">
                 <?php wp_nonce_field( 'woocommerce-process_checkout' ); ?>
                 <input type="hidden" name="woocommerce_checkout_place_order" value="1">
+                <?php 
+                // Получаем доступные методы оплаты
+                $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
+                $default_gateway = '';
+                if ( ! empty( $available_gateways ) ) {
+                    $default_gateway = key( $available_gateways );
+                }
+                ?>
+                <input type="hidden" name="payment_method" value="<?php echo esc_attr( $default_gateway ); ?>">
+                
+                <!-- Обязательные поля WooCommerce (скрытые, с дефолтными значениями) -->
+                <input type="hidden" name="billing_country" value="RU">
+                <input type="hidden" name="billing_state" value="SPE">
+                <input type="hidden" name="billing_postcode" value="000000">
+                <input type="hidden" name="billing_city" id="hidden_billing_city" value="-">
+                <input type="hidden" name="billing_address_1" id="hidden_billing_address" value="-">
                 <div class="checkout__content">
                     
                     <!-- Левая колонка - формы -->
@@ -192,7 +214,7 @@ get_header();
                                     <div class="checkout__product-name"><?php echo $product->get_name(); ?></div>
                                     <div class="checkout__product-meta">
                                         <span class="checkout__product-qty"><?php echo $quantity; ?>шт</span>
-                                        <span class="checkout__product-price"><?php echo wc_price( $product->get_price() * $quantity ); ?></span>
+                                        <span class="checkout__product-price"><?php echo wc_price( (float) $product->get_price() * (int) $quantity ); ?></span>
                                     </div>
                                 </div>
                             </div>
@@ -251,371 +273,100 @@ get_header();
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Переключение между юр. и физ. лицом
-    const customerTypeRadios = document.querySelectorAll('input[name="customer_type"]');
-    const legalFields = document.querySelector('.checkout__legal-fields');
-    const companyInput = document.getElementById('billing_company');
-    const taxIdInput = document.getElementById('billing_tax_id');
+    const form = document.querySelector('.checkout__form');
+    if (!form) return;
     
-    function updateLegalFields() {
-        const selectedType = document.querySelector('input[name="customer_type"]:checked');
-        if (selectedType && selectedType.value === 'legal') {
-            // Юр. лицо - показываем поля и делаем обязательными
-            if (legalFields) legalFields.style.display = 'flex';
-            if (companyInput) companyInput.required = true;
-            if (taxIdInput) taxIdInput.required = true;
-        } else {
-            // Физ. лицо - скрываем поля и убираем обязательность
-            if (legalFields) legalFields.style.display = 'none';
-            if (companyInput) companyInput.required = false;
-            if (taxIdInput) taxIdInput.required = false;
-        }
-    }
-    
-    // Инициализация при загрузке
-    updateLegalFields();
-    
-    // Обработчик переключения
-    customerTypeRadios.forEach(radio => {
-        radio.addEventListener('change', updateLegalFields);
-    });
-    
-    // Переключение между доставкой и самовывозом
+    // Переключение доставка/самовывоз
     const deliveryRadios = document.querySelectorAll('input[name="delivery_type"]');
     const deliveryFields = document.querySelector('.checkout__delivery-fields');
     const pickupFields = document.querySelector('.checkout__pickup-fields');
     
-    // Загружаем сохраненные данные пользователя
-    if (typeof asker_checkout_data !== 'undefined') {
-        // Заполняем поля формы сохраненными данными
-        Object.keys(asker_checkout_data).forEach(fieldName => {
-            const field = document.querySelector(`input[name="${fieldName}"], textarea[name="${fieldName}"]`);
-            if (field && asker_checkout_data[fieldName]) {
-                field.value = asker_checkout_data[fieldName];
-            }
-        });
-        
-        // Загружаем сохраненные предпочтения доставки
-        if (asker_checkout_data.delivery_type) {
-            const savedType = asker_checkout_data.delivery_type;
-            const radioToSelect = document.querySelector(`input[name="delivery_type"][value="${savedType}"]`);
-            if (radioToSelect) {
-                radioToSelect.checked = true;
-                if (savedType === 'delivery') {
-                    deliveryFields.style.display = 'block';
-                    pickupFields.style.display = 'none';
-                } else {
-                    deliveryFields.style.display = 'none';
-                    pickupFields.style.display = 'block';
-                }
-            }
+    function toggleDeliveryFields() {
+        const selectedValue = document.querySelector('input[name="delivery_type"]:checked')?.value;
+        if (selectedValue === 'delivery') {
+            if (deliveryFields) deliveryFields.style.display = 'flex';
+            if (pickupFields) pickupFields.style.display = 'none';
+        } else {
+            if (deliveryFields) deliveryFields.style.display = 'none';
+            if (pickupFields) pickupFields.style.display = 'flex';
         }
     }
     
     deliveryRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            if (this.value === 'delivery') {
-                deliveryFields.style.display = 'block';
-                pickupFields.style.display = 'none';
-            } else {
-                deliveryFields.style.display = 'none';
-                pickupFields.style.display = 'block';
-            }
-            
-            // Сохраняем предпочтение
-            saveFormData();
-        });
+        radio.addEventListener('change', toggleDeliveryFields);
     });
     
-    // Счетчик символов для комментария
-    const commentTextarea = document.querySelector('textarea[name="order_comments"]');
-    const charCount = document.querySelector('.checkout__char-count');
+    // Инициализация при загрузке
+    toggleDeliveryFields();
     
-    if (commentTextarea && charCount) {
-        commentTextarea.addEventListener('input', function() {
-            const length = this.value.length;
-            charCount.textContent = length + '/500 символов';
-            
-            if (length > 500) {
-                charCount.style.color = '#ff4444';
-            } else {
-                charCount.style.color = '#999999';
+    let errorDiv = document.createElement('div');
+    errorDiv.className = 'checkout__error-message';
+    errorDiv.style.cssText = 'display:none;background:#ff4444;color:white;padding:15px;border-radius:8px;margin-bottom:20px;';
+    form.insertBefore(errorDiv, form.firstChild);
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        errorDiv.style.display = 'none';
+        
+        this.querySelectorAll('input[required], select[required]').forEach(f => {
+            f.style.borderColor = '#E0E0E0';
+        });
+        
+        const requiredFields = this.querySelectorAll('input[required], select[required]');
+        let hasEmptyFields = false;
+        let emptyFieldNames = [];
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.style.borderColor = '#ff4444';
+                hasEmptyFields = true;
+                emptyFieldNames.push(field.placeholder || field.name);
             }
         });
-    }
-    
-    // Базовая валидация формы
-    const form = document.querySelector('.checkout__form');
-    const submitBtn = document.querySelector('.checkout__submit-btn');
-    
-    if (form && submitBtn) {
-        form.addEventListener('submit', function(e) {
-            // Проверяем обязательные поля
-            const requiredFields = form.querySelectorAll('input[required]');
-            let isValid = true;
-            
-            requiredFields.forEach(field => {
-                if (!field.value.trim()) {
-                    field.style.borderColor = '#ff4444';
-                    isValid = false;
-                } else {
-                    field.style.borderColor = '#E0E0E0';
-                }
-            });
-            
-            // Проверяем email
-            const emailField = form.querySelector('input[type="email"]');
-            if (emailField && emailField.value) {
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(emailField.value)) {
-                    emailField.style.borderColor = '#ff4444';
-                    isValid = false;
-                }
-            }
-            
-            // Проверяем телефон
-            const phoneField = form.querySelector('input[type="tel"]');
-            if (phoneField && phoneField.value) {
-                const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
-                if (!phoneRegex.test(phoneField.value)) {
-                    phoneField.style.borderColor = '#ff4444';
-                    isValid = false;
-                }
-            }
-            
-            if (!isValid) {
-                e.preventDefault();
-                // Показываем сообщение об ошибке
-                submitBtn.textContent = 'Исправьте ошибки в форме';
-                submitBtn.style.background = '#ff4444';
-                
-                setTimeout(() => {
-                    submitBtn.textContent = 'Подтвердить заказ';
-                    submitBtn.style.background = '#FFEB3B';
-                }, 3000);
+        
+        if (hasEmptyFields) {
+            errorDiv.textContent = 'Заполните обязательные поля: ' + emptyFieldNames.join(', ');
+            errorDiv.style.display = 'block';
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
+        }
+        
+        const btn = this.querySelector('.checkout__submit-btn');
+        if (btn) {
+            btn.textContent = 'Обрабатываем заказ...';
+            btn.style.background = '#4CAF50';
+            btn.disabled = true;
+        }
+        
+        const formData = new FormData(this);
+        formData.append('action', 'asker_create_order');
+        
+        fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.result === 'success' && data.redirect) {
+                window.location.href = data.redirect;
             } else {
-                // Если форма валидна, позволяем WooCommerce обработать её
-                submitBtn.textContent = 'Обрабатываем заказ...';
-                submitBtn.style.background = '#4CAF50';
-                submitBtn.disabled = true;
+                throw new Error(data.messages || 'Неизвестная ошибка');
             }
-        });
-    }
-    
-    // Автосохранение данных формы
-    const formInputs = document.querySelectorAll('.checkout__form input, .checkout__form textarea');
-    formInputs.forEach(input => {
-        input.addEventListener('blur', function() {
-            saveFormData();
+        })
+        .catch(err => {
+            errorDiv.textContent = err.message;
+            errorDiv.style.display = 'block';
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            if (btn) {
+                btn.textContent = 'Подтвердить заказ';
+                btn.style.background = '#FFEB3B';
+                btn.disabled = false;
+            }
         });
     });
 });
-
-// Функция сохранения данных формы
-function saveFormData() {
-    const formData = new FormData(document.querySelector('.checkout__form'));
-    
-    fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
-        method: 'POST',
-        body: formData.append('action', 'save_checkout_data')
-    }).catch(error => {
-        console.log('Ошибка сохранения данных:', error);
-    });
-}
-
-// Функция показа страницы подтверждения
-function showThankYouPage() {
-    // Создаем модальное окно с страницей подтверждения
-    const modal = document.createElement('div');
-    modal.className = 'thankyou-modal';
-    
-    modal.innerHTML = `
-        <div class="thankyou-page">
-            <div class="container">
-                <div class="thankyou__card">
-                    <!-- Кнопка закрытия -->
-                    <button class="thankyou__close-btn" onclick="closeModal()">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                            <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                            <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </button>
-                    <div class="thankyou__header">
-                        <div class="thankyou__success-icon">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                                <circle cx="12" cy="12" r="12" fill="#4CAF50"/>
-                                <path d="M8 12L11 15L16 9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </div>
-                        <h1 class="thankyou__title">Заказ успешно оформлен!</h1>
-                        <p class="thankyou__subtitle">Спасибо за ваш заказ. Мы свяжемся с вами в ближайшее время.</p>
-                    </div>
-                    
-                    <div class="thankyou__content">
-                        <div class="thankyou__order-details">
-                            <h2 class="thankyou__section-title">Детали заказа</h2>
-                            <div class="thankyou__detail-row">
-                                <span class="thankyou__detail-label">Номер заказа:</span>
-                                <span class="thankyou__detail-value">#${Math.floor(Math.random() * 900000) + 100000}</span>
-                            </div>
-                            <div class="thankyou__detail-row">
-                                <span class="thankyou__detail-label">Дата оформления:</span>
-                                <span class="thankyou__detail-value">${new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })} в ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
-                            </div>
-                            <div class="thankyou__detail-row">
-                                <span class="thankyou__detail-label">Статус:</span>
-                                <span class="thankyou__status-badge">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                                        <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                                    </svg>
-                                    Ожидает оплаты
-                                </span>
-                            </div>
-                            <div class="thankyou__detail-row">
-                                <span class="thankyou__detail-label">Способ оплаты:</span>
-                                <span class="thankyou__detail-value">По счету</span>
-                            </div>
-                        </div>
-                        
-                        <div class="thankyou__next-steps">
-                            <h2 class="thankyou__section-title">Что дальше?</h2>
-                            <div class="thankyou__steps">
-                                <div class="thankyou__step">
-                                    <div class="thankyou__step-number">1</div>
-                                    <div class="thankyou__step-content">
-                                        <h3>Получите счет</h3>
-                                        <p>Счет будет отправлен на ваш email в течение 30 минут</p>
-                                    </div>
-                                </div>
-                                <div class="thankyou__step">
-                                    <div class="thankyou__step-number">2</div>
-                                    <div class="thankyou__step-content">
-                                        <h3>Оплатите счет</h3>
-                                        <p>У вас есть 3 рабочих дня для оплаты</p>
-                                    </div>
-                                </div>
-                                <div class="thankyou__step">
-                                    <div class="thankyou__step-number">3</div>
-                                    <div class="thankyou__step-content">
-                                        <h3>Получите товар</h3>
-                                        <p>Доставка в течение 2-5 рабочих дней после оплаты</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="thankyou__contact-info">
-                        <h2 class="thankyou__section-title">Контактная информация</h2>
-                        <div class="thankyou__contact-cards">
-                            <div class="thankyou__contact-card">
-                                <div class="thankyou__contact-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                                        <path d="M12 2a10 10 0 0 0-10 10c0 1.5.5 3 1.5 4.5L12 22l8.5-5.5c1-1.5 1.5-3 1.5-4.5A10 10 0 0 0 12 2z"/>
-                                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                                    </svg>
-                                </div>
-                                <div class="thankyou__contact-details">
-                                    <h3>Ваш менеджер</h3>
-                                    <p>Владимир Курдов</p>
-                                </div>
-                            </div>
-                            <div class="thankyou__contact-card">
-                                <div class="thankyou__contact-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="2"/>
-                                        <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2"/>
-                                    </svg>
-                                </div>
-                                <div class="thankyou__contact-details">
-                                    <h3>Email</h3>
-                                    <p>opt@asker-corp.ru</p>
-                                </div>
-                            </div>
-                            <div class="thankyou__contact-card">
-                                <div class="thankyou__contact-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor" stroke-width="2"/>
-                                    </svg>
-                                </div>
-                                <div class="thankyou__contact-details">
-                                    <h3>Телефон</h3>
-                                    <p>+7 (812) 123-12-23</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="thankyou__important-info">
-                        <div class="thankyou__important-header">
-                            <div class="thankyou__important-icon">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                                    <path d="M12 8v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                                    <path d="M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                                </svg>
-                            </div>
-                            <h2 class="thankyou__section-title">Важная информация</h2>
-                        </div>
-                        <ul class="thankyou__important-list">
-                            <li>Проверьте папку "Спам" если не получили счет в течение часа</li>
-                            <li>Сохраните номер заказа для отслеживания статуса</li>
-                            <li>При возникновении вопросов обращайтесь в службу поддержки</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="thankyou__actions">
-                        <a href="${window.location.origin}" class="thankyou__btn thankyou__btn--primary">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="2"/>
-                                <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2"/>
-                            </svg>
-                            Вернуться на главную
-                        </a>
-                        <button class="thankyou__btn thankyou__btn--secondary" onclick="window.print()">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <polyline points="6,9 6,2 18,2 18,9" stroke="currentColor" stroke-width="2"/>
-                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="2"/>
-                                <rect x="6" y="14" width="12" height="8" stroke="currentColor" stroke-width="2"/>
-                            </svg>
-                            Распечатать заказ
-                        </button>
-                    </div>
-                    
-                    <div class="thankyou__footer-message">
-                        <p>Спасибо, что выбрали наш магазин! Мы ценим ваше доверие.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Добавляем класс для скрытия хедера и футера
-    document.body.classList.add('thankyou-modal-open');
-    
-    // Закрытие по клику на фон
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            closeModal();
-        }
-    });
-    
-    // Закрытие по Escape
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeModal();
-        }
-    });
-    
-    function closeModal() {
-        document.body.removeChild(modal);
-        document.body.classList.remove('thankyou-modal-open');
-    }
-}
 </script>
 
 <?php get_footer(); ?>

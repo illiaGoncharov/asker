@@ -506,8 +506,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Помечаем как обрабатываемый
                 button.setAttribute('data-processing', 'true');
                 button.disabled = true;
-                const originalText = button.textContent || button.innerText;
-                button.textContent = 'Добавляется...';
+                
+                // Сохраняем оригинальный текст с учётом структуры span
+                const btnTextSpan = button.querySelector('.btn-text');
+                const originalText = btnTextSpan ? btnTextSpan.textContent : (button.textContent || button.innerText);
+                if (btnTextSpan) {
+                    btnTextSpan.textContent = 'Добавляется...';
+                } else {
+                    button.textContent = 'Добавляется...';
+                }
                 
                 // Получаем количество из input, если есть
                 let quantity = 1;
@@ -588,12 +595,34 @@ document.addEventListener('DOMContentLoaded', function() {
                             setTimeout(() => updateCartCounter(), 500);
                         }
                         
-                        // Показываем успех
-                        button.textContent = 'Добавлено!';
+                        // Показываем успех и обновляем бейдж
+                        const btnTextSpanSuccess = button.querySelector('.btn-text');
+                        if (btnTextSpanSuccess) {
+                            btnTextSpanSuccess.textContent = 'Добавлено!';
+                            // Обновляем бейдж количества
+                            const badgeSpan = button.querySelector('.btn-cart-count');
+                            if (badgeSpan) {
+                                const currentCount = parseInt(badgeSpan.getAttribute('data-count') || '0', 10);
+                                const newCount = currentCount + quantity;
+                                badgeSpan.setAttribute('data-count', newCount);
+                                badgeSpan.textContent = newCount;
+                                button.classList.add('has-items');
+                                // Анимация пульса
+                                badgeSpan.classList.remove('pulse');
+                                setTimeout(() => badgeSpan.classList.add('pulse'), 10);
+                            }
+                        } else {
+                            button.textContent = 'Добавлено!';
+                        }
                         button.style.background = '#4CAF50';
                         
                         setTimeout(() => {
-                            button.textContent = originalText;
+                            const btnTextSpanRestore = button.querySelector('.btn-text');
+                            if (btnTextSpanRestore) {
+                                btnTextSpanRestore.textContent = originalText;
+                            } else {
+                                button.textContent = originalText;
+                            }
                             button.style.background = '';
                             button.removeAttribute('data-processing');
                             button.disabled = false;
@@ -602,7 +631,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Проверяем WooCommerce формат ответа (fragments, cart_hash)
                         // Это УСПЕШНЫЙ ответ от WooCommerce!
                         if (data.fragments || data.cart_hash) {
-                            button.textContent = 'Добавлено!';
+                            const btnTextSpanAlt = button.querySelector('.btn-text');
+                            if (btnTextSpanAlt) {
+                                btnTextSpanAlt.textContent = 'Добавлено!';
+                                // Обновляем бейдж количества
+                                const badgeSpanAlt = button.querySelector('.btn-cart-count');
+                                if (badgeSpanAlt) {
+                                    const currentCountAlt = parseInt(badgeSpanAlt.getAttribute('data-count') || '0', 10);
+                                    const newCountAlt = currentCountAlt + quantity;
+                                    badgeSpanAlt.setAttribute('data-count', newCountAlt);
+                                    badgeSpanAlt.textContent = newCountAlt;
+                                    button.classList.add('has-items');
+                                    badgeSpanAlt.classList.remove('pulse');
+                                    setTimeout(() => badgeSpanAlt.classList.add('pulse'), 10);
+                                }
+                            } else {
+                                button.textContent = 'Добавлено!';
+                            }
                             button.style.background = '#4CAF50';
                             
                             // Обновляем счетчик корзины
@@ -611,14 +656,24 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                             
                             setTimeout(() => {
-                                button.textContent = originalText;
+                                const btnTextSpanRestoreAlt = button.querySelector('.btn-text');
+                                if (btnTextSpanRestoreAlt) {
+                                    btnTextSpanRestoreAlt.textContent = originalText;
+                                } else {
+                                    button.textContent = originalText;
+                                }
                                 button.style.background = '';
                                 button.removeAttribute('data-processing');
                                 button.disabled = false;
                             }, 3500);
                         } else {
                             // Реальная ошибка
-                            button.textContent = originalText;
+                            const btnTextSpanErr = button.querySelector('.btn-text');
+                            if (btnTextSpanErr) {
+                                btnTextSpanErr.textContent = originalText;
+                            } else {
+                                button.textContent = originalText;
+                            }
                             button.removeAttribute('data-processing');
                             button.disabled = false;
                         }
@@ -626,7 +681,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .catch(error => {
                     // Тихая обработка ошибок - могут быть вызваны расширениями браузера
-                    button.textContent = originalText;
+                    const btnTextSpanCatch = button.querySelector('.btn-text');
+                    if (btnTextSpanCatch) {
+                        btnTextSpanCatch.textContent = originalText;
+                    } else {
+                        button.textContent = originalText;
+                    }
                     button.removeAttribute('data-processing');
                     button.disabled = false;
                 });

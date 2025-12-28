@@ -82,7 +82,7 @@ add_filter( 'woocommerce_checkout_posted_data', 'asker_sanitize_checkout_fields'
 /**
  * Добавляем HTML5 атрибуты валидации к полям чекаута
  */
-function asker_add_checkout_field_attributes( $fields, $country ) {
+function asker_add_checkout_field_attributes( $fields, $country = '' ) {
     // Телефон
     if ( isset( $fields['billing']['billing_phone'] ) ) {
         $fields['billing']['billing_phone']['input_class'][] = 'validate-phone';

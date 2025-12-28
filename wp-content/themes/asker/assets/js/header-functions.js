@@ -62,27 +62,141 @@ function openContactFormPopup() {
     
     document.body.appendChild(popup);
     
-    // Инициализируем CF7 для новой формы (поддержка разных версий CF7)
+    // Инициализируем CF7 для новой формы
     var cf7Form = popup.querySelector('.wpcf7');
     if (cf7Form) {
-        // CF7 5.4+ использует wpcf7.init()
+        var form = cf7Form.querySelector('form');
+        
+        // Попробуем инициализировать CF7 стандартным способом
         if (typeof wpcf7 !== 'undefined') {
+            // CF7 5.4+ использует wpcf7.init()
             if (typeof wpcf7.init === 'function') {
-                wpcf7.init(cf7Form);
+                try {
+                    wpcf7.init(cf7Form);
+                } catch (e) {
+                    console.log('CF7 init error:', e);
+                }
             } else if (typeof wpcf7.initForm === 'function') {
                 // Старые версии CF7
-                wpcf7.initForm(cf7Form.querySelector('form'));
+                try {
+                    wpcf7.initForm(form);
+                } catch (e) {
+                    console.log('CF7 initForm error:', e);
+                }
             }
         }
         
-        // Также триггерим событие для CF7
+        // Триггерим событие для CF7 (поможет некоторым версиям)
         var cf7Event = new CustomEvent('wpcf7:init', { detail: { form: cf7Form } });
         document.dispatchEvent(cf7Event);
         
-        // Принудительно добавляем обработчик отправки если CF7 не инициализирован
-        var form = cf7Form.querySelector('form');
-        if (form && !form.hasAttribute('data-cf7-initialized')) {
-            form.setAttribute('data-cf7-initialized', 'true');
+        // Добавляем fallback обработчик отправки AJAX, если CF7 не сработал
+        if (form && !form.hasAttribute('data-cf7-popup-handler')) {
+            form.setAttribute('data-cf7-popup-handler', 'true');
+            
+            form.addEventListener('submit', function(e) {
+                // Если у формы уже есть CF7 обработчик, не вмешиваемся
+                // Проверяем через наличие data-status атрибута который CF7 добавляет
+                if (cf7Form.getAttribute('data-status') === 'submitting') {
+                    return; // CF7 обрабатывает
+                }
+                
+                e.preventDefault();
+                
+                var formData = new FormData(form);
+                var submitBtn = form.querySelector('input[type="submit"], button[type="submit"]');
+                var responseOutput = cf7Form.querySelector('.wpcf7-response-output');
+                
+                // Добавляем action для CF7
+                var formId = cf7Form.getAttribute('data-id') || cf7Form.querySelector('input[name="_wpcf7"]')?.value;
+                if (!formId) {
+                    // Пробуем получить из атрибута id
+                    var idMatch = cf7Form.id && cf7Form.id.match(/wpcf7-f(\d+)/);
+                    if (idMatch) {
+                        formId = idMatch[1];
+                    }
+                }
+                
+                // Показываем состояние загрузки
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.value = submitBtn.value || 'Отправка...';
+                }
+                if (responseOutput) {
+                    responseOutput.textContent = '';
+                    responseOutput.classList.remove('wpcf7-mail-sent-ok', 'wpcf7-validation-errors');
+                }
+                
+                // URL для отправки CF7
+                var ajaxUrl = (typeof wpcf7 !== 'undefined' && wpcf7.api && wpcf7.api.root)
+                    ? wpcf7.api.root + 'contact-form-7/v1/contact-forms/' + formId + '/feedback'
+                    : '/wp-json/contact-form-7/v1/contact-forms/' + formId + '/feedback';
+                
+                fetch(ajaxUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                    }
+                    
+                    if (data.status === 'mail_sent') {
+                        // Успех
+                        if (responseOutput) {
+                            responseOutput.textContent = data.message || 'Сообщение отправлено!';
+                            responseOutput.classList.add('wpcf7-mail-sent-ok');
+                            responseOutput.classList.remove('wpcf7-validation-errors');
+                        }
+                        // Очищаем форму
+                        form.reset();
+                        // Закрываем попап через 2 секунды
+                        setTimeout(function() {
+                            closeContactFormPopup();
+                        }, 2000);
+                    } else {
+                        // Ошибка валидации или отправки
+                        if (responseOutput) {
+                            responseOutput.textContent = data.message || 'Ошибка отправки';
+                            responseOutput.classList.add('wpcf7-validation-errors');
+                            responseOutput.classList.remove('wpcf7-mail-sent-ok');
+                        }
+                        
+                        // Показываем ошибки полей
+                        if (data.invalid_fields && data.invalid_fields.length > 0) {
+                            data.invalid_fields.forEach(function(field) {
+                                var input = form.querySelector('[name="' + field.field + '"]');
+                                if (input) {
+                                    input.classList.add('wpcf7-not-valid');
+                                    var tip = input.parentNode.querySelector('.wpcf7-not-valid-tip');
+                                    if (!tip) {
+                                        tip = document.createElement('span');
+                                        tip.className = 'wpcf7-not-valid-tip';
+                                        input.parentNode.appendChild(tip);
+                                    }
+                                    tip.textContent = field.message;
+                                }
+                            });
+                        }
+                    }
+                })
+                .catch(function(error) {
+                    console.log('CF7 submit error:', error);
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                    }
+                    if (responseOutput) {
+                        responseOutput.textContent = 'Ошибка сети. Попробуйте позже.';
+                        responseOutput.classList.add('wpcf7-validation-errors');
+                    }
+                });
+            });
         }
     }
     
