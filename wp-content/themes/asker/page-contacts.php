@@ -35,7 +35,7 @@ get_header();
                             <p>ПН-ПТ с 9:00 до 18:00</p>
                         </div>
                     </div>
-                    <a href="https://t.me/Ararat007_7" target="_blank" class="contact-card__button contact-card__button--chat">Написать директору</a>
+                    <a href="#" onclick="openContactFormPopup(); return false;" class="contact-card__button contact-card__button--chat">Написать директору</a>
                 </div>
 
                 <!-- Форма обратной связи -->
@@ -61,7 +61,26 @@ get_header();
 
             <!-- Правая колонка: карта -->
             <div class="contact-page__right">
-                <div class="contact-map" id="yandex-map" data-api-key="<?php echo esc_attr(get_theme_mod('yandex_map_api_key', '')); ?>"></div>
+                <?php 
+                // Проверяем, есть ли URL карты из Конструктора
+                $map_url = get_theme_mod('yandex_map_url', '');
+                
+                if (!empty($map_url)) : 
+                    // Используем iframe с URL из Конструктора карт
+                ?>
+                    <div class="contact-map contact-map--iframe">
+                        <iframe 
+                            src="<?php echo esc_url($map_url); ?>" 
+                            width="100%" 
+                            height="100%" 
+                            frameborder="0"
+                            allowfullscreen
+                        ></iframe>
+                    </div>
+                <?php else : ?>
+                    <!-- Fallback: JavaScript API карты -->
+                    <div class="contact-map" id="yandex-map" data-api-key="<?php echo esc_attr(get_theme_mod('yandex_map_api_key', '')); ?>"></div>
+                <?php endif; ?>
             </div>
         </div>
 </div>

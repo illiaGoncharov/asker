@@ -75,15 +75,28 @@ add_action('customize_register', function ($wp_customize) {
         'type' => 'text',
     ]);
     
-    // API ключ Яндекс.Карт
+    // URL карты из Конструктора Яндекс.Карт
+    $wp_customize->add_setting('yandex_map_url', [
+        'default' => '',
+        'sanitize_callback' => 'esc_url_raw',
+    ]);
+    
+    $wp_customize->add_control('yandex_map_url', [
+        'label' => 'URL карты (Конструктор Яндекс)',
+        'description' => 'Скопируйте только URL из src="..." в iframe коде. Например: https://yandex.ru/map-widget/v1/?um=constructor...',
+        'section' => 'asker_theme_settings',
+        'type' => 'url',
+    ]);
+    
+    // API ключ Яндекс.Карт (устаревший способ)
     $wp_customize->add_setting('yandex_map_api_key', [
         'default' => '',
         'sanitize_callback' => 'sanitize_text_field',
     ]);
     
     $wp_customize->add_control('yandex_map_api_key', [
-        'label' => 'API ключ Яндекс.Карт',
-        'description' => 'Получите ключ на <a href="https://developer.tech.yandex.ru/services/" target="_blank">developer.tech.yandex.ru</a>',
+        'label' => 'API ключ Яндекс.Карт (альтернатива)',
+        'description' => 'Используется только если iframe код не задан. Получите на <a href="https://developer.tech.yandex.ru/services/" target="_blank">developer.tech.yandex.ru</a>',
         'section' => 'asker_theme_settings',
         'type' => 'text',
     ]);

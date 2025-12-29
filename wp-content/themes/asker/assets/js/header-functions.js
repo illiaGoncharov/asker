@@ -41,7 +41,7 @@ function openContactFormPopup() {
         formContent = formTemplate.innerHTML;
     } else {
         // Фолбэк - сообщение со ссылкой на Telegram
-        formContent = '<p class="popup-form-notice">Форма не настроена.<br><br><a href="https://t.me/Ararat007_7" target="_blank" class="popup-tg-link">Написать в Telegram</a></p>';
+        formContent = '<p class="popup-form-notice">Форма не настроена.<br><br><a href="https://t.me/Askercorp" target="_blank" class="popup-tg-link">Написать в Telegram</a></p>';
     }
     
     // Создаем попап

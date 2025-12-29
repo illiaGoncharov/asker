@@ -275,7 +275,7 @@
                 </form>
             </div>
             <div class="header-actions">
-                <a href="https://t.me/Ararat007_7" target="_blank" class="icon-chat">
+                <a href="https://t.me/Askercorp" target="_blank" class="icon-chat">
                     <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/chat.svg" alt="Telegram" class="header-icon">
                 </a>
                 <a href="#" class="icon-mail" onclick="openContactFormPopup(); return false;">
@@ -404,7 +404,7 @@
                 <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/message.svg" alt="" class="mobile-contact-icon">
                 <span><?php echo get_option('woocommerce_store_email', 'info@askerspb.ru'); ?></span>
             </a>
-            <a href="https://t.me/Ararat007_7" target="_blank" class="mobile-contact-link" onclick="document.querySelector('.mobile-menu-close').click();">
+            <a href="https://t.me/Askercorp" target="_blank" class="mobile-contact-link" onclick="document.querySelector('.mobile-menu-close').click();">
                 <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/chat.svg" alt="" class="mobile-contact-icon">
                 <span>Telegram</span>
             </a>

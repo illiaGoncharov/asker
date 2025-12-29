@@ -3,8 +3,11 @@
  * Инициализация темы: поддержка возможностей, меню, локализация.
  */
 
-// Отключаем Admin Bar на фронтенде (может вызывать 500 на checkout)
-add_filter('show_admin_bar', '__return_false');
+// Отключаем Admin Bar на фронтенде только для не-администраторов (может вызывать 500 на checkout)
+add_filter('show_admin_bar', function($show) {
+    // Показываем Admin Bar только администраторам
+    return current_user_can('manage_options') ? true : false;
+});
 
 add_action('after_setup_theme', function () {
     // Принудительно устанавливаем русский язык для WordPress и WooCommerce
@@ -48,6 +51,9 @@ add_action('after_setup_theme', function () {
         'flex-height' => true,
         'flex-width'  => true,
     ]);
+    
+    // Поддержка Customizer
+    add_theme_support('customize-selective-refresh-widgets');
     
     // Поддержка SVG
     add_filter('upload_mimes', function($mimes) {

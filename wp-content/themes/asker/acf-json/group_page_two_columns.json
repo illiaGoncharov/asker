@@ -1,0 +1,82 @@
+{
+  "key": "group_page_two_columns",
+  "title": "Две колонки контента",
+  "fields": [
+    {
+      "key": "field_left_column",
+      "label": "Левая колонка (50%)",
+      "name": "left_column",
+      "type": "wysiwyg",
+      "instructions": "Контент для левой колонки страницы",
+      "tabs": "all",
+      "toolbar": "full",
+      "media_upload": 1,
+      "required": 0
+    },
+    {
+      "key": "field_right_column",
+      "label": "Правая колонка (50%)",
+      "name": "right_column",
+      "type": "wysiwyg",
+      "instructions": "Контент для правой колонки страницы",
+      "tabs": "all",
+      "toolbar": "full",
+      "media_upload": 1,
+      "required": 0
+    }
+  ],
+  "location": [
+    [
+      {
+        "param": "page_template",
+        "operator": "==",
+        "value": "page-payment.php"
+      }
+    ],
+    [
+      {
+        "param": "page_template",
+        "operator": "==",
+        "value": "page-delivery.php"
+      }
+    ],
+    [
+      {
+        "param": "page_template",
+        "operator": "==",
+        "value": "page-about.php"
+      }
+    ],
+    [
+      {
+        "param": "page",
+        "operator": "==",
+        "value": "payment"
+      }
+    ],
+    [
+      {
+        "param": "page",
+        "operator": "==",
+        "value": "delivery"
+      }
+    ],
+    [
+      {
+        "param": "page",
+        "operator": "==",
+        "value": "about"
+      }
+    ]
+  ],
+  "menu_order": 0,
+  "position": "normal",
+  "style": "default",
+  "label_placement": "top",
+  "instruction_placement": "label",
+  "hide_on_screen": "",
+  "active": true,
+  "description": "Две колонки контента для страниц Оплата, Доставка и О компании",
+  "modified": 1735689600
+}
+

@@ -3170,50 +3170,59 @@ function asker_generate_username_from_email( $username, $email, $new_user_args )
 add_filter( 'woocommerce_registration_generate_username', 'asker_generate_username_from_email', 10, 3 );
 
 /**
- * Отключаем автогенерацию пароля - пользователь вводит сам
+ * ПРИНУДИТЕЛЬНО отключаем автогенерацию пароля
  */
-function asker_disable_password_generation( $password_generated ) {
-    return false; // Используем пароль, введённый пользователем
-}
-add_filter( 'woocommerce_registration_generate_password', 'asker_disable_password_generation' );
+add_filter( 'woocommerce_registration_generate_password', '__return_false', 999 );
+add_filter( 'pre_option_woocommerce_registration_generate_password', function() { return 'no'; }, 999 );
 
 /**
- * Принудительно устанавливаем пароль из POST при регистрации
- * 
- * WooCommerce может не использовать пароль из $_POST['password'] даже если
- * фильтр woocommerce_registration_generate_password возвращает false.
- * Эта функция гарантирует, что пароль пользователя будет сохранён.
- *
- * @param int   $customer_id       ID созданного пользователя
- * @param array $new_customer_data Данные нового пользователя
- * @param bool  $password_generated Был ли пароль автогенерирован
+ * Устанавливаем пароль из POST в данные нового пользователя ДО его создания
  */
-function asker_set_password_on_registration( $customer_id, $new_customer_data, $password_generated ) {
-    // Если пароль был передан в POST и не был автогенерирован
-    if ( isset( $_POST['password'] ) && ! empty( $_POST['password'] ) && ! $password_generated ) {
-        // Используем wp_set_password для безопасной установки пароля
-        // Функция автоматически хеширует пароль через wp_hash_password()
-        wp_set_password( $_POST['password'], $customer_id );
-        
-        // Логируем успешную установку пароля (только в режиме отладки)
-        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-            error_log( 'ASKER: Password set from POST for user ID: ' . $customer_id );
-        }
-    } elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-        // Логируем причину, если пароль не был установлен
-        $reason = '';
-        if ( ! isset( $_POST['password'] ) ) {
-            $reason = 'password not in POST';
-        } elseif ( empty( $_POST['password'] ) ) {
-            $reason = 'password is empty';
-        } elseif ( $password_generated ) {
-            $reason = 'password was auto-generated';
-        }
-        error_log( 'ASKER: Password NOT set from POST for user ID: ' . $customer_id . ' - Reason: ' . $reason );
+function asker_set_customer_password( $customer_data ) {
+    if ( isset( $_POST['password'] ) && ! empty( $_POST['password'] ) ) {
+        $customer_data['user_pass'] = $_POST['password'];
+    }
+    return $customer_data;
+}
+add_filter( 'woocommerce_new_customer_data', 'asker_set_customer_password', 999, 1 );
+
+/**
+ * ПРИНУДИТЕЛЬНО устанавливаем пароль через WordPress хук user_register
+ * Это последний рубеж - срабатывает для ЛЮБОГО создания пользователя
+ */
+function asker_force_password_on_user_register( $user_id ) {
+    // Проверяем что это регистрация через форму (не админка)
+    if ( isset( $_POST['password'] ) && ! empty( $_POST['password'] ) ) {
+        global $wpdb;
+        // Хешируем пароль и обновляем напрямую в базе
+        $hashed_password = wp_hash_password( $_POST['password'] );
+        $wpdb->update( 
+            $wpdb->users, 
+            array( 'user_pass' => $hashed_password ), 
+            array( 'ID' => $user_id ) 
+        );
+        // Очищаем кэш пользователя
+        clean_user_cache( $user_id );
     }
 }
-// Приоритет 5 - выполняется ДО автоматического входа (приоритет 10)
-add_action( 'woocommerce_created_customer', 'asker_set_password_on_registration', 5, 3 );
+add_action( 'user_register', 'asker_force_password_on_user_register', 999 );
+
+/**
+ * Также через WooCommerce хук на всякий случай
+ */
+function asker_set_password_on_registration( $customer_id, $new_customer_data, $password_generated ) {
+    if ( isset( $_POST['password'] ) && ! empty( $_POST['password'] ) ) {
+        global $wpdb;
+        $hashed_password = wp_hash_password( $_POST['password'] );
+        $wpdb->update( 
+            $wpdb->users, 
+            array( 'user_pass' => $hashed_password ), 
+            array( 'ID' => $customer_id ) 
+        );
+        clean_user_cache( $customer_id );
+    }
+}
+add_action( 'woocommerce_created_customer', 'asker_set_password_on_registration', 999, 3 );
 
 /**
  * Включаем регистрацию на странице My Account
@@ -3406,11 +3415,26 @@ function asker_check_login_attempts( $user, $username, $password ) {
     
     // Если больше 5 попыток за 15 минут - блокируем
     if ( $attempts && $attempts >= 5 ) {
+        // Получаем время истечения transient
+        $timeout_key = '_transient_timeout_' . $transient_key;
+        $expiration = get_option( $timeout_key );
+        
+        // Рассчитываем оставшееся время
+        if ( $expiration && $expiration > time() ) {
+            $remaining_seconds = $expiration - time();
+            $remaining_minutes = max( 1, ceil( $remaining_seconds / 60 ) );
+        } else {
+            // Если время истекло, но transient еще есть - сбрасываем
+            delete_transient( $transient_key );
+            delete_option( $transient_key . '_time' );
+            return $user;
+        }
+        
         return new WP_Error(
             'too_many_attempts',
             sprintf(
                 'Слишком много попыток входа. Попробуйте через %d минут.',
-                ceil( ( 900 - ( time() - get_option( $transient_key . '_time', time() ) ) ) / 60 )
+                $remaining_minutes
             )
         );
     }
@@ -3432,14 +3456,15 @@ function asker_failed_login_attempts( $username ) {
     $transient_key = 'asker_login_attempts_' . md5( $ip );
     $attempts = get_transient( $transient_key );
     
-    if ( ! $attempts ) {
+    if ( $attempts === false ) {
+        // Первая попытка - начинаем отсчет
         $attempts = 1;
-        update_option( $transient_key . '_time', time() );
     } else {
+        // Увеличиваем счетчик
         $attempts++;
     }
     
-    // Блокируем на 15 минут
+    // Блокируем на 15 минут (900 секунд)
     set_transient( $transient_key, $attempts, 900 );
 }
 add_action( 'wp_login_failed', 'asker_failed_login_attempts' );

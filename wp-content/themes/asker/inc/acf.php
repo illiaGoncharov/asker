@@ -13,17 +13,17 @@ add_filter('acf/settings/load_json', function ($paths) {
     return $paths;
 });
 
-// Расширяем условия для ACF группы "Контакты" - добавляем поддержку страницы по slug "contacts"
+// Расширяем условия для ACF групп - добавляем поддержку страниц по slug
 add_filter('acf/location/rule_match/page', function($match, $rule, $options) {
     // Проверяем текущую редактируемую страницу
     global $post;
     $current_page_id = isset($post) ? $post->ID : 0;
     $rule_value = (string) $rule['value'];
     
-    // Если правило для страницы со slug "contacts" или ID 12
-    if ($rule['operator'] === '==') {
+    // Если правило для страницы по slug
+    if ($rule['operator'] === '==' && isset($post)) {
         // Проверка по slug
-        if ($rule_value === 'contacts' && isset($post) && $post->post_name === 'contacts') {
+        if ($post->post_name === $rule_value) {
             return true;
         }
         // Проверка по ID
@@ -39,6 +39,28 @@ add_filter('acf/location/rule_match/page', function($match, $rule, $options) {
     }
     return $match;
 }, 10, 3);
+
+// Добавляем поддержку страниц по slug для группы "Две колонки"
+add_filter('acf/location/rule_match/page', function($match, $rule, $options) {
+    if ($rule['param'] !== 'page' || $rule['operator'] !== '==') {
+        return $match;
+    }
+    
+    global $post;
+    if (!isset($post) || $post->post_type !== 'page') {
+        return $match;
+    }
+    
+    $rule_value = (string) $rule['value'];
+    $page_slugs = ['payment', 'delivery', 'about'];
+    
+    // Проверяем, если правило для одной из наших страниц
+    if (in_array($rule_value, $page_slugs) && $post->post_name === $rule_value) {
+        return true;
+    }
+    
+    return $match;
+}, 20, 3);
 
 // Убрали страницу настроек - теперь всё в Customizer и ACF
 

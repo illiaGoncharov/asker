@@ -16,8 +16,8 @@
             return;
         }
 
-        // API ключ встроен в код
-        const apiKey = 'd28e3471-49d9-44e9-bc04-b5e023d5956a';
+        // API ключ из data-атрибута (берется из Customizer)
+        const apiKey = mapContainer.getAttribute('data-api-key') || 'd28e3471-49d9-44e9-bc04-b5e023d5956a';
 
         // Загружаем API Яндекс.Карт
         const script = document.createElement('script');

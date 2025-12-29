@@ -17,7 +17,28 @@ get_header();
     <h1 class="page-title">О компании</h1>
 
     <div class="content-page">
+        <?php
+        // Получаем ACF поля для двух колонок
+        $left_column = get_field('left_column');
+        $right_column = get_field('right_column');
+        
+        if ($left_column || $right_column) : ?>
+            <div class="content-page__two-columns">
+                <?php if ($left_column) : ?>
+                    <div class="content-page__column content-page__column--left">
+                        <?php echo wp_kses_post($left_column); ?>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if ($right_column) : ?>
+                    <div class="content-page__column content-page__column--right">
+                        <?php echo wp_kses_post($right_column); ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php else : ?>
             <?php
+            // Fallback: стандартный контент страницы
             while (have_posts()) : the_post();
                 the_content();
             endwhile;
@@ -55,7 +76,8 @@ get_header();
                     </div>
                 </div>
             <?php endif; ?>
-        </div>
+        <?php endif; ?>
+    </div>
 </div>
 
 <?php get_footer(); ?>

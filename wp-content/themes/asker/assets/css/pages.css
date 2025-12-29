@@ -729,6 +729,13 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+.contact-map--iframe iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 16px;
+}
+
 @media (max-width: 1024px) {
     .contact-page__right {
         position: static;
@@ -1510,4 +1517,63 @@
   width: 100%;
   box-sizing: border-box;
   text-align: left;
+}
+
+/* ========================================
+   TWO COLUMNS LAYOUT - Две колонки
+   ======================================== */
+
+.content-page__two-columns {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  margin-top: 24px;
+}
+
+.content-page__column {
+  flex: 1;
+  width: 50%;
+  min-width: 0;
+}
+
+.content-page__column--left {
+  padding-right: 16px;
+}
+
+.content-page__column--right {
+  padding-left: 16px;
+}
+
+.content-page__column h2,
+.content-page__column h3,
+.content-page__column h4 {
+  margin-top: 0;
+}
+
+.content-page__column p:first-child {
+  margin-top: 0;
+}
+
+.content-page__column p:last-child {
+  margin-bottom: 0;
+}
+
+/* Адаптивность для двух колонок */
+@media (max-width: 768px) {
+  .content-page__two-columns {
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .content-page__column {
+    width: 100%;
+  }
+
+  .content-page__column--left {
+    padding-right: 0;
+  }
+
+  .content-page__column--right {
+    padding-left: 0;
+  }
 }

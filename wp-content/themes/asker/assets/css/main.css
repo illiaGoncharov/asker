@@ -5103,6 +5103,17 @@ body.woocommerce-account .container .section__title,
   color: var(--primary-yellow);
 }
 
+.footer__links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.footer__links .footer__title {
+  margin-bottom: 8px;
+}
+
 .footer__social-section {
   display: flex;
   flex-direction: column;

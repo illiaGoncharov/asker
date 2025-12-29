@@ -98,7 +98,7 @@ add_action('wp_enqueue_scripts', function () {
             );
         }
 
-        // Скрипт Яндекс.Карт - только на странице контактов
+        // Скрипт Яндекс.Карт - только на странице контактов и только если НЕ используется iframe
         global $post;
         $is_contact_page = is_page_template('templates/page-contact.php') || 
                            is_page('contacts') || 
@@ -106,7 +106,11 @@ add_action('wp_enqueue_scripts', function () {
                            is_page_template('Contacts Page') ||
                            (isset($post) && $post->post_name === 'contacts');
         
-        if ($is_contact_page) {
+        // Проверяем, есть ли URL карты - если да, не загружаем JS API
+        $map_url = get_theme_mod('yandex_map_url', '');
+        $use_js_api = empty($map_url);
+        
+        if ($is_contact_page && $use_js_api) {
             $yandex_map_js_path = get_template_directory() . '/assets/js/yandex-map.js';
             if (file_exists($yandex_map_js_path) && is_readable($yandex_map_js_path)) {
                 $yandex_map_version = filemtime($yandex_map_js_path) ?: time();
