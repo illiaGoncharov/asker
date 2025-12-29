@@ -190,16 +190,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             action_type: 'remove'
                         },
                         success: function(response) {
+                            // Обновляем счетчик после успешного удаления
                             if (typeof updateWishlistCounter === 'function') {
-                                if (typeof updateWishlistCounter === 'function') {
-                if (typeof updateWishlistCounter === 'function') {
-                    updateWishlistCounter();
-                } else if (typeof updateWishlistCount === 'function') {
-                    updateWishlistCount();
-                }
-            } else if (typeof updateWishlistCount === 'function') {
-                updateWishlistCount();
-            }
+                                updateWishlistCounter();
                             } else if (typeof updateWishlistCount === 'function') {
                                 updateWishlistCount();
                             }
