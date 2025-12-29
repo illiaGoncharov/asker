@@ -291,51 +291,25 @@ function updateCartCount() {
 
 // Функция обновления счетчика избранного
 function updateWishlistCount() {
-    // Используем правильный AJAX URL и action
-    const ajaxUrl = (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) 
-        ? asker_ajax.ajax_url 
-        : (window.wc_add_to_cart_params && window.wc_add_to_cart_params.ajax_url)
-        ? window.wc_add_to_cart_params.ajax_url
-        : null;
+    // Для всех пользователей (гости и авторизованные) читаем из localStorage
+    // Это единый источник правды для избранного
+    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+    const count = favorites.length;
     
-    if (!ajaxUrl) {
-        return; // Не делаем запрос, если URL недоступен
+    // Обновляем счетчик в десктопном хедере
+    const wishlistCount = document.querySelector('.wishlist-count');
+    if (wishlistCount) {
+        wishlistCount.textContent = count;
+        wishlistCount.setAttribute('data-count', count);
+        wishlistCount.style.display = count > 0 ? 'flex' : 'none';
     }
     
-    // Получаем количество товаров в избранном через AJAX
-    fetch(ajaxUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'action=get_wishlist_count'
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('HTTP error! status: ' + response.status);
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data && data.success && data.data && data.data.count !== undefined) {
-            const wishlistCount = document.querySelector('.wishlist-count');
-            if (wishlistCount) {
-                wishlistCount.textContent = data.data.count;
-                wishlistCount.setAttribute('data-count', data.data.count);
-                // Скрываем счетчик если 0
-                wishlistCount.style.display = data.data.count > 0 ? 'flex' : 'none';
-            }
-            // Обновляем мобильный счетчик
-            const mobileWishlistCount = document.querySelector('.mobile-wishlist-count');
-            if (mobileWishlistCount) {
-                mobileWishlistCount.textContent = data.data.count;
-                mobileWishlistCount.style.display = data.data.count > 0 ? 'inline-flex' : 'none';
-            }
-        }
-    })
-    .catch(error => {
-        // Тихий catch - не логируем ошибки
-    });
+    // Обновляем мобильный счетчик
+    const mobileWishlistCount = document.querySelector('.mobile-wishlist-count');
+    if (mobileWishlistCount) {
+        mobileWishlistCount.textContent = count;
+        mobileWishlistCount.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
 }
 
 // Инициализация при загрузке страницы
@@ -386,3 +360,4 @@ window.openContactFormPopup = openContactFormPopup;
 window.closeContactFormPopup = closeContactFormPopup;
 window.updateCartCount = updateCartCount;
 window.updateWishlistCount = updateWishlistCount;
+window.updateWishlistCounter = updateWishlistCount; // Алиас для совместимости
