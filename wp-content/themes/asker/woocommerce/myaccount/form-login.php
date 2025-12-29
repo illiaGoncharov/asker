@@ -14,13 +14,31 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 ?>
 
+<?php
+// Определяем, какую вкладку показывать по умолчанию
+$show_register_tab = false;
+
+// Если была отправлена форма регистрации — показываем вкладку регистрации
+// Проверяем через nonce, чтобы срабатывало только при реальной отправке формы
+if ( isset( $_POST['register'] ) && 
+     isset( $_POST['woocommerce-register-nonce'] ) && 
+     wp_verify_nonce( $_POST['woocommerce-register-nonce'], 'woocommerce-register' ) ) {
+    $show_register_tab = true;
+}
+
+// Проверяем, есть ли параметр в URL для показа формы регистрации
+if ( isset( $_GET['action'] ) && $_GET['action'] === 'register' ) {
+    $show_register_tab = true;
+}
+?>
+
 <!-- ASKER CUSTOM form-login.php LOADED: <?php echo date('Y-m-d H:i:s'); ?> -->
 <div class="auth-page" data-template="asker-custom-form-login">
     <!-- Вкладки Вход/Регистрация - вне белой карточки -->
         <div class="auth-tabs">
-            <button class="auth-tab auth-tab--active" data-tab="login">Вход</button>
+            <button class="auth-tab <?php echo ! $show_register_tab ? 'auth-tab--active' : ''; ?>" data-tab="login">Вход</button>
         <span class="auth-tab-separator">/</span>
-            <button class="auth-tab" data-tab="register">Зарегистрироваться</button>
+            <button class="auth-tab <?php echo $show_register_tab ? 'auth-tab--active' : ''; ?>" data-tab="register">Зарегистрироваться</button>
         </div>
         
     <div class="auth-container">
@@ -28,7 +46,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         <?php woocommerce_output_all_notices(); ?>
         
         <!-- Форма входа -->
-        <div class="auth-form-wrapper auth-form-wrapper--login active">
+        <div class="auth-form-wrapper auth-form-wrapper--login <?php echo ! $show_register_tab ? 'active' : ''; ?>">
             <?php do_action( 'woocommerce_before_customer_login_form' ); ?>
             
             <form class="auth-form woocommerce-form woocommerce-form-login login" method="post">
@@ -125,7 +143,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         
         <!-- Форма регистрации -->
         <!-- Показываем форму регистрации всегда, независимо от настроек WooCommerce -->
-        <div class="auth-form-wrapper auth-form-wrapper--register">
+        <div class="auth-form-wrapper auth-form-wrapper--register <?php echo $show_register_tab ? 'active' : ''; ?>">
             <?php do_action( 'woocommerce_before_register_form' ); ?>
             
             <form method="post" class="auth-form woocommerce-form woocommerce-form-register register" <?php do_action( 'woocommerce_register_form_tag' ); ?> >

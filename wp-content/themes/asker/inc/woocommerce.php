@@ -3257,6 +3257,7 @@ function asker_enable_woocommerce_emails() {
     // Список email шаблонов для включения
     $email_templates = array(
         'new_order',                    // Новый заказ (админу)
+        'customer_new_account',         // Новый аккаунт (клиенту при регистрации)
         'customer_processing_order',    // Заказ в обработке (клиенту)
         'customer_completed_order',     // Заказ выполнен (клиенту)
         'customer_invoice',             // Счёт на оплату (клиенту)
@@ -3289,6 +3290,13 @@ add_action( 'init', function() {
     if ( ! get_option( 'asker_emails_enabled' ) ) {
         asker_enable_woocommerce_emails();
         update_option( 'asker_emails_enabled', 'yes' );
+    }
+    
+    // Принудительно включаем email о новой регистрации (если ещё не включен)
+    $new_account_settings = get_option( 'woocommerce_customer_new_account_settings', array() );
+    if ( ! isset( $new_account_settings['enabled'] ) || $new_account_settings['enabled'] !== 'yes' ) {
+        $new_account_settings['enabled'] = 'yes';
+        update_option( 'woocommerce_customer_new_account_settings', $new_account_settings );
     }
 }, 999 );
 
