@@ -139,12 +139,12 @@ add_filter( 'woocommerce_get_image_size_thumbnail', function( $size ) {
  * Используем свой .container для единообразия с остальными страницами
  */
 function asker_remove_wc_wrappers() {
-	if ( is_product() ) {
-		remove_action( 'woocommerce_before_main_content', 'woocommerce_output_content_wrapper', 10 );
-		remove_action( 'woocommerce_after_main_content', 'woocommerce_output_content_wrapper_end', 10 );
-		// Убираем стандартные хлебные крошки WooCommerce
-		remove_action( 'woocommerce_before_main_content', 'woocommerce_breadcrumb', 20 );
-	}
+    if ( is_product() ) {
+        remove_action( 'woocommerce_before_main_content', 'woocommerce_output_content_wrapper', 10 );
+        remove_action( 'woocommerce_after_main_content', 'woocommerce_output_content_wrapper_end', 10 );
+        // Убираем стандартные хлебные крошки WooCommerce
+        remove_action( 'woocommerce_before_main_content', 'woocommerce_breadcrumb', 20 );
+    }
 }
 add_action( 'wp', 'asker_remove_wc_wrappers' );
 
@@ -152,13 +152,13 @@ add_action( 'wp', 'asker_remove_wc_wrappers' );
  * Убеждаемся что похожие товары выводятся на странице товара
  */
 function asker_ensure_related_products() {
-	if ( is_product() ) {
-		// Убираем стандартный вывод похожих товаров если он был удален
-		remove_action( 'woocommerce_after_single_product_summary', 'woocommerce_output_related_products', 20 );
-		
-		// Добавляем свой вывод похожих товаров с кастомным шаблоном
-		add_action( 'woocommerce_after_single_product_summary', 'asker_output_related_products', 20 );
-	}
+    if ( is_product() ) {
+        // Убираем стандартный вывод похожих товаров если он был удален
+        remove_action( 'woocommerce_after_single_product_summary', 'woocommerce_output_related_products', 20 );
+        
+        // Добавляем свой вывод похожих товаров с кастомным шаблоном
+        add_action( 'woocommerce_after_single_product_summary', 'asker_output_related_products', 20 );
+    }
 }
 add_action( 'wp', 'asker_ensure_related_products' );
 
@@ -166,94 +166,94 @@ add_action( 'wp', 'asker_ensure_related_products' );
  * Вывод похожих товаров с использованием кастомного шаблона
  */
 function asker_output_related_products() {
-	global $product;
-	
-	if ( ! $product ) {
-		$product = wc_get_product( get_the_ID() );
-	}
-	
-	if ( ! $product ) {
-		return;
-	}
-	
-	$product_id = $product->get_id();
-	$related_products_ids = array();
-	
-	// Метод 1: Получаем похожие товары через WooCommerce API
-	$wc_related = wc_get_related_products( $product_id, 4 );
-	if ( ! empty( $wc_related ) ) {
-		$related_products_ids = $wc_related;
-	}
-	
-	// Метод 2: Если нет похожих через стандартный метод, пробуем через категории
-	if ( empty( $related_products_ids ) ) {
-		$categories = wp_get_post_terms( $product_id, 'product_cat', array( 'fields' => 'ids' ) );
-		if ( ! empty( $categories ) && ! is_wp_error( $categories ) ) {
-			$args = array(
-				'post_type' => 'product',
-				'posts_per_page' => 4,
-				'post__not_in' => array( $product_id ),
-				'post_status' => 'publish',
-				'orderby' => 'rand',
-				'tax_query' => array(
-					array(
-						'taxonomy' => 'product_cat',
-						'field' => 'term_id',
-						'terms' => $categories,
-						'operator' => 'IN',
-					),
-				),
-			);
-			$related_query = new WP_Query( $args );
-			if ( $related_query->have_posts() ) {
-				$related_products_ids = wp_list_pluck( $related_query->posts, 'ID' );
-			}
-			wp_reset_postdata();
-		}
-	}
-	
-	// Метод 3: Если всё ещё нет похожих, берём любые опубликованные товары (кроме текущего)
-	if ( empty( $related_products_ids ) ) {
-		$args = array(
-			'post_type' => 'product',
-			'posts_per_page' => 4,
-			'post__not_in' => array( $product_id ),
-			'post_status' => 'publish',
-			'orderby' => 'rand',
-		);
-		$related_query = new WP_Query( $args );
-		if ( $related_query->have_posts() ) {
-			$related_products_ids = wp_list_pluck( $related_query->posts, 'ID' );
-		}
-		wp_reset_postdata();
-	}
-	
-	if ( empty( $related_products_ids ) ) {
-		return;
-	}
-	
-	// Загружаем кастомный шаблон
-	$template_path = get_template_directory() . '/woocommerce/single-product/related.php';
-	
-	if ( file_exists( $template_path ) ) {
-		// Подготавливаем данные для шаблона
-		$related_products_objects = array();
-		foreach ( $related_products_ids as $related_product_id ) {
-			$related_product = wc_get_product( $related_product_id );
-			if ( $related_product && $related_product->is_visible() && $related_product->is_purchasable() ) {
-				$related_products_objects[] = $related_product;
-			}
-		}
-		
-		if ( ! empty( $related_products_objects ) ) {
-			// Устанавливаем переменную для шаблона
-			$related_products = $related_products_objects;
-			include $template_path;
-		}
-	} else {
-		// Если кастомного шаблона нет - используем стандартный
-		woocommerce_output_related_products();
-	}
+    global $product;
+    
+    if ( ! $product ) {
+        $product = wc_get_product( get_the_ID() );
+    }
+    
+    if ( ! $product ) {
+        return;
+    }
+    
+    $product_id = $product->get_id();
+    $related_products_ids = array();
+    
+    // Метод 1: Получаем похожие товары через WooCommerce API
+    $wc_related = wc_get_related_products( $product_id, 4 );
+    if ( ! empty( $wc_related ) ) {
+        $related_products_ids = $wc_related;
+    }
+    
+    // Метод 2: Если нет похожих через стандартный метод, пробуем через категории
+    if ( empty( $related_products_ids ) ) {
+        $categories = wp_get_post_terms( $product_id, 'product_cat', array( 'fields' => 'ids' ) );
+        if ( ! empty( $categories ) && ! is_wp_error( $categories ) ) {
+            $args = array(
+                'post_type' => 'product',
+                'posts_per_page' => 4,
+                'post__not_in' => array( $product_id ),
+                'post_status' => 'publish',
+                'orderby' => 'rand',
+                'tax_query' => array(
+                    array(
+                        'taxonomy' => 'product_cat',
+                        'field' => 'term_id',
+                        'terms' => $categories,
+                        'operator' => 'IN',
+                    ),
+                ),
+            );
+            $related_query = new WP_Query( $args );
+            if ( $related_query->have_posts() ) {
+                $related_products_ids = wp_list_pluck( $related_query->posts, 'ID' );
+            }
+            wp_reset_postdata();
+        }
+    }
+    
+    // Метод 3: Если всё ещё нет похожих, берём любые опубликованные товары (кроме текущего)
+    if ( empty( $related_products_ids ) ) {
+        $args = array(
+            'post_type' => 'product',
+            'posts_per_page' => 4,
+            'post__not_in' => array( $product_id ),
+            'post_status' => 'publish',
+            'orderby' => 'rand',
+        );
+        $related_query = new WP_Query( $args );
+        if ( $related_query->have_posts() ) {
+            $related_products_ids = wp_list_pluck( $related_query->posts, 'ID' );
+        }
+        wp_reset_postdata();
+    }
+    
+    if ( empty( $related_products_ids ) ) {
+        return;
+    }
+    
+    // Загружаем кастомный шаблон
+    $template_path = get_template_directory() . '/woocommerce/single-product/related.php';
+    
+    if ( file_exists( $template_path ) ) {
+        // Подготавливаем данные для шаблона
+        $related_products_objects = array();
+        foreach ( $related_products_ids as $related_product_id ) {
+            $related_product = wc_get_product( $related_product_id );
+            if ( $related_product && $related_product->is_visible() && $related_product->is_purchasable() ) {
+                $related_products_objects[] = $related_product;
+            }
+        }
+        
+        if ( ! empty( $related_products_objects ) ) {
+            // Устанавливаем переменную для шаблона
+            $related_products = $related_products_objects;
+            include $template_path;
+        }
+    } else {
+        // Если кастомного шаблона нет - используем стандартный
+        woocommerce_output_related_products();
+    }
 }
 
 /**
@@ -3176,6 +3176,44 @@ function asker_disable_password_generation( $password_generated ) {
     return false; // Используем пароль, введённый пользователем
 }
 add_filter( 'woocommerce_registration_generate_password', 'asker_disable_password_generation' );
+
+/**
+ * Принудительно устанавливаем пароль из POST при регистрации
+ * 
+ * WooCommerce может не использовать пароль из $_POST['password'] даже если
+ * фильтр woocommerce_registration_generate_password возвращает false.
+ * Эта функция гарантирует, что пароль пользователя будет сохранён.
+ *
+ * @param int   $customer_id       ID созданного пользователя
+ * @param array $new_customer_data Данные нового пользователя
+ * @param bool  $password_generated Был ли пароль автогенерирован
+ */
+function asker_set_password_on_registration( $customer_id, $new_customer_data, $password_generated ) {
+    // Если пароль был передан в POST и не был автогенерирован
+    if ( isset( $_POST['password'] ) && ! empty( $_POST['password'] ) && ! $password_generated ) {
+        // Используем wp_set_password для безопасной установки пароля
+        // Функция автоматически хеширует пароль через wp_hash_password()
+        wp_set_password( $_POST['password'], $customer_id );
+        
+        // Логируем успешную установку пароля (только в режиме отладки)
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( 'ASKER: Password set from POST for user ID: ' . $customer_id );
+        }
+    } elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+        // Логируем причину, если пароль не был установлен
+        $reason = '';
+        if ( ! isset( $_POST['password'] ) ) {
+            $reason = 'password not in POST';
+        } elseif ( empty( $_POST['password'] ) ) {
+            $reason = 'password is empty';
+        } elseif ( $password_generated ) {
+            $reason = 'password was auto-generated';
+        }
+        error_log( 'ASKER: Password NOT set from POST for user ID: ' . $customer_id . ' - Reason: ' . $reason );
+    }
+}
+// Приоритет 5 - выполняется ДО автоматического входа (приоритет 10)
+add_action( 'woocommerce_created_customer', 'asker_set_password_on_registration', 5, 3 );
 
 /**
  * Включаем регистрацию на странице My Account
