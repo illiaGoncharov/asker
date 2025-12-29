@@ -1888,9 +1888,26 @@ function asker_disable_checkout_ajax() {
                                     checkoutBtn.textContent = 'Подтвердить заказ';
                                     checkoutBtn.disabled = false;
                                     
-                                    // Показываем ошибку
+                                    // Парсим HTML ошибки и извлекаем текст
                                     var errorMsg = data.messages || 'Неизвестная ошибка';
-                                    alert('Ошибка создания заказа:\n' + errorMsg);
+                                    
+                                    // Если это HTML - парсим и извлекаем текст
+                                    if (errorMsg.indexOf('<') !== -1) {
+                                        var tempDiv = document.createElement('div');
+                                        tempDiv.innerHTML = errorMsg;
+                                        var errorItems = tempDiv.querySelectorAll('li');
+                                        if (errorItems.length > 0) {
+                                            var errors = [];
+                                            errorItems.forEach(function(li) {
+                                                errors.push('• ' + li.textContent.trim());
+                                            });
+                                            errorMsg = errors.join('\n');
+                                        } else {
+                                            errorMsg = tempDiv.textContent.trim();
+                                        }
+                                    }
+                                    
+                                    alert('Ошибка оформления заказа:\n\n' + errorMsg);
                                 }
                             }).catch(function(error) {
                                 // Восстанавливаем кнопку при ошибке

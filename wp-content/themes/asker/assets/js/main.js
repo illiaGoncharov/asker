@@ -482,11 +482,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const button = e.target.closest('.btn-add-cart, .add_to_cart_button');
             if (!button) return;
             
-            // Пропускаем кнопки в избранном - их обрабатывает код в my-account.php
+            // Обрабатываем кнопки в избранном тоже
             const wishlistItem = button.closest('.wishlist-item');
-            if (wishlistItem) {
-                return; // Не обрабатываем, пусть код из my-account.php обработает
-            }
             
             // Защита от двойных кликов
             if (button.hasAttribute('data-processing') || button.classList.contains('loading')) {
@@ -513,12 +510,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (btnTextSpan) {
                     btnTextSpan.textContent = 'Добавляется...';
                 } else {
-                    button.textContent = 'Добавляется...';
+                button.textContent = 'Добавляется...';
                 }
                 
                 // Получаем количество из input, если есть
                 let quantity = 1;
-                const productCard = button.closest('.shop-product-card, .product-card');
+                const productCard = button.closest('.shop-product-card, .product-card, .wishlist-item');
                 if (productCard) {
                     const qtyInput = productCard.querySelector('input.qty, .quantity-input');
                     if (qtyInput) {
@@ -581,10 +578,51 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Обновляем через WooCommerce события - передаем jQuery объект, а не нативный DOM
                         if (typeof jQuery !== 'undefined') {
                             try {
+                                // Сохраняем активный таб ПЕРЕД обновлением fragments
+                                const $activeTabBefore = jQuery('.tab-content.active');
+                                const activeTabIdBefore = $activeTabBefore.length ? $activeTabBefore.attr('id') : null;
+                                const $activeNavBefore = jQuery('.account-nav .nav-item.active');
+                                const activeNavTabBefore = $activeNavBefore.length ? $activeNavBefore.attr('data-tab') : null;
+                                
+                                // Обновляем fragments, но исключаем навигацию из обновления
+                                const filteredFragments = {};
+                                jQuery.each(fragments, function(key, value) {
+                                    // НЕ обновляем навигацию и табы через fragments
+                                    if (key.indexOf('.account-nav') === -1 && 
+                                        key.indexOf('.nav-item') === -1 && 
+                                        key.indexOf('#wishlist') === -1 &&
+                                        key.indexOf('#overview') === -1 &&
+                                        key.indexOf('#profile') === -1 &&
+                                        key.indexOf('#orders') === -1) {
+                                        filteredFragments[key] = value;
+                                    }
+                                });
+                                
                                 // Конвертируем button в jQuery объект для WooCommerce
                                 const $button = jQuery(button);
-                                // Триггерим событие с правильными параметрами
-                                jQuery(document.body).trigger('added_to_cart', [fragments, cartHash, $button]);
+                                // Триггерим событие с отфильтрованными fragments
+                                jQuery(document.body).trigger('added_to_cart', [filteredFragments, cartHash, $button]);
+                                
+                                // Восстанавливаем активный таб сразу после триггера
+                                if (activeTabIdBefore) {
+                                    setTimeout(function() {
+                                        const $tabToRestore = jQuery('#' + activeTabIdBefore);
+                                        if ($tabToRestore.length) {
+                                            jQuery('.tab-content').removeClass('active');
+                                            $tabToRestore.addClass('active');
+                                        }
+                                    }, 50);
+                                }
+                                
+                                if (activeNavTabBefore) {
+                                    setTimeout(function() {
+                                        const $navToRestore = jQuery('.account-nav .nav-item[data-tab="' + activeNavTabBefore + '"]');
+                                        if ($navToRestore.length) {
+                                            jQuery('.account-nav .nav-item').removeClass('active');
+                                            $navToRestore.addClass('active');
+                                        }
+                                    }, 50);
+                                }
                             } catch (e) {
                                 // Игнорируем ошибки WooCommerce скриптов
                             }
@@ -611,19 +649,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                 badgeSpan.classList.remove('pulse');
                                 setTimeout(() => badgeSpan.classList.add('pulse'), 10);
                             }
-                        } else {
-                            button.textContent = 'Добавлено!';
                         }
-                        button.style.background = '#4CAF50';
+                        // НЕ меняем background - CSS класс has-items сделает кнопку желтой при hover
                         
                         setTimeout(() => {
                             const btnTextSpanRestore = button.querySelector('.btn-text');
                             if (btnTextSpanRestore) {
                                 btnTextSpanRestore.textContent = originalText;
-                            } else {
-                                button.textContent = originalText;
                             }
-                            button.style.background = '';
+                            // НЕ используем button.textContent - это перезапишет бейджик!
                             button.removeAttribute('data-processing');
                             button.disabled = false;
                         }, 3500);
@@ -646,9 +680,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                     setTimeout(() => badgeSpanAlt.classList.add('pulse'), 10);
                                 }
                             } else {
-                                button.textContent = 'Добавлено!';
+                            button.textContent = 'Добавлено!';
                             }
-                            button.style.background = '#4CAF50';
+                            // НЕ меняем background - CSS класс has-items сделает кнопку желтой при hover
                             
                             // Обновляем счетчик корзины
                             if (window.updateCartCount && typeof window.updateCartCount === 'function') {
@@ -659,10 +693,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const btnTextSpanRestoreAlt = button.querySelector('.btn-text');
                                 if (btnTextSpanRestoreAlt) {
                                     btnTextSpanRestoreAlt.textContent = originalText;
-                                } else {
-                                    button.textContent = originalText;
                                 }
-                                button.style.background = '';
+                                // НЕ используем button.textContent - это перезапишет бейджик!
                                 button.removeAttribute('data-processing');
                                 button.disabled = false;
                             }, 3500);
@@ -670,10 +702,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             // Реальная ошибка
                             const btnTextSpanErr = button.querySelector('.btn-text');
                             if (btnTextSpanErr) {
-                                btnTextSpanErr.textContent = originalText;
-                            } else {
-                                button.textContent = originalText;
+                                btnTextSpanErr.textContent = 'Ошибка';
+                                setTimeout(() => {
+                                    btnTextSpanErr.textContent = originalText;
+                                }, 2000);
                             }
+                            // НЕ используем button.textContent - это перезапишет бейджик!
                             button.removeAttribute('data-processing');
                             button.disabled = false;
                         }
@@ -683,10 +717,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Тихая обработка ошибок - могут быть вызваны расширениями браузера
                     const btnTextSpanCatch = button.querySelector('.btn-text');
                     if (btnTextSpanCatch) {
-                        btnTextSpanCatch.textContent = originalText;
-                    } else {
-                        button.textContent = originalText;
+                        btnTextSpanCatch.textContent = 'Ошибка';
+                        setTimeout(() => {
+                            btnTextSpanCatch.textContent = originalText;
+                        }, 2000);
                     }
+                    // НЕ используем button.textContent - это перезапишет бейджик!
                     button.removeAttribute('data-processing');
                     button.disabled = false;
                 });
@@ -1192,6 +1228,40 @@ function initAccountTabs() {
         return false;
     }
     
+    // Сохраняем активный таб перед перезагрузкой страницы
+    window.addEventListener('beforeunload', function() {
+        const $activeTab = jQuery('.tab-content.active');
+        const activeTabId = $activeTab.length ? $activeTab.attr('id') : null;
+        const $activeNavItem = jQuery('.account-nav .nav-item.active');
+        const activeNavTab = $activeNavItem.length ? $activeNavItem.attr('data-tab') : null;
+        
+        if (activeTabId) {
+            sessionStorage.setItem('asker_active_tab', activeTabId);
+        } else if (activeNavTab) {
+            sessionStorage.setItem('asker_active_tab', activeNavTab);
+        }
+    });
+    
+    // Восстанавливаем активный таб из sessionStorage при загрузке страницы
+    const savedTab = sessionStorage.getItem('asker_active_tab');
+    if (savedTab) {
+        // Небольшая задержка для гарантии, что DOM готов
+        setTimeout(function() {
+            const $savedTab = jQuery('#' + savedTab);
+            const $savedNav = jQuery('.account-nav .nav-item[data-tab="' + savedTab + '"]');
+            if ($savedTab.length) {
+                jQuery('.tab-content').removeClass('active');
+                $savedTab.addClass('active');
+            }
+            if ($savedNav.length) {
+                jQuery('.account-nav .nav-item').removeClass('active');
+                $savedNav.addClass('active');
+            }
+            // Очищаем сохраненный таб после восстановления
+            sessionStorage.removeItem('asker_active_tab');
+        }, 100);
+    }
+    
     // Используем делегирование событий для надёжности
     accountNav.addEventListener('click', function(e) {
         const navItem = e.target.closest('.nav-item');
@@ -1205,6 +1275,9 @@ function initAccountTabs() {
         if (!targetTab) {
             return;
         }
+        
+        // Сохраняем активный таб в sessionStorage
+        sessionStorage.setItem('asker_active_tab', targetTab);
         
         // Убираем активный класс у всех элементов навигации
         accountNav.querySelectorAll('.nav-item').forEach(nav => {
@@ -1510,7 +1583,9 @@ if (document.readyState === 'loading') {
             
             // Сохраняем оригинальный текст для восстановления
             if (!$btn.data('original-text')) {
-                $btn.data('original-text', $btn.text().trim() || 'В корзину');
+                const $btnText = $btn.find('.btn-text');
+                const originalText = $btnText.length ? $btnText.text().trim() : 'В корзину';
+                $btn.data('original-text', originalText);
             }
         }
     });
@@ -1559,6 +1634,73 @@ if (document.readyState === 'loading') {
     }
     
     $(document.body).on('added_to_cart', function(e, fragments, cart_hash, $button) {
+        // Сохраняем текущий активный таб в ЛК, чтобы не переключался при обновлении DOM
+        const $activeTab = $('.tab-content.active');
+        const activeTabId = $activeTab.length ? $activeTab.attr('id') : null;
+        const $activeNavItem = $('.account-nav .nav-item.active');
+        const activeNavTab = $activeNavItem.length ? $activeNavItem.attr('data-tab') : null;
+        
+        // Сохраняем активный таб в sessionStorage на случай перезагрузки
+        if (activeTabId) {
+            sessionStorage.setItem('asker_active_tab', activeTabId);
+        } else if (activeNavTab) {
+            sessionStorage.setItem('asker_active_tab', activeNavTab);
+        }
+        
+        // Сохраняем текущий hash в URL
+        const currentHash = window.location.hash;
+        
+        // Функция восстановления активного таба
+        function restoreActiveTab() {
+            if (activeTabId) {
+                const $tabToRestore = $('#' + activeTabId);
+                if ($tabToRestore.length && !$tabToRestore.hasClass('active')) {
+                    $('.tab-content').removeClass('active');
+                    $tabToRestore.addClass('active');
+                }
+            }
+            
+            if (activeNavTab) {
+                const $navToRestore = $('.account-nav .nav-item[data-tab="' + activeNavTab + '"]');
+                if ($navToRestore.length && !$navToRestore.hasClass('active')) {
+                    $('.account-nav .nav-item').removeClass('active');
+                    $navToRestore.addClass('active');
+                }
+            }
+            
+            // Восстанавливаем hash в URL
+            if (currentHash && window.location.hash !== currentHash) {
+                window.location.hash = currentHash;
+            }
+        }
+        
+        // Исключаем навигацию из обновления fragments
+        if (fragments && typeof fragments === 'object') {
+            const filteredFragments = {};
+            $.each(fragments, function(key, value) {
+                // НЕ обновляем навигацию и табы через fragments
+                if (key.indexOf('.account-nav') === -1 && 
+                    key.indexOf('.nav-item') === -1 && 
+                    key.indexOf('#wishlist') === -1 &&
+                    key.indexOf('#overview') === -1 &&
+                    key.indexOf('#profile') === -1 &&
+                    key.indexOf('#orders') === -1 &&
+                    key.indexOf('account-nav') === -1) {
+                    filteredFragments[key] = value;
+                }
+            });
+            
+            // Обновляем только отфильтрованные fragments
+            if (Object.keys(filteredFragments).length > 0) {
+                $.each(filteredFragments, function(key, value) {
+                    const $target = $(key);
+                    if ($target.length) {
+                        $target.replaceWith(value);
+                    }
+                });
+            }
+        }
+        
         // Предотвращаем появление кнопки "View cart" в карточках товаров
         // Удаляем все появившиеся элементы .added_to_cart или .wc-forward
         setTimeout(function() {
@@ -1572,22 +1714,67 @@ if (document.readyState === 'loading') {
                     $btnText.text('В корзину');
                 }
             });
-        }, 100);
+            
+            // Восстанавливаем активный таб
+            restoreActiveTab();
+        }, 50);
+        
+        // Дополнительные проверки для надежности
+        setTimeout(restoreActiveTab, 150);
+        setTimeout(restoreActiveTab, 300);
+        setTimeout(restoreActiveTab, 500);
         
         // Товар успешно добавлен - убираем состояние загрузки
         let $btn = $($button);
+        let productId = null;
         
-        // Функция обновления бейджа количества
-        function updateButtonBadge($button) {
-            const $badge = $button.find('.btn-cart-count');
-            if ($badge.length) {
-                const currentCount = parseInt($badge.attr('data-count') || '0', 10);
-                const newCount = currentCount + 1;
-                $badge.attr('data-count', newCount).text(newCount);
-                $button.addClass('has-items');
-                // Анимация пульса
-                $badge.removeClass('pulse');
-                setTimeout(function() { $badge.addClass('pulse'); }, 10);
+        // Получаем product_id из кнопки
+        if ($btn && $btn.length) {
+            productId = $btn.data('product-id') || $btn.data('product_id') || $btn.attr('data-product-id') || $btn.attr('data-product_id');
+        }
+        
+        // Функция обновления бейджа количества для всех кнопок с данным product_id
+        function updateButtonBadge($button, productId) {
+            if (productId) {
+                // Находим все кнопки с данным product_id
+                $('.add_to_cart_button[data-product-id="' + productId + '"], .add_to_cart_button[data-product_id="' + productId + '"], .wishlist-item-add-cart[data-product-id="' + productId + '"]').each(function() {
+                    const $btn = $(this);
+                    const $badge = $btn.find('.btn-cart-count');
+                    if ($badge.length) {
+                        // Инкрементируем текущее значение
+                        const currentCount = parseInt($badge.attr('data-count') || '0', 10);
+                        const newCount = currentCount + 1;
+                        // Обновляем ТОЛЬКО бейджик, НЕ трогаем текст кнопки
+                        $badge.attr('data-count', newCount);
+                        $badge.text(newCount);
+                        $btn.addClass('has-items');
+                        // Анимация пульса
+                        $badge.removeClass('pulse');
+                        setTimeout(function() { $badge.addClass('pulse'); }, 10);
+                    } else {
+                        // Если бейджика нет - создаем его
+                        const $btnText = $btn.find('.btn-text');
+                        if ($btnText.length) {
+                            const newCount = 1;
+                            $btn.append('<span class="btn-cart-count" data-count="' + newCount + '">' + newCount + '</span>');
+                            $btn.addClass('has-items');
+                        }
+                    }
+                });
+            } else if ($button && $button.length) {
+                // Fallback: обновляем только переданную кнопку
+                const $badge = $button.find('.btn-cart-count');
+                if ($badge.length) {
+                    const currentCount = parseInt($badge.attr('data-count') || '0', 10);
+                    const newCount = currentCount + 1;
+                    // Обновляем ТОЛЬКО бейджик, НЕ трогаем текст кнопки
+                    $badge.attr('data-count', newCount);
+                    $badge.text(newCount);
+                    $button.addClass('has-items');
+                    // Анимация пульса
+                    $badge.removeClass('pulse');
+                    setTimeout(function() { $badge.addClass('pulse'); }, 10);
+                }
             }
         }
         
@@ -1595,33 +1782,30 @@ if (document.readyState === 'loading') {
         if (!$btn || !$btn.length) {
             $('.add_to_cart_button.loading').each(function() {
                 const $btn2 = $(this);
+                const btnProductId = $btn2.data('product-id') || $btn2.data('product_id') || $btn2.attr('data-product-id') || $btn2.attr('data-product_id');
                 clearLoadingState($btn2);
-                updateButtonBadge($btn2);
+                updateButtonBadge($btn2, btnProductId);
                 
-                // Обновляем текст через span или напрямую
+                // Обновляем текст ТОЛЬКО через span, НЕ перезаписываем всю кнопку
                 const $btnText = $btn2.find('.btn-text');
                 if ($btnText.length) {
                     $btnText.text('Добавлено!');
                     setTimeout(function() { $btnText.text('В корзину'); }, 3500);
-                } else {
-                    $btn2.text('Добавлено!');
-                    setTimeout(function() { $btn2.text('В корзину'); }, 3500);
                 }
+                // НЕ используем $btn2.text() - это перезапишет бейджик!
             });
         } else {
             // Убираем класс loading
             clearLoadingState($btn);
-            updateButtonBadge($btn);
+            updateButtonBadge($btn, productId);
             
-            // Обновляем текст через span или напрямую
+            // Обновляем текст ТОЛЬКО через span, НЕ перезаписываем всю кнопку
             const $btnText = $btn.find('.btn-text');
             if ($btnText.length) {
                 $btnText.text('Добавлено!');
                 setTimeout(function() { $btnText.text('В корзину'); }, 3500);
-            } else {
-                $btn.text('Добавлено!');
-                setTimeout(function() { $btn.text('В корзину'); }, 3500);
             }
+            // НЕ используем $btn.text() - это перезапишет бейджик!
         }
         
         // Обновляем счетчик корзины
@@ -1633,16 +1817,116 @@ if (document.readyState === 'loading') {
             if (typeof fetchCartCountFromServer === 'function') {
                 fetchCartCountFromServer();
             }
+            
+            // Финальная проверка и восстановление активного таба в ЛК
+            if (activeTabId) {
+                const $tabToRestore = $('#' + activeTabId);
+                if ($tabToRestore.length && !$tabToRestore.hasClass('active')) {
+                    $('.tab-content').removeClass('active');
+                    $tabToRestore.addClass('active');
+                }
+            }
+            
+            if (activeNavTab) {
+                const $navToRestore = $('.account-nav .nav-item[data-tab="' + activeNavTab + '"]');
+                if ($navToRestore.length && !$navToRestore.hasClass('active')) {
+                    $('.account-nav .nav-item').removeClass('active');
+                    $navToRestore.addClass('active');
+                }
+            }
+            
+            // Восстанавливаем hash в URL, если он был изменен
+            if (currentHash && window.location.hash !== currentHash) {
+                window.location.hash = currentHash;
+            }
         }, 200);
     });
     
+    // MutationObserver для отслеживания изменений в навигации ЛК
+    // Автоматически восстанавливает активный таб, если он был изменен
+    if (typeof MutationObserver !== 'undefined') {
+        const accountNav = document.querySelector('.account-nav');
+        if (accountNav) {
+            const navObserver = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        // Проверяем, не изменился ли активный таб
+                        const $activeNavItem = jQuery('.account-nav .nav-item.active');
+                        const activeNavTab = $activeNavItem.length ? $activeNavItem.attr('data-tab') : null;
+                        const $activeTab = jQuery('.tab-content.active');
+                        const activeTabId = $activeTab.length ? $activeTab.attr('id') : null;
+                        
+                        // Если активный таб не соответствует активной навигации - исправляем
+                        if (activeNavTab && activeTabId !== activeNavTab) {
+                            const $tabToShow = jQuery('#' + activeNavTab);
+                            if ($tabToShow.length && !$tabToShow.hasClass('active')) {
+                                jQuery('.tab-content').removeClass('active');
+                                $tabToShow.addClass('active');
+                            }
+                        }
+                    }
+                });
+            });
+            
+            // Наблюдаем за изменениями в навигации
+            navObserver.observe(accountNav, {
+                attributes: true,
+                attributeFilter: ['class'],
+                subtree: true,
+                childList: false
+            });
+        }
+    }
+    
     // Дополнительная очистка при обновлении фрагментов WooCommerce
     $(document.body).on('wc_fragments_refreshed updated_wc_div', function(e) {
+        // Сохраняем текущий активный таб в ЛК перед обновлением
+        const $activeTab = $('.tab-content.active');
+        const activeTabId = $activeTab.length ? $activeTab.attr('id') : null;
+        const $activeNavItem = $('.account-nav .nav-item.active');
+        const activeNavTab = $activeNavItem.length ? $activeNavItem.attr('data-tab') : null;
+        const currentHash = window.location.hash;
+        
+        // Функция восстановления активного таба
+        function restoreActiveTab() {
+            if (activeTabId) {
+                const $tabToRestore = $('#' + activeTabId);
+                if ($tabToRestore.length && !$tabToRestore.hasClass('active')) {
+                    $('.tab-content').removeClass('active');
+                    $tabToRestore.addClass('active');
+                }
+            }
+            
+            if (activeNavTab) {
+                const $navToRestore = $('.account-nav .nav-item[data-tab="' + activeNavTab + '"]');
+                if ($navToRestore.length && !$navToRestore.hasClass('active')) {
+                    $('.account-nav .nav-item').removeClass('active');
+                    $navToRestore.addClass('active');
+                }
+            }
+            
+            // Восстанавливаем hash в URL
+            if (currentHash && window.location.hash !== currentHash) {
+                window.location.hash = currentHash;
+            }
+        }
+        
         // Обновляем счетчик при обновлении фрагментов
         if (typeof fetchCartCountFromServer === 'function') {
             setTimeout(function() {
                 fetchCartCountFromServer();
-            }, 100);
+                restoreActiveTab();
+            }, 50);
+            
+            // Дополнительные проверки для надежности
+            setTimeout(restoreActiveTab, 150);
+            setTimeout(restoreActiveTab, 300);
+            setTimeout(restoreActiveTab, 500);
+        } else {
+            // Если функция недоступна, все равно восстанавливаем таб
+            setTimeout(restoreActiveTab, 50);
+            setTimeout(restoreActiveTab, 150);
+            setTimeout(restoreActiveTab, 300);
         }
         // WooCommerce обновил фрагменты - очищаем все залипшие кнопки
         setTimeout(function() {
@@ -1651,12 +1935,13 @@ if (document.readyState === 'loading') {
                 clearLoadingState($btn);
                 
                 // Восстанавливаем текст если нужно
-                const originalText = $btn.data('original-text') || 'В корзину';
-                if ($btn.text().trim() === '' || $btn.text().trim() === 'Добавление...') {
-                    $btn.text(originalText).css({
-                        'background-color': '',
-                        'opacity': '1'
-                    });
+                const $btnText = $btn.find('.btn-text');
+                if ($btnText.length) {
+                    const originalText = $btn.data('original-text') || 'В корзину';
+                    const currentText = $btnText.text().trim();
+                    if (currentText === '' || currentText === 'Добавление...') {
+                        $btnText.text(originalText);
+                    }
                 }
             });
         }, 100);
@@ -1681,12 +1966,13 @@ if (document.readyState === 'loading') {
                     if (loadingTime > 2000) {
                         clearLoadingState($btn);
                         
-                        const originalText = $btn.data('original-text') || 'В корзину';
-                        if ($btn.text().trim() === '' || $btn.text().trim() === 'Добавление...') {
-                            $btn.text(originalText).css({
-                                'background-color': '',
-                                'opacity': '1'
-                            });
+                        const $btnText = $btn.find('.btn-text');
+                        if ($btnText.length) {
+                            const originalText = $btn.data('original-text') || 'В корзину';
+                            const currentText = $btnText.text().trim();
+                            if (currentText === '' || currentText === 'Добавление...') {
+                                $btnText.text(originalText);
+                            }
                         }
                     }
                 });
@@ -1702,18 +1988,15 @@ if (document.readyState === 'loading') {
         clearLoadingState($btn);
         
         // Показываем ошибку
-        const originalText = $btn.text().trim() || 'В корзину';
-        $btn.text('Ошибка').css({
-            'background-color': '#dc3545',
-            'opacity': '1'
-        });
-        
-        setTimeout(function() {
-            $btn.text(originalText).css({
-                'background-color': '',
-                'opacity': ''
-            });
-        }, 2000);
+        const $btnText = $btn.find('.btn-text');
+        if ($btnText.length) {
+            const originalText = $btnText.text().trim() || 'В корзину';
+            $btnText.text('Ошибка');
+            
+            setTimeout(function() {
+                $btnText.text(originalText);
+            }, 2000);
+        }
     });
     
     // Принудительная очистка всех залипших кнопок при загрузке страницы
@@ -1736,11 +2019,11 @@ if (document.readyState === 'loading') {
                 clearLoadingState($btn);
                 
                 // Восстанавливаем текст кнопки
-                const originalText = $btn.data('original-text') || $btn.text().trim() || 'В корзину';
-                $btn.text(originalText).css({
-                    'background-color': '',
-                    'opacity': '1'
-                });
+                const $btnText = $btn.find('.btn-text');
+                if ($btnText.length) {
+                    const originalText = $btn.data('original-text') || $btnText.text().trim() || 'В корзину';
+                    $btnText.text(originalText);
+                }
             }
         });
     }, 2000); // Проверяем каждые 2 секунды
@@ -1933,3 +2216,92 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// ===== ГЛОБАЛЬНЫЙ ОБРАБОТЧИК УДАЛЕНИЯ ИЗ ИЗБРАННОГО =====
+// Работает на всех страницах (page-wishlist.php и в ЛК)
+(function() {
+    'use strict';
+    
+    // Используем делегирование событий для динамически добавляемых элементов
+    if (typeof jQuery !== 'undefined') {
+        jQuery(document).on('click', '.wishlist-item-remove', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const btn = jQuery(this);
+            const productId = btn.data('product-id');
+            const wishlistItem = btn.closest('.wishlist-item');
+            
+            if (!productId || !wishlistItem.length) {
+                return false;
+            }
+            
+            // Удаляем из localStorage
+            let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+            favorites = favorites.filter(id => String(id) !== String(productId));
+            localStorage.setItem('favorites', JSON.stringify(favorites));
+            
+            // Анимация удаления
+            wishlistItem.css({
+                'opacity': '0',
+                'transform': 'scale(0.95)',
+                'transition': 'all 0.2s ease'
+            });
+            
+            setTimeout(function() {
+                wishlistItem.remove();
+                
+                // Обновляем счетчик
+                if (typeof updateWishlistCount === 'function') {
+                    updateWishlistCount();
+                }
+                if (typeof updateWishlistCounter === 'function') {
+                    updateWishlistCounter();
+                }
+                
+                // Проверяем, пуст ли список
+                const $wishlistContainer = jQuery('.wishlist-list, .wishlist-products, #wishlist-content');
+                if ($wishlistContainer.length) {
+                    const $remainingItems = $wishlistContainer.find('.wishlist-item');
+                    if ($remainingItems.length === 0) {
+                        // Если список пуст, показываем сообщение или перезагружаем
+                        // НЕ перезагружаем если мы в ЛК - просто показываем пустое состояние
+                        // Проверяем наличие табов ЛК или секции #wishlist
+                        const isInMyAccount = jQuery('#wishlist, .my-account-tabs, .woocommerce-MyAccount-navigation').length > 0;
+                        if (!isInMyAccount) {
+                            // На странице page-wishlist.php перезагружаем
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 300);
+                        } else {
+                            // В ЛК - обновляем список через функцию рендеринга, если есть
+                            setTimeout(function() {
+                                if (typeof renderWishlistFromLocalStorage === 'function') {
+                                    renderWishlistFromLocalStorage();
+                                } else if (typeof loadWishlistFromServer === 'function') {
+                                    loadWishlistFromServer();
+                                }
+                            }, 100);
+                        }
+                    }
+                }
+            }, 200);
+            
+            // Удаляем через AJAX (в фоне, не блокируем UI)
+            if (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) {
+                jQuery.ajax({
+                    url: asker_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'asker_sync_wishlist',
+                        product_ids: favorites
+                    }
+                }).fail(function() {
+                    console.error('Failed to sync wishlist');
+                });
+            }
+            
+            return false;
+        });
+    }
+})();

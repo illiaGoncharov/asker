@@ -178,37 +178,19 @@ if (isset($_POST['first_name']) && is_user_logged_in()) {
     } else {
         $success_message = '<div class="success-message" style="background: #D1FAE5; color: #065F46; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; text-align: center;">Профиль успешно обновлен!</div>';
         
-        // Показываем предупреждение, если файл был отправлен, но не загружен
-        if (isset($_POST['first_name']) && current_user_can('administrator')) {
-            $debug_info = '';
-            
-            if (isset($_FILES['avatar'])) {
-                if (!empty($_FILES['avatar']['name'])) {
-                    if ($_FILES['avatar']['error'] !== UPLOAD_ERR_OK) {
+        // Показываем ошибку ТОЛЬКО если пользователь реально пытался загрузить файл
+        // и произошла ошибка (не UPLOAD_ERR_NO_FILE который означает что файл просто не выбран)
+        if (isset($_FILES['avatar']) && !empty($_FILES['avatar']['name']) && $_FILES['avatar']['error'] !== UPLOAD_ERR_OK && $_FILES['avatar']['error'] !== UPLOAD_ERR_NO_FILE) {
                         $error_codes = array(
-                            UPLOAD_ERR_INI_SIZE => 'Файл превышает максимальный размер (upload_max_filesize)',
+                UPLOAD_ERR_INI_SIZE => 'Файл превышает максимальный размер',
                             UPLOAD_ERR_FORM_SIZE => 'Файл превышает максимальный размер формы',
                             UPLOAD_ERR_PARTIAL => 'Файл загружен частично',
-                            UPLOAD_ERR_NO_FILE => 'Файл не был загружен',
-                            UPLOAD_ERR_NO_TMP_DIR => 'Отсутствует временная папка',
-                            UPLOAD_ERR_CANT_WRITE => 'Не удалось записать файл на диск',
-                            UPLOAD_ERR_EXTENSION => 'Загрузка остановлена расширением'
+                UPLOAD_ERR_NO_TMP_DIR => 'Ошибка сервера: отсутствует временная папка',
+                UPLOAD_ERR_CANT_WRITE => 'Ошибка сервера: не удалось записать файл',
+                UPLOAD_ERR_EXTENSION => 'Загрузка остановлена'
                         );
                         $error_msg = isset($error_codes[$_FILES['avatar']['error']]) ? $error_codes[$_FILES['avatar']['error']] : 'Неизвестная ошибка';
-                        $debug_info = 'Ошибка загрузки аватара: ' . $error_msg . ' (код: ' . $_FILES['avatar']['error'] . ')';
-                    } else {
-                        $debug_info = 'Файл был отправлен, но не обработан. Проверьте логи WordPress.';
-                    }
-                } else {
-                    $debug_info = 'Файл не был выбран или имя файла пустое.';
-                }
-            } else {
-                $debug_info = 'Файл не был отправлен в форме. Проверьте enctype="multipart/form-data" в форме.';
-            }
-            
-            if ($debug_info) {
-                $success_message .= '<div class="error-message" style="background: #FEE2E2; color: #991B1B; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; text-align: center;">' . $debug_info . '</div>';
-            }
+            $success_message .= '<div class="error-message" style="background: #FEE2E2; color: #991B1B; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; text-align: center;">Ошибка загрузки аватара: ' . $error_msg . '</div>';
         }
     }
 }
@@ -244,6 +226,9 @@ File: <?php echo __FILE__; ?>
 ==========================================
 -->
 <div class="account-page container" data-template="asker-custom-my-account">
+    <!-- Уведомления WooCommerce -->
+    <?php woocommerce_output_all_notices(); ?>
+    
     <?php if (is_user_logged_in()): ?>
         <?php if (isset($success_message)): ?>
             <?php echo $success_message; ?>
@@ -1020,7 +1005,23 @@ File: <?php echo __FILE__; ?>
                                                             <input type="number" class="quantity-input" value="1" min="1" data-product-id="<?php echo esc_attr($product_id); ?>">
                                                             <button class="quantity-btn quantity-plus" data-product-id="<?php echo esc_attr($product_id); ?>">+</button>
                                                         </div>
-                                                        <button class="wishlist-item-add-cart btn-add-cart add_to_cart_button" data-product-id="<?php echo esc_attr($product_id); ?>">В корзину</button>
+                                                        <?php
+                                                        // Получаем количество этого товара в корзине
+                                                        $cart_qty = 0;
+                                                        if ( function_exists( 'WC' ) && WC()->cart ) {
+                                                            foreach ( WC()->cart->get_cart() as $cart_item ) {
+                                                                if ( $cart_item['product_id'] == $product_id ) {
+                                                                    $cart_qty = $cart_item['quantity'];
+                                                                    break;
+                                                                }
+                                                            }
+                                                        }
+                                                        $btn_class = 'wishlist-item-add-cart btn-add-cart add_to_cart_button';
+                                                        if ( $cart_qty > 0 ) {
+                                                            $btn_class .= ' has-items';
+                                                        }
+                                                        ?>
+                                                        <button class="<?php echo esc_attr( $btn_class ); ?>" data-product-id="<?php echo esc_attr($product_id); ?>"><span class="btn-text">В корзину</span><span class="btn-cart-count" data-count="<?php echo esc_attr( $cart_qty ); ?>"><?php echo esc_html( $cart_qty ); ?></span></button>
                                                     </div>
                                                 </div>
                                             <?php
@@ -1355,343 +1356,10 @@ jQuery(document).ready(function($) {
     // ОБРАБОТЧИК КНОПОК КОЛИЧЕСТВА перенесён в main.js
     // Работает глобально для всех страниц
 
-    // Удаление из избранного (используем делегирование событий)
-    $(document).on('click', '.wishlist-item-remove', function(e) {
-        e.preventDefault();
-        const btn = $(this);
-        const productId = btn.data('product-id');
-        const wishlistItem = btn.closest('.wishlist-item');
-        
-        if (confirm('Удалить товар из избранного?')) {
-            // Удаляем из localStorage
-            let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-            favorites = favorites.filter(id => id != productId);
-            localStorage.setItem('favorites', JSON.stringify(favorites));
-            
-            // Удаляем через AJAX
-            if (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) {
-                $.ajax({
-                    url: asker_ajax.ajax_url,
-                    type: 'POST',
-                    data: {
-                        action: 'asker_sync_wishlist',
-                        product_ids: favorites
-                    },
-                    success: function() {
-                        wishlistItem.remove();
-                        
-                        // Обновляем счетчик
-                        if (typeof updateWishlistCount === 'function') {
-                            updateWishlistCount();
-                        }
-                        
-                        // Если список пуст, перезагружаем страницу
-                        if ($('.wishlist-item').length === 0) {
-                            window.location.reload();
-                        }
-                    },
-                    error: function() {
-                        // Если AJAX ошибка, все равно удаляем элемент
-                        wishlistItem.remove();
-                        if ($('.wishlist-item').length === 0) {
-                            window.location.reload();
-                        }
-                    }
-                });
-            } else {
-                // Если AJAX недоступен, просто удаляем элемент и перезагружаем
-                wishlistItem.remove();
-                if ($('.wishlist-item').length === 0) {
-                    window.location.reload();
-                }
-            }
-        }
-    });
+    // Удаление из избранного теперь обрабатывается в main.js глобально для всех страниц
     
-    // Добавление в корзину с учетом количества (используем делегирование событий)
-    // Используем capture фазу для раннего перехвата, чтобы наш код обработал первым
-    $(document).on('click', '.wishlist-item-add-cart', function(e) {
-        e.preventDefault();
-        e.stopPropagation(); // Останавливаем всплытие, чтобы другие обработчики не сработали
-        e.stopImmediatePropagation(); // Останавливаем все остальные обработчики на этом элементе
-        
-        const btn = $(this);
-        const originalText = btn.text(); // Сохраняем текст СРАЗУ, до любых изменений
-        
-        // Блокируем повторные клики
-        if (btn.prop('disabled')) {
-            return false;
-        }
-        
-        const productId = btn.data('product-id');
-        const wishlistItem = btn.closest('.wishlist-item');
-        const quantityInput = wishlistItem.find('.quantity-input');
-        
-        // Получаем количество - используем нативный DOM элемент для надежности
-        // Читаем значение ДО блокировки кнопки, чтобы убедиться что оно актуальное
-        let quantity = 1;
-        if (quantityInput.length && quantityInput[0]) {
-            // Используем нативное свойство value напрямую из DOM
-            const nativeInput = quantityInput[0];
-            const rawValue = nativeInput.value;
-            const parsedValue = parseInt(rawValue, 10);
-            
-            // Проверяем валидность
-            if (!isNaN(parsedValue) && parsedValue >= 1) {
-                quantity = parsedValue;
-            }
-            
-            console.log('Quantity from native input - raw:', rawValue, 'parsed:', parsedValue, 'final:', quantity);
-            console.log('Input element:', nativeInput);
-            console.log('Input.value:', nativeInput.value, 'Input.getAttribute("value"):', nativeInput.getAttribute('value'));
-        } else {
-            console.warn('Quantity input not found!');
-        }
-        
-        console.log('Adding to cart - productId:', productId, 'quantity:', quantity);
-        
-        btn.prop('disabled', true);
-        btn.text('Добавление...');
-        
-        // Проверяем наличие asker_ajax
-        if (typeof asker_ajax === 'undefined') {
-            window.asker_ajax = {
-                ajax_url: '<?php echo esc_js(admin_url("admin-ajax.php")); ?>'
-            };
-        }
-        
-        // Используем стандартную функцию добавления в корзину WooCommerce
-        if (typeof addToCart === 'function') {
-            addToCart(productId, quantity);
-            btn.prop('disabled', false);
-            btn.text(originalText);
-        } else if (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) {
-            // Перечитываем количество перед отправкой на всякий случай
-            let finalQuantity = quantity;
-            if (quantityInput.length && quantityInput[0]) {
-                const recheckValue = parseInt(quantityInput[0].value, 10);
-                if (!isNaN(recheckValue) && recheckValue >= 1) {
-                    finalQuantity = recheckValue;
-                    console.log('Rechecked quantity before AJAX:', finalQuantity);
-                }
-            }
-            
-            const ajaxData = {
-                action: 'woocommerce_add_to_cart',
-                product_id: productId,
-                quantity: finalQuantity
-            };
-            
-            console.log('AJAX request data:', ajaxData);
-            console.log('Sending quantity:', finalQuantity, 'type:', typeof finalQuantity);
-            
-            // Используем нативный fetch() вместо jQuery AJAX, чтобы обойти перехват расширения браузера
-            // alert() уже переопределен глобально в начале скрипта для подавления ошибок от расширения
-            // Создаем FormData для отправки данных
-            const formData = new FormData();
-            formData.append('action', 'woocommerce_add_to_cart');
-            formData.append('product_id', productId);
-            formData.append('quantity', finalQuantity);
-            
-            // Оборачиваем весь запрос в try-catch для защиты от расширений браузера
-            try {
-                fetch(asker_ajax.ajax_url, {
-                    method: 'POST',
-                    body: formData,
-                    credentials: 'same-origin'
-                })
-                .then(function(response) {
-                    // Всегда обрабатываем ответ, даже если статус не 200
-                    // Не бросаем исключения, чтобы расширение браузера не перехватило
-                    let responseData = null;
-                    
-                    // Пытаемся распарсить JSON безопасно
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        return response.json().catch(function(parseError) {
-                            // Если не удалось распарсить JSON - возвращаем пустой объект
-                            console.log('JSON parse error (suppressed):', parseError);
-                            return { success: false, error: 'parse_error' };
-                        });
-                    } else {
-                        // Если ответ не JSON - возвращаем пустой объект
-                        return response.text().then(function(text) {
-                            console.log('Non-JSON response:', text);
-                            return { success: false, error: 'non_json_response' };
-                        }).catch(function() {
-                            return { success: false, error: 'read_error' };
-                        });
-                    }
-                })
-                .then(function(response) {
-                // Обрабатываем успешный ответ
-                btn.prop('disabled', false);
-                btn.text(originalText);
-                
-                // Логируем ответ для отладки
-                console.log('Add to cart response (fetch):', response);
-                console.log('Response type:', typeof response);
-                console.log('Response stringified:', JSON.stringify(response));
-                
-                // Проверяем успешность разными способами
-                // WooCommerce может возвращать {fragments: {...}, cart_hash: '...'} без success/data
-                let isSuccess = false;
-                
-                if (response) {
-                    // Формат WooCommerce fragments (если есть cart_hash - товар добавлен) - проверяем первым!
-                    // Проверяем наличие cart_hash - это главный индикатор успеха для WooCommerce
-                    if (response.cart_hash) {
-                        isSuccess = true;
-                        console.log('✅ Detected WooCommerce fragments format - cart_hash:', response.cart_hash);
-                    }
-                    // Также проверяем fragments как запасной вариант
-                    else if (response.fragments && typeof response.fragments === 'object') {
-                        isSuccess = true;
-                        console.log('✅ Detected WooCommerce fragments format - fragments present');
-                    }
-                    // Стандартный формат wp_send_json_success
-                    else if (response.success === true || response.success === 'true' || response.success === 1) {
-                        isSuccess = true;
-                        console.log('Detected wp_send_json_success format');
-                    }
-                    // Проверяем data внутри
-                    else if (response.data) {
-                        if (response.data.cart_item_key || response.data.cart_count !== undefined || response.data.cart_hash) {
-                            isSuccess = true;
-                            console.log('Detected success in response.data');
-                        }
-                    }
-                    // Проверяем на верхнем уровне
-                    else if (response.cart_item_key || response.cart_count !== undefined) {
-                        isSuccess = true;
-                        console.log('Detected cart indicators at top level');
-                    }
-                }
-                
-                console.log('Is success:', isSuccess, 'response keys:', response ? Object.keys(response) : 'no response');
-                
-                if (isSuccess) {
-                    // Используем fragments из WooCommerce для мгновенного обновления
-                    if (response.fragments) {
-                        // Обновляем виджет корзины через fragments
-                        $.each(response.fragments, function(key, value) {
-                            $(key).replaceWith(value);
-                        });
-                        
-                        // Триггерим событие для других скриптов
-                        $(document.body).trigger('wc_fragments_refreshed');
-                    }
-                    
-                    // Обновляем счетчик корзины
-                    if (typeof updateCartCount === 'function') {
-                        updateCartCount();
-                    }
-                    
-                    // Также делаем дополнительный запрос для подстраховки
-                    if (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) {
-                        $.ajax({
-                            url: asker_ajax.ajax_url,
-                            type: 'POST',
-                            data: {
-                                action: 'asker_get_cart_count'
-                            },
-                            success: function(countResponse) {
-                                if (countResponse && countResponse.success && countResponse.data && countResponse.data.count !== undefined) {
-                                    const count = countResponse.data.count;
-                                    // Обновляем счетчик в шапке
-                                    $('.cart-count').each(function() {
-                                        $(this).text(count);
-                                        $(this).attr('data-count', count);
-                                        $(this).css('display', count > 0 ? 'flex' : 'none');
-                                    });
-                                    // Обновляем мобильный счетчик
-                                    $('.mobile-cart-count').each(function() {
-                                        $(this).text(count);
-                                        $(this).css('display', count > 0 ? 'inline-flex' : 'none');
-                                    });
-                                }
-                            }
-                        });
-                    }
-                    
-                    // Показываем уведомление об успехе
-                    console.log('✅ Товар успешно добавлен в корзину');
-                } else {
-                    // Если формат ответа нестандартный, но товар мог добавиться
-                    // Проверяем наличие данных о корзине (fragments или cart_hash)
-                    if (response && (response.fragments || response.cart_hash || (response.data && (response.data.cart_count !== undefined || response.data.cart_item_key)))) {
-                        // Товар добавился, но формат ответа нестандартный
-                        console.log('✅ Товар добавлен (нестандартный формат ответа)');
-                        // Обновляем счетчик вручную если есть данные
-                        if (response.data && response.data.cart_count !== undefined) {
-                            const count = response.data.cart_count;
-                            $('.cart-count').each(function() {
-                                $(this).text(count);
-                                $(this).attr('data-count', count);
-                                $(this).css('display', count > 0 ? 'flex' : 'none');
-                            });
-                            $('.mobile-cart-count').each(function() {
-                                $(this).text(count);
-                                $(this).css('display', count > 0 ? 'inline-flex' : 'none');
-                            });
-                        }
-                    } else {
-                        // Реальная ошибка - логируем тихо, без alert
-                        console.log('❌ Ошибка добавления в корзину (suppressed):', response);
-                        const errorMsg = (response && response.data && response.data.message) 
-                            ? response.data.message 
-                            : 'Не удалось добавить товар в корзину';
-                        // Не показываем alert для ошибок из расширений браузера
-                        // Тихо логируем в консоль
-                    }
-                }
-            })
-                .catch(function(error) {
-                    // Обрабатываем ошибку тихо, без alert
-                    btn.prop('disabled', false);
-                    btn.text(originalText);
-                    
-                    // Логируем только в консоль, не показываем alert
-                    console.log('Add to cart fetch error (suppressed):', error);
-                    
-                    // Проверяем, может товар все равно добавился (расширение могло перехватить успешный ответ)
-                    // Обновляем счетчик корзины на всякий случай
-                    if (typeof asker_ajax !== 'undefined' && asker_ajax.ajax_url) {
-                        $.ajax({
-                            url: asker_ajax.ajax_url,
-                            type: 'POST',
-                            data: {
-                                action: 'asker_get_cart_count'
-                            },
-                            success: function(countResponse) {
-                                if (countResponse && countResponse.success && countResponse.data && countResponse.data.count !== undefined) {
-                                    const count = countResponse.data.count;
-                                    $('.cart-count').each(function() {
-                                        $(this).text(count);
-                                        $(this).attr('data-count', count);
-                                        $(this).css('display', count > 0 ? 'flex' : 'none');
-                                    });
-                                    $('.mobile-cart-count').each(function() {
-                                        $(this).text(count);
-                                        $(this).css('display', count > 0 ? 'inline-flex' : 'none');
-                                    });
-                                }
-                            }
-                        });
-                    }
-                });
-            } catch (error) {
-                // Обрабатываем синхронные ошибки
-                btn.prop('disabled', false);
-                btn.text(originalText);
-                console.log('Add to cart sync error (suppressed):', error);
-            }
-        } else {
-            btn.prop('disabled', false);
-            btn.text(originalText);
-            console.error('AJAX недоступен. Пожалуйста, обновите страницу.');
-        }
-    }); // Конец обработчика событий для добавления в корзину
+    // Добавление в корзину теперь обрабатывается в main.js для всех кнопок, включая избранное
+    // Убрали отдельный обработчик, чтобы избежать конфликтов
 }); // Конец jQuery(document).ready
 </script>
 

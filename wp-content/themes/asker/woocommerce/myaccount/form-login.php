@@ -152,7 +152,16 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <!-- Поле пароля -->
                 <div class="form-group">
                     <label for="reg_password">Пароль&nbsp;<span class="required">*</span></label>
-                    <input type="password" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="password" id="reg_password" autocomplete="new-password" required />
+                    <input type="password" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="password" id="reg_password" autocomplete="new-password" required minlength="8" />
+                    <div class="password-requirements" id="password-requirements">
+                        <p class="password-requirements__title">Пароль должен содержать:</p>
+                        <ul class="password-requirements__list">
+                            <li class="password-req" data-req="length"><span class="password-req__icon">○</span> Минимум 8 символов</li>
+                            <li class="password-req" data-req="digit"><span class="password-req__icon">○</span> Хотя бы одну цифру</li>
+                            <li class="password-req" data-req="upper"><span class="password-req__icon">○</span> Хотя бы одну заглавную букву</li>
+                            <li class="password-req" data-req="special"><span class="password-req__icon">○</span> Хотя бы один спецсимвол (!@#$%^&* и др.)</li>
+                        </ul>
+                    </div>
                 </div>
                 
                 <?php do_action( 'woocommerce_register_form' ); ?>
@@ -259,6 +268,63 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
+    // Валидация пароля в реальном времени
+    const regPassword = document.getElementById('reg_password');
+    const requirementsList = document.getElementById('password-requirements');
+    
+    if (regPassword && requirementsList) {
+        const requirements = {
+            length: { regex: /.{8,}/, element: requirementsList.querySelector('[data-req="length"]') },
+            digit: { regex: /[0-9]/, element: requirementsList.querySelector('[data-req="digit"]') },
+            upper: { regex: /[A-ZА-ЯЁ]/u, element: requirementsList.querySelector('[data-req="upper"]') },
+            special: { regex: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/, element: requirementsList.querySelector('[data-req="special"]') }
+        };
+        
+        function validatePassword() {
+            const password = regPassword.value;
+            let allValid = true;
+            
+            for (const [key, req] of Object.entries(requirements)) {
+                if (req.element) {
+                    const icon = req.element.querySelector('.password-req__icon');
+                    if (req.regex.test(password)) {
+                        req.element.classList.add('password-req--valid');
+                        req.element.classList.remove('password-req--invalid');
+                        if (icon) icon.textContent = '✓';
+                    } else {
+                        req.element.classList.remove('password-req--valid');
+                        if (password.length > 0) {
+                            req.element.classList.add('password-req--invalid');
+                        } else {
+                            req.element.classList.remove('password-req--invalid');
+                        }
+                        if (icon) icon.textContent = '○';
+                        allValid = false;
+                    }
+                }
+            }
+            
+            return allValid;
+        }
+        
+        regPassword.addEventListener('input', validatePassword);
+        regPassword.addEventListener('focus', function() {
+            requirementsList.style.display = 'block';
+        });
+        
+        // Валидация при отправке формы
+        const regForm = regPassword.closest('form');
+        if (regForm) {
+            regForm.addEventListener('submit', function(e) {
+                if (!validatePassword()) {
+                    e.preventDefault();
+                    regPassword.focus();
+                    requirementsList.style.display = 'block';
+                }
+            });
+        }
+    }
 });
 </script>
 

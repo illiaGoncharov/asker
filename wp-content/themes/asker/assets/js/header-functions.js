@@ -66,22 +66,26 @@ function openContactFormPopup() {
     var cf7Form = popup.querySelector('.wpcf7');
     if (cf7Form) {
         var form = cf7Form.querySelector('form');
+        var cf7Initialized = false;
         
         // Попробуем инициализировать CF7 стандартным способом
-        if (typeof wpcf7 !== 'undefined') {
-            // CF7 5.4+ использует wpcf7.init()
+        if (typeof wpcf7 !== 'undefined' && form) {
+            // CF7 5.4+ использует wpcf7.init() но ожидает form, а не wrapper
             if (typeof wpcf7.init === 'function') {
                 try {
-                    wpcf7.init(cf7Form);
+                    // CF7 5.4+ ожидает form element
+                    wpcf7.init(form);
+                    cf7Initialized = true;
                 } catch (e) {
-                    console.log('CF7 init error:', e);
+                    // CF7 init не сработал, используем fallback
                 }
             } else if (typeof wpcf7.initForm === 'function') {
                 // Старые версии CF7
                 try {
                     wpcf7.initForm(form);
+                    cf7Initialized = true;
                 } catch (e) {
-                    console.log('CF7 initForm error:', e);
+                    // CF7 initForm не сработал
                 }
             }
         }
@@ -90,17 +94,11 @@ function openContactFormPopup() {
         var cf7Event = new CustomEvent('wpcf7:init', { detail: { form: cf7Form } });
         document.dispatchEvent(cf7Event);
         
-        // Добавляем fallback обработчик отправки AJAX, если CF7 не сработал
-        if (form && !form.hasAttribute('data-cf7-popup-handler')) {
+        // Добавляем fallback обработчик ТОЛЬКО если CF7 не инициализировался
+        if (form && !cf7Initialized && !form.hasAttribute('data-cf7-popup-handler')) {
             form.setAttribute('data-cf7-popup-handler', 'true');
             
             form.addEventListener('submit', function(e) {
-                // Если у формы уже есть CF7 обработчик, не вмешиваемся
-                // Проверяем через наличие data-status атрибута который CF7 добавляет
-                if (cf7Form.getAttribute('data-status') === 'submitting') {
-                    return; // CF7 обрабатывает
-                }
-                
                 e.preventDefault();
                 
                 var formData = new FormData(form);
@@ -108,7 +106,13 @@ function openContactFormPopup() {
                 var responseOutput = cf7Form.querySelector('.wpcf7-response-output');
                 
                 // Добавляем action для CF7
-                var formId = cf7Form.getAttribute('data-id') || cf7Form.querySelector('input[name="_wpcf7"]')?.value;
+                var formId = cf7Form.getAttribute('data-id');
+                if (!formId) {
+                    var wpcf7Input = cf7Form.querySelector('input[name="_wpcf7"]');
+                    if (wpcf7Input) {
+                        formId = wpcf7Input.value;
+                    }
+                }
                 if (!formId) {
                     // Пробуем получить из атрибута id
                     var idMatch = cf7Form.id && cf7Form.id.match(/wpcf7-f(\d+)/);
@@ -116,6 +120,7 @@ function openContactFormPopup() {
                         formId = idMatch[1];
                     }
                 }
+                
                 
                 // Показываем состояние загрузки
                 if (submitBtn) {
@@ -187,7 +192,6 @@ function openContactFormPopup() {
                     }
                 })
                 .catch(function(error) {
-                    console.log('CF7 submit error:', error);
                     if (submitBtn) {
                         submitBtn.disabled = false;
                     }
@@ -198,6 +202,14 @@ function openContactFormPopup() {
                 });
             });
         }
+    }
+    
+    // Активируем кнопку отправки (CF7 может её заблокировать)
+    var submitBtn = popup.querySelector('.wpcf7-submit, input[type="submit"], button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.removeAttribute('disabled');
+        submitBtn.removeAttribute('aria-disabled');
+        submitBtn.classList.remove('disabled');
     }
     
     // Фокус на первое поле

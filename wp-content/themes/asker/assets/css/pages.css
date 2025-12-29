@@ -841,6 +841,62 @@
   width: 100%;
 }
 
+/* Требования к паролю */
+.password-requirements {
+  margin-top: 8px;
+  padding: 12px 16px;
+  background: var(--bg-light);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.password-requirements__title {
+  margin: 0 0 8px 0;
+  font-weight: 500;
+  color: var(--text-gray);
+  font-size: 12px;
+}
+
+.password-requirements__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.password-req {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-gray);
+  font-size: 12px;
+  transition: color 0.2s ease;
+}
+
+.password-req__icon {
+  width: 16px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.password-req--valid {
+  color: #22C55E;
+}
+
+.password-req--valid .password-req__icon {
+  color: #22C55E;
+}
+
+.password-req--invalid {
+  color: #EF4444;
+}
+
+.password-req--invalid .password-req__icon {
+  color: #EF4444;
+}
+
 /* Поля имени и фамилии в две колонки */
 .auth-page .auth-container .auth-form .form-group--two-columns {
   display: grid;

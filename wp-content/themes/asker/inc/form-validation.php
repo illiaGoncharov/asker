@@ -5,6 +5,89 @@
  */
 
 /**
+ * Валидация пароля при регистрации WooCommerce
+ * Требования: минимум 8 символов, цифры, заглавные буквы, спецсимволы
+ */
+function asker_validate_password_strength( $errors, $username, $email ) {
+    // Получаем пароль из POST
+    $password = isset( $_POST['password'] ) ? $_POST['password'] : '';
+    
+    if ( empty( $password ) ) {
+        return $errors;
+    }
+    
+    $password_errors = array();
+    
+    // Минимум 8 символов
+    if ( strlen( $password ) < 8 ) {
+        $password_errors[] = 'минимум 8 символов';
+    }
+    
+    // Должна быть хотя бы одна цифра
+    if ( ! preg_match( '/[0-9]/', $password ) ) {
+        $password_errors[] = 'хотя бы одна цифра';
+    }
+    
+    // Должна быть хотя бы одна заглавная буква
+    if ( ! preg_match( '/[A-ZА-ЯЁ]/u', $password ) ) {
+        $password_errors[] = 'хотя бы одна заглавная буква';
+    }
+    
+    // Должен быть хотя бы один спецсимвол
+    if ( ! preg_match( '/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?~`]/', $password ) ) {
+        $password_errors[] = 'хотя бы один специальный символ (!@#$%^&* и др.)';
+    }
+    
+    // Если есть ошибки - добавляем их
+    if ( ! empty( $password_errors ) ) {
+        $error_message = 'Пароль должен содержать: ' . implode( ', ', $password_errors ) . '.';
+        $errors->add( 'weak_password', '<strong>Ненадёжный пароль.</strong> ' . $error_message );
+    }
+    
+    return $errors;
+}
+add_filter( 'woocommerce_registration_errors', 'asker_validate_password_strength', 10, 3 );
+
+/**
+ * Также валидируем пароль при смене пароля в аккаунте
+ */
+function asker_validate_password_change( $errors, $user ) {
+    if ( isset( $_POST['password_1'] ) && ! empty( $_POST['password_1'] ) ) {
+        $password = $_POST['password_1'];
+        $password_errors = array();
+        
+        // Минимум 8 символов
+        if ( strlen( $password ) < 8 ) {
+            $password_errors[] = 'минимум 8 символов';
+        }
+        
+        // Должна быть хотя бы одна цифра
+        if ( ! preg_match( '/[0-9]/', $password ) ) {
+            $password_errors[] = 'хотя бы одна цифра';
+        }
+        
+        // Должна быть хотя бы одна заглавная буква
+        if ( ! preg_match( '/[A-ZА-ЯЁ]/u', $password ) ) {
+            $password_errors[] = 'хотя бы одна заглавная буква';
+        }
+        
+        // Должен быть хотя бы один спецсимвол
+        if ( ! preg_match( '/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?~`]/', $password ) ) {
+            $password_errors[] = 'хотя бы один специальный символ (!@#$%^&* и др.)';
+        }
+        
+        // Если есть ошибки - добавляем их
+        if ( ! empty( $password_errors ) ) {
+            $error_message = 'Пароль должен содержать: ' . implode( ', ', $password_errors ) . '.';
+            $errors->add( 'weak_password', '<strong>Ненадёжный пароль.</strong> ' . $error_message );
+        }
+    }
+    
+    return $errors;
+}
+add_filter( 'woocommerce_save_account_details_errors', 'asker_validate_password_change', 10, 2 );
+
+/**
  * Валидация полей чекаута WooCommerce
  */
 function asker_validate_checkout_fields( $data, $errors ) {
@@ -144,4 +227,228 @@ if ( class_exists( 'WPCF7_ContactForm' ) ) {
     add_filter( 'wpcf7_validate_email', 'asker_validate_cf7_form', 10, 2 );
     add_filter( 'wpcf7_validate_email*', 'asker_validate_cf7_form', 10, 2 );
 }
+
+/**
+ * Переводим сообщения Contact Form 7 на русский
+ */
+function asker_cf7_translate_messages( $messages ) {
+    $messages = array_merge( $messages, array(
+        'mail_sent_ok' => array(
+            'description' => 'Сообщение успешно отправлено',
+            'default' => 'Спасибо! Ваше сообщение отправлено.',
+        ),
+        'mail_sent_ng' => array(
+            'description' => 'Ошибка отправки',
+            'default' => 'Произошла ошибка при отправке. Попробуйте позже.',
+        ),
+        'validation_error' => array(
+            'description' => 'Ошибка валидации',
+            'default' => 'Пожалуйста, проверьте заполненные поля.',
+        ),
+        'spam' => array(
+            'description' => 'Спам',
+            'default' => 'Сообщение отмечено как спам.',
+        ),
+        'accept_terms' => array(
+            'description' => 'Согласие',
+            'default' => 'Необходимо принять условия.',
+        ),
+        'invalid_required' => array(
+            'description' => 'Обязательное поле',
+            'default' => 'Это поле обязательно для заполнения.',
+        ),
+        'invalid_too_long' => array(
+            'description' => 'Слишком длинное',
+            'default' => 'Слишком длинное значение.',
+        ),
+        'invalid_too_short' => array(
+            'description' => 'Слишком короткое',
+            'default' => 'Слишком короткое значение.',
+        ),
+        'upload_failed' => array(
+            'description' => 'Ошибка загрузки',
+            'default' => 'Ошибка при загрузке файла.',
+        ),
+        'upload_file_type_invalid' => array(
+            'description' => 'Неверный тип файла',
+            'default' => 'Неверный тип файла.',
+        ),
+        'upload_file_too_large' => array(
+            'description' => 'Файл слишком большой',
+            'default' => 'Файл слишком большой.',
+        ),
+        'upload_failed_php_error' => array(
+            'description' => 'PHP ошибка',
+            'default' => 'Ошибка при загрузке файла.',
+        ),
+        'invalid_date' => array(
+            'description' => 'Неверная дата',
+            'default' => 'Неверный формат даты.',
+        ),
+        'date_too_early' => array(
+            'description' => 'Слишком ранняя дата',
+            'default' => 'Дата слишком ранняя.',
+        ),
+        'date_too_late' => array(
+            'description' => 'Слишком поздняя дата',
+            'default' => 'Дата слишком поздняя.',
+        ),
+        'invalid_number' => array(
+            'description' => 'Неверное число',
+            'default' => 'Неверный формат числа.',
+        ),
+        'number_too_small' => array(
+            'description' => 'Число слишком маленькое',
+            'default' => 'Число слишком маленькое.',
+        ),
+        'number_too_large' => array(
+            'description' => 'Число слишком большое',
+            'default' => 'Число слишком большое.',
+        ),
+        'quiz_answer_not_correct' => array(
+            'description' => 'Неверный ответ',
+            'default' => 'Неверный ответ.',
+        ),
+        'invalid_email' => array(
+            'description' => 'Неверный email',
+            'default' => 'Неверный адрес электронной почты.',
+        ),
+        'invalid_url' => array(
+            'description' => 'Неверный URL',
+            'default' => 'Неверный адрес URL.',
+        ),
+        'invalid_tel' => array(
+            'description' => 'Неверный телефон',
+            'default' => 'Неверный номер телефона.',
+        ),
+    ));
+    
+    return $messages;
+}
+add_filter( 'wpcf7_messages', 'asker_cf7_translate_messages' );
+
+/**
+ * Переводим сообщения CF7 через gettext
+ */
+function asker_cf7_gettext_messages( $translated, $text, $domain ) {
+    if ( $domain !== 'contact-form-7' ) {
+        return $translated;
+    }
+    
+    $translations = array(
+        'Thank you for your message. It has been sent.' => 'Спасибо! Ваше сообщение отправлено.',
+        'There was an error trying to send your message. Please try again later.' => 'Произошла ошибка при отправке. Попробуйте позже.',
+        'One or more fields have an error. Please check and try again.' => 'Пожалуйста, проверьте заполненные поля.',
+        'There was an error trying to send your message.' => 'Ошибка при отправке сообщения.',
+        'Please fill out this field.' => 'Это поле обязательно для заполнения.',
+        'Please enter a valid email address.' => 'Введите корректный email адрес.',
+        'Please enter a valid phone number.' => 'Введите корректный номер телефона.',
+        'The field is too long.' => 'Слишком длинное значение.',
+        'The field is too short.' => 'Слишком короткое значение.',
+        'Sending ...' => 'Отправка...',
+        'Submit' => 'Отправить',
+        'Send' => 'Отправить',
+    );
+    
+    if ( isset( $translations[ $text ] ) ) {
+        return $translations[ $text ];
+    }
+    
+    return $translated;
+}
+add_filter( 'gettext', 'asker_cf7_gettext_messages', 20, 3 );
+
+/**
+ * Переводим сообщения WooCommerce (регистрация, вход и т.д.)
+ */
+function asker_wc_gettext_messages( $translated, $text, $domain ) {
+    if ( $domain !== 'woocommerce' ) {
+        return $translated;
+    }
+    
+    $translations = array(
+        'An account is already registered with your email address. Please log in.' => 'Аккаунт с таким email уже существует. Пожалуйста, войдите.',
+        'An account is already registered with your email address. <a href="%s">Please log in.</a>' => 'Аккаунт с таким email уже существует. <a href="%s">Пожалуйста, войдите.</a>',
+        'Error: An account is already registered with your email address.' => 'Ошибка: Аккаунт с таким email уже существует.',
+        'Please provide a valid email address.' => 'Пожалуйста, введите корректный email адрес.',
+        'Please enter an account username.' => 'Пожалуйста, введите имя пользователя.',
+        'Please enter an account password.' => 'Пожалуйста, введите пароль.',
+        'Registration is disabled.' => 'Регистрация отключена.',
+        'Lost your password?' => 'Забыли пароль?',
+        'Username or email address' => 'Имя пользователя или Email',
+        'Password' => 'Пароль',
+        'Remember me' => 'Запомнить меня',
+        'Log in' => 'Войти',
+        'Register' => 'Зарегистрироваться',
+    );
+    
+    if ( isset( $translations[ $text ] ) ) {
+        return $translations[ $text ];
+    }
+    
+    return $translated;
+}
+add_filter( 'gettext', 'asker_wc_gettext_messages', 20, 3 );
+
+/**
+ * Переводим сообщения CF7 при отправке формы (динамически)
+ */
+function asker_cf7_translate_response_message( $message, $status ) {
+    $translations = array(
+        'Thank you for your message. It has been sent.' => 'Спасибо! Ваше сообщение отправлено.',
+        'There was an error trying to send your message. Please try again later.' => 'Произошла ошибка при отправке. Попробуйте позже.',
+        'One or more fields have an error. Please check and try again.' => 'Пожалуйста, проверьте заполненные поля.',
+        'There was an error trying to send your message.' => 'Ошибка при отправке сообщения.',
+        'Please fill the required fields.' => 'Заполните обязательные поля.',
+        'Sending ...' => 'Отправка...',
+    );
+    
+    if ( isset( $translations[ $message ] ) ) {
+        return $translations[ $message ];
+    }
+    
+    return $message;
+}
+add_filter( 'wpcf7_display_message', 'asker_cf7_translate_response_message', 10, 2 );
+
+/**
+ * Показываем сообщение об успешной регистрации
+ */
+function asker_registration_success_message() {
+    // Проверяем, что пользователь только что зарегистрировался
+    if ( isset( $_GET['registered'] ) && $_GET['registered'] === 'success' ) {
+        wc_add_notice( 'Регистрация прошла успешно! Добро пожаловать в Asker Parts.', 'success' );
+    }
+}
+add_action( 'woocommerce_before_my_account', 'asker_registration_success_message' );
+
+/**
+ * Редирект после успешной регистрации с параметром
+ */
+function asker_registration_redirect( $redirect ) {
+    // Добавляем параметр для показа сообщения
+    return add_query_arg( 'registered', 'success', wc_get_page_permalink( 'myaccount' ) );
+}
+add_filter( 'woocommerce_registration_redirect', 'asker_registration_redirect' );
+
+/**
+ * Альтернативный способ - показываем notice сразу после регистрации
+ */
+function asker_after_registration_notice( $customer_id ) {
+    // Устанавливаем transient для показа сообщения
+    set_transient( 'asker_registration_success_' . $customer_id, true, 60 );
+}
+add_action( 'woocommerce_created_customer', 'asker_after_registration_notice' );
+
+/**
+ * Показываем сообщение при входе нового пользователя
+ */
+function asker_show_registration_success_on_login() {
+    $user_id = get_current_user_id();
+    if ( $user_id && get_transient( 'asker_registration_success_' . $user_id ) ) {
+        wc_add_notice( '🎉 Регистрация прошла успешно! Добро пожаловать в Asker Parts.', 'success' );
+        delete_transient( 'asker_registration_success_' . $user_id );
+    }
+}
+add_action( 'wp', 'asker_show_registration_success_on_login' );
 

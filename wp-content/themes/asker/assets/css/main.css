@@ -7373,6 +7373,25 @@ body:not(.home) .site-main {
   color: var(--primary-black);
 }
 
+/* Кнопка "Повторить" в таблице заказов */
+.order-actions .btn-primary {
+  padding: 8px 16px;
+  background: var(--primary-black);
+  border: none;
+  border-radius: 6px;
+  color: var(--bg-white);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.order-actions .btn-primary:hover {
+  background: #333;
+  color: var(--bg-white);
+}
+
 /* ===== ИЗБРАННОЕ В ЛК ===== */
 .wishlist-products {
   margin-top: 24px;
@@ -7574,23 +7593,95 @@ body:not(.home) .site-main {
   margin: 0;
 }
 
-.wishlist-item-add-cart {
+/* Кнопка "В корзину" в избранном - как в каталоге */
+.wishlist-item-add-cart,
+.wishlist-item-add-cart.btn-add-cart,
+.wishlist-item-add-cart.add_to_cart_button,
+button.wishlist-item-add-cart,
+button.wishlist-item-add-cart.btn-add-cart,
+button.wishlist-item-add-cart.add_to_cart_button {
+  position: relative;
   padding: 10px 20px;
-  background: var(--primary-black);
-  color: var(--bg-white);
+  background: var(--primary-black) !important;
+  color: var(--bg-white) !important;
   border: none;
-  border-radius: 8px;
+  border-radius: 50px !important;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
-  width: 100%;
+  width: auto;
+  min-width: 120px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-secondary);
 }
 
-.wishlist-item-add-cart:hover {
-  background: var(--primary-yellow);
-  color: var(--primary-black);
+/* Кнопка всегда черная, желтая ТОЛЬКО при hover когда есть товары */
+.wishlist-item-add-cart.has-items:hover,
+.wishlist-item-add-cart.btn-add-cart.has-items:hover,
+.wishlist-item-add-cart.add_to_cart_button.has-items:hover,
+button.wishlist-item-add-cart.has-items:hover,
+button.wishlist-item-add-cart.btn-add-cart.has-items:hover,
+button.wishlist-item-add-cart.add_to_cart_button.has-items:hover,
+.wishlist-item .wishlist-item-add-cart.has-items:hover,
+.wishlist-item .wishlist-item-add-cart.btn-add-cart.has-items:hover,
+.wishlist-item .wishlist-item-add-cart.add_to_cart_button.has-items:hover {
+  background: linear-gradient(135deg, #FFEB3B 0%, #FDD835 100%) !important;
+  color: var(--primary-black) !important;
+}
+
+/* Hover для черной кнопки (когда нет товаров в корзине) */
+.wishlist-item-add-cart:not(.has-items):hover,
+.wishlist-item-add-cart.btn-add-cart:not(.has-items):hover,
+.wishlist-item-add-cart.add_to_cart_button:not(.has-items):hover,
+button.wishlist-item-add-cart:not(.has-items):hover,
+button.wishlist-item-add-cart.btn-add-cart:not(.has-items):hover,
+button.wishlist-item-add-cart.add_to_cart_button:not(.has-items):hover {
+  background: #1F2937 !important;
+  color: var(--bg-white) !important;
+}
+
+/* Бейджик количества на кнопке в избранном */
+.wishlist-item-add-cart .btn-text {
+  transition: opacity 0.3s ease;
+}
+
+.wishlist-item-add-cart .btn-cart-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 22px;
+  height: 22px;
+  background: #4CAF50;
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.4);
+  line-height: 1;
+}
+
+/* Показываем бейдж когда есть товары */
+.wishlist-item-add-cart.has-items .btn-cart-count,
+.wishlist-item-add-cart .btn-cart-count[data-count]:not([data-count="0"]):not([data-count=""]) {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Анимация при добавлении */
+.wishlist-item-add-cart .btn-cart-count.pulse {
+  animation: cart-count-pulse 0.4s ease;
 }
 
 /* Пагинация избранного */
@@ -9513,10 +9604,10 @@ body.thankyou-modal-open {
 }
 
 .thankyou__section-title {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
   color: #333333;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   font-family: var(--font-manrope);
 }
 
@@ -9708,21 +9799,24 @@ body.thankyou-modal-open {
 .thankyou__steps {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .thankyou__step {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: 12px;
 }
 
 .thankyou__step-number {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
   background: #E3F2FD;
   color: #1976D2;
   border-radius: 50%;
+  font-size: 12px;
+  margin-top: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9733,18 +9827,22 @@ body.thankyou-modal-open {
 }
 
 .thankyou__step-content h3 {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: #333333;
-  margin-bottom: 4px;
+  margin: 0 0 1px 0 !important;
+  padding: 0 !important;
   font-family: var(--font-manrope);
+  line-height: 1.2;
 }
 
 .thankyou__step-content p {
   font-size: 13px;
-  color: #666666;
+  color: #888888;
   font-family: var(--font-manrope);
-  line-height: 1.4;
+  line-height: 1.35;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* Контактная информация */
@@ -9759,32 +9857,29 @@ body.thankyou-modal-open {
 }
 
 .thankyou__contact-card {
-  background: linear-gradient(135deg, #F8F9FA 0%, #E9ECEF 100%);
-  border-radius: 16px;
-  padding: 24px;
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 20px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  gap: 12px;
+  border: 1px solid #E5E5E5;
 }
 
 .thankyou__contact-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: #CCC;
 }
 
 .thankyou__contact-icon {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
-  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  background: #F5F5F5;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #1976D2;
+  color: #333;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.2);
 }
 
 .thankyou__contact-details h3 {
@@ -12024,14 +12119,259 @@ body.woocommerce-cart .page-title {
 }
 
 @media print {
+  /* Скрываем всё лишнее при печати */
+  .header,
+  header,
+  .footer,
+  footer,
+  .mobile-menu,
+  .breadcrumbs,
   .view-order__back-link,
-  .view-order__actions {
-    display: none;
+  .view-order__actions,
+  .view-order__sidebar,
+  .thankyou__actions,
+  .thankyou__footer-message,
+  .thankyou__important-info,
+  #cookie-bar,
+  .contact-form-popup,
+  nav {
+    display: none !important;
+  }
+  
+  /* Убираем фоны и тени */
+  body,
+  html,
+  main,
+  .view-order-page,
+  .view-order__content,
+  .view-order__card,
+  .thankyou-page,
+  .thankyou__card {
+    background: white !important;
+    box-shadow: none !important;
+  }
+  
+  /* Контейнер на всю ширину */
+  .container {
+    max-width: 100% !important;
+    padding: 0 20px !important;
+  }
+  
+  /* ===== VIEW-ORDER PRINT ===== */
+  .view-order__content {
+    display: block !important;
+  }
+  
+  .view-order__details {
+    width: 100% !important;
+    max-width: 100% !important;
   }
   
   .view-order__card {
     border: 1px solid #ddd;
     break-inside: avoid;
+    margin-bottom: 20px;
+    padding: 15px;
+  }
+  
+  .view-order__title {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  
+  .view-order__item {
+    border-bottom: 1px solid #eee;
+    padding: 10px 0;
+    break-inside: avoid;
+  }
+  
+  .view-order__item-image img {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+  }
+  
+  .view-order__header::before {
+    content: "ASKER PARTS";
+    display: block;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #000;
+  }
+  
+  /* ===== THANKYOU PRINT ===== */
+  .thankyou-page {
+    display: block !important;
+    position: static !important;
+  }
+  
+  .thankyou__card {
+    padding: 20px !important;
+    border: none !important;
+  }
+  
+  .thankyou__header {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #333;
+  }
+  
+  .thankyou__success-icon {
+    display: none !important;
+  }
+  
+  .thankyou__title {
+    font-size: 22px !important;
+    color: #000 !important;
+  }
+  
+  .thankyou__section-title {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #000;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 5px;
+  }
+  
+  .thankyou__content {
+    display: flex !important;
+    gap: 30px;
+  }
+  
+  .thankyou__order-details,
+  .thankyou__next-steps {
+    flex: 1;
+  }
+  
+  .thankyou__order-items {
+    margin-top: 20px;
+    page-break-inside: avoid;
+  }
+  
+  .thankyou__item {
+    padding: 8px 0;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .thankyou__item-image {
+    display: none !important;
+  }
+  
+  .thankyou__contact-info {
+    margin-top: 20px;
+    page-break-inside: avoid;
+  }
+  
+  .thankyou__contact-icon {
+    display: none !important;
+  }
+  
+  .thankyou__header::before {
+    content: "ASKER PARTS - Заказ";
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: #000;
+  }
+  
+  /* Убираем разрывы страниц */
+  .thankyou__order-details,
+  .thankyou__next-steps,
+  .thankyou__contact-info {
+    page-break-inside: avoid;
+  }
+}
+
+/* ===== 404 СТРАНИЦА ===== */
+.error-404-page {
+  min-height: 50vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0 80px;
+  text-align: center;
+}
+
+.error-content {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.error-code {
+  font-size: 120px;
+  font-weight: 800;
+  color: var(--color-primary, #FFE600);
+  line-height: 1;
+  margin: 0 0 16px 0;
+}
+
+.error-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: var(--text-dark, #1a1a1a);
+}
+
+.error-description {
+  font-size: 16px;
+  color: var(--text-secondary, #666);
+  margin: 0 0 32px 0;
+  line-height: 1.5;
+}
+
+.error-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.error-actions .btn {
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.error-actions .btn--primary {
+  background: var(--color-primary, #FFE600);
+  color: #1a1a1a;
+}
+
+.error-actions .btn--primary:hover {
+  background: #f0d800;
+  transform: translateY(-2px);
+}
+
+.error-actions .btn--outline {
+  background: transparent;
+  border: 2px solid #1a1a1a;
+  color: #1a1a1a;
+}
+
+.error-actions .btn--outline:hover {
+  background: #1a1a1a;
+  color: white;
+}
+
+@media (max-width: 480px) {
+  .error-code {
+    font-size: 80px;
+  }
+  
+  .error-title {
+    font-size: 24px;
+  }
+  
+  .error-actions {
+    flex-direction: column;
+  }
+  
+  .error-actions .btn {
+    width: 100%;
   }
 }
 
@@ -12187,6 +12527,16 @@ body.woocommerce-cart .page-title {
   border-color: #c3e6cb;
 }
 
+/* Скрываем дублирующий спиннер CF7 - оставляем только один */
+.contact-form-popup-body .wpcf7-spinner ~ .wpcf7-spinner {
+  display: none;
+}
+
+/* Один спиннер достаточно */
+.contact-form-popup-body .wpcf7-spinner {
+  margin-left: 10px;
+}
+
 .popup-form-notice {
   text-align: center;
   color: var(--text-gray);
@@ -12228,5 +12578,18 @@ body.woocommerce-cart .page-title {
   .contact-form-popup-body {
     padding: 20px;
   }
+}
+
+/* ===== ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ КНОПОК В ИЗБРАННОМ - ГАРАНТИРОВАННОЕ ПРИМЕНЕНИЕ ===== */
+/* Желтые кнопки в избранном когда есть товары в корзине */
+/* Дополнительные стили для hover - желтые кнопки только при наведении */
+.wishlist-item button.wishlist-item-add-cart.has-items:hover,
+.wishlist-item button.wishlist-item-add-cart.btn-add-cart.has-items:hover,
+.wishlist-item button.wishlist-item-add-cart.add_to_cart_button.has-items:hover,
+.wishlist-item .wishlist-item-add-cart.has-items:hover,
+.wishlist-item .wishlist-item-add-cart.btn-add-cart.has-items:hover,
+.wishlist-item .wishlist-item-add-cart.add_to_cart_button.has-items:hover {
+  background: linear-gradient(135deg, #FFEB3B 0%, #FDD835 100%) !important;
+  color: var(--primary-black) !important;
 }
 

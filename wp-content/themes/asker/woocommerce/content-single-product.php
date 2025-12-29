@@ -132,9 +132,23 @@ if ( ! $product ) {
 						<button type="button" class="qty-btn qty-plus" aria-label="Увеличить количество">+</button>
 					</div>
 
-					<button type="submit" name="add-to-cart" value="<?php echo esc_attr( $product->get_id() ); ?>" class="single_add_to_cart_button button alt">
-						В корзину
-					</button>
+					<?php
+					// Получаем количество этого товара в корзине
+					$cart_qty = 0;
+					if ( function_exists( 'WC' ) && WC()->cart ) {
+						foreach ( WC()->cart->get_cart() as $cart_item ) {
+							if ( $cart_item['product_id'] == $product->get_id() ) {
+								$cart_qty = $cart_item['quantity'];
+								break;
+							}
+						}
+					}
+					$btn_class = 'single_add_to_cart_button button alt add_to_cart_button';
+					if ( $cart_qty > 0 ) {
+						$btn_class .= ' has-items';
+					}
+					?>
+					<button type="submit" name="add-to-cart" value="<?php echo esc_attr( $product->get_id() ); ?>" class="<?php echo esc_attr( $btn_class ); ?>"><span class="btn-text">В корзину</span><span class="btn-cart-count" data-count="<?php echo esc_attr( $cart_qty ); ?>"><?php echo esc_html( $cart_qty ); ?></span></button>
 				</div>
 
 				<?php do_action( 'woocommerce_after_add_to_cart_button' ); ?>
