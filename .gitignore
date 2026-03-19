@@ -21,6 +21,7 @@ wp-content/themes/*
 # Локальные файлы
 .env
 .DS_Store
+wp-content/themes/asker/.ftp-deploy-sync-state.json
 .idea/
 .vscode/
 

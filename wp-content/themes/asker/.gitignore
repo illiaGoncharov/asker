@@ -6,6 +6,7 @@
 .env
 assets/src/
 NOTES.private.md
+.ftp-deploy-sync-state.json
 
 
 
