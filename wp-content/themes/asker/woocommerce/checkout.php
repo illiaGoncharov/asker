@@ -118,10 +118,10 @@ get_header();
                             </div>
                             <!-- Поля для юр. лица (обязательные) -->
                             <div class="checkout__field-group checkout__legal-fields">
-                                <input type="text" name="billing_company" id="billing_company" placeholder="Название организации*" required
+                                <input type="text" name="billing_company" id="billing_company" placeholder="Название организации" required
                                        value="<?php echo esc_attr( get_user_meta( get_current_user_id(), 'billing_company', true ) ); ?>">
-                                <input type="text" name="billing_tax_id" id="billing_tax_id" placeholder="ИНН организации*" required
-                                       value="<?php echo esc_attr( get_user_meta( get_current_user_id(), 'billing_tax_id', true ) ); ?>">
+                                <input type="text" name="company_inn" id="company_inn" placeholder="ИНН организации" required
+                                       value="<?php echo esc_attr( get_user_meta( get_current_user_id(), 'company_inn', true ) ); ?>">
                             </div>
                         </div>
                     </div>
@@ -142,16 +142,17 @@ get_header();
                         <!-- Поля для доставки -->
                         <div class="checkout__form-fields checkout__delivery-fields">
                                    <!-- Выбор транспортной компании -->
-                                   <div class="checkout__field-group checkout__field-group--full">
-                                       <label for="shipping_company" class="checkout__field-label">Транспортная компания</label>
-                                       <select name="shipping_company" id="shipping_company" class="checkout__select">
-                                           <option value="">— Выберите ТК —</option>
-                                           <option value="cdek" <?php selected( get_user_meta( get_current_user_id(), 'shipping_company', true ), 'cdek' ); ?>>СДЭК</option>
-                                           <option value="pek" <?php selected( get_user_meta( get_current_user_id(), 'shipping_company', true ), 'pek' ); ?>>ПЭК</option>
-                                           <option value="dellin" <?php selected( get_user_meta( get_current_user_id(), 'shipping_company', true ), 'dellin' ); ?>>Деловые линии</option>
-                                           <option value="yandex" <?php selected( get_user_meta( get_current_user_id(), 'shipping_company', true ), 'yandex' ); ?>>Яндекс доставка</option>
-                                       </select>
-                                   </div>
+                                    <div class="checkout__field-group checkout__field-group--full">
+                                        <label for="delivery_company" class="checkout__field-label">Транспортная компания</label>
+                                        <select name="delivery_company" id="delivery_company" class="checkout__select">
+                                            <option value="">— Выберите ТК —</option>
+                                            <option value="cdek" <?php selected( get_user_meta( get_current_user_id(), 'delivery_company', true ), 'cdek' ); ?>>СДЭК</option>
+                                            <option value="pek" <?php selected( get_user_meta( get_current_user_id(), 'delivery_company', true ), 'pek' ); ?>>ПЭК</option>
+                                            <option value="dellin" <?php selected( get_user_meta( get_current_user_id(), 'delivery_company', true ), 'dellin' ); ?>>Деловые линии</option>
+                                            <option value="vozovoz" <?php selected( get_user_meta( get_current_user_id(), 'delivery_company', true ), 'vozovoz' ); ?>>Возовоз</option>
+                                            <option value="other" <?php selected( get_user_meta( get_current_user_id(), 'delivery_company', true ), 'other' ); ?>>Другое</option>
+                                        </select>
+                                    </div>
                                    <div class="checkout__field-group">
                                        <input type="text" name="shipping_city" placeholder="Город"
                                               value="<?php echo esc_attr( get_user_meta( get_current_user_id(), 'shipping_city', true ) ); ?>">
@@ -224,7 +225,7 @@ get_header();
                         <!-- Итоги -->
                         <div class="checkout__totals">
                             <div class="checkout__total-row">
-                                <span>Итого:</span>
+                                <span>Итого без скидки:</span>
                                 <span><?php echo WC()->cart->get_cart_subtotal(); ?></span>
                             </div>
                             <?php if ( WC()->cart->get_discount_total() > 0 ) : ?>
@@ -248,7 +249,7 @@ get_header();
                         
                         <!-- Дополнительная информация -->
                         <div class="checkout__order-info">
-                            <p>НДС включен в стоимость товаров</p>
+                            <p>Стоимость указана без НДС</p>
                             <p>Стоимость доставки рассчитывается отдельно</p>
                         </div>
                         

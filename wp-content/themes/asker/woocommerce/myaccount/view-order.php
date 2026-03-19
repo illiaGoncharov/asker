@@ -11,7 +11,6 @@ defined( 'ABSPATH' ) || exit;
 
 // Получаем заказ
 if ( ! isset( $order ) || ! $order ) {
-    // Пробуем получить из query_vars
     global $wp;
     if ( isset( $wp->query_vars['view-order'] ) ) {
         $order_id = absint( $wp->query_vars['view-order'] );
@@ -44,16 +43,7 @@ if ( $manager_id ) {
 
 // Получаем статус заказа
 $order_status = $order->get_status();
-$status_labels = array(
-    'pending'    => 'Заказ на проверке',
-    'processing' => 'В обработке',
-    'on-hold'    => 'На удержании',
-    'completed'  => 'Завершен',
-    'cancelled'  => 'Отменен',
-    'refunded'   => 'Возвращен',
-    'failed'     => 'Ошибка',
-);
-$status_label = isset( $status_labels[ $order_status ] ) ? $status_labels[ $order_status ] : ucfirst( $order_status );
+$status_label = wc_get_order_status_name( $order_status );
 
 // Способ оплаты
 $payment_method_title = $order->get_payment_method_title();
@@ -61,25 +51,40 @@ if ( ! $payment_method_title ) {
     $payment_method_title = 'По счету';
 }
 
-// Получаем данные доставки
-$shipping_method = '';
-$shipping_items = $order->get_shipping_methods();
-if ( ! empty( $shipping_items ) ) {
-    foreach ( $shipping_items as $shipping_item ) {
-        $shipping_method = $shipping_item->get_method_title();
-        break;
-    }
+// Получаем тип доставки
+$delivery_type = $order->get_meta( '_delivery_type' );
+
+// Получаем транспортную компанию
+$delivery_company_name = $order->get_meta( '_delivery_company_name' );
+$delivery_company = $order->get_meta( '_delivery_company' );
+
+// Если нет названия, пробуем старое поле
+if ( ! $delivery_company_name ) {
+    $delivery_company_name = $order->get_meta( '_shipping_company_name' );
+}
+if ( ! $delivery_company ) {
+    $delivery_company = $order->get_meta( '_shipping_company' );
 }
 
-// Получаем транспортную компанию из мета заказа
-$shipping_company = $order->get_meta( '_shipping_company' );
-$shipping_companies = array(
-    'cdek'    => 'СДЭК',
-    'pek'     => 'ПЭК',
-    'dellin'  => 'Деловые линии',
-    'yandex'  => 'Яндекс доставка',
-);
-$shipping_company_name = isset( $shipping_companies[ $shipping_company ] ) ? $shipping_companies[ $shipping_company ] : $shipping_company;
+// Формируем отображение доставки
+$delivery_display = '';
+if ( $delivery_type === 'pickup' ) {
+    $delivery_display = '📦 Самовывоз';
+} elseif ( $delivery_company_name ) {
+    $delivery_display = '🚚 ' . $delivery_company_name;
+} elseif ( $delivery_company ) {
+    // Резервный вариант - показываем код
+    $companies = array(
+        'cdek' => 'СДЭК',
+        'pek' => 'ПЭК',
+        'dellin' => 'Деловые линии',
+        'vozovoz' => 'Возовоз',
+        'other' => 'Другое'
+    );
+    $delivery_display = '🚚 ' . ( isset( $companies[ $delivery_company ] ) ? $companies[ $delivery_company ] : $delivery_company );
+} else {
+    $delivery_display = 'Доставка';
+}
 
 // Трек-номер (если есть)
 $tracking_number = $order->get_meta( '_tracking_number' );
@@ -125,21 +130,10 @@ $tracking_number = $order->get_meta( '_tracking_number' );
                         <span class="view-order__value"><?php echo esc_html( $payment_method_title ); ?></span>
                     </div>
                     
-                    <?php if ( $shipping_method || $shipping_company_name ) : ?>
                     <div class="view-order__info-item">
                         <span class="view-order__label">Доставка</span>
-                        <span class="view-order__value">
-                            <?php 
-                            if ( $shipping_method ) {
-                                echo esc_html( $shipping_method );
-                            }
-                            if ( $shipping_company_name ) {
-                                echo ( $shipping_method ? ' — ' : '' ) . esc_html( $shipping_company_name );
-                            }
-                            ?>
-                        </span>
+                        <span class="view-order__value"><?php echo esc_html( $delivery_display ); ?></span>
                     </div>
-                    <?php endif; ?>
                     
                     <?php if ( $tracking_number ) : ?>
                     <div class="view-order__info-item view-order__info-item--full">
@@ -151,6 +145,8 @@ $tracking_number = $order->get_meta( '_tracking_number' );
                             </button>
                         </span>
                     </div>
+                    
+                    
                     <?php endif; ?>
                 </div>
                 
@@ -204,12 +200,15 @@ $tracking_number = $order->get_meta( '_tracking_number' );
                         <?php
                     }
                     ?>
+                    
+                    
+                    
                 </div>
                 
                 <!-- Итого -->
                 <div class="view-order__summary">
                     <div class="view-order__summary-row">
-                        <span>Подитог</span>
+                        <span>Подытог</span>
                         <span><?php echo wc_price( $order->get_subtotal() ); ?></span>
                     </div>
                     
@@ -232,11 +231,50 @@ $tracking_number = $order->get_meta( '_tracking_number' );
                         <span><?php echo $order->get_formatted_order_total(); ?></span>
                     </div>
                 </div>
+                
+                
+                
             </div>
+            
+
+            
         </div>
+        
+        
         
         <!-- Правая колонка -->
         <div class="view-order__sidebar">
+            
+            <!-- Документы к заказу -->
+            <?php
+            $invoice_id = $order->get_meta('_invoice_file_id');
+            $waybill_id = $order->get_meta('_waybill_file_id');
+            if ($invoice_id || $waybill_id) :
+            ?>
+            <div class="view-order__card">
+                <h2 class="view-order__section-title">Документы</h2>
+                <div class="view-order__documents">
+                    <?php if ($invoice_id && wp_get_attachment_url($invoice_id)) : ?>
+                    <a href="<?php echo esc_url(wp_get_attachment_url($invoice_id)); ?>" target="_blank" class="view-order__doc-link">
+<!--                     <svg width="18" height="22" viewBox="0 0 18 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M11 1.26953V5.40007C11 5.96012 11 6.24015 11.109 6.45406C11.2049 6.64222 11.3578 6.7952 11.546 6.89108C11.7599 7.00007 12.0399 7.00007 12.6 7.00007H16.7305M13 12H5M13 16H5M7 8H5M11 1H5.8C4.11984 1 3.27976 1 2.63803 1.32698C2.07354 1.6146 1.6146 2.07354 1.32698 2.63803C1 3.27976 1 4.11984 1 5.8V16.2C1 17.8802 1 18.7202 1.32698 19.362C1.6146 19.9265 2.07354 20.3854 2.63803 20.673C3.27976 21 4.11984 21 5.8 21H12.2C13.8802 21 14.7202 21 15.362 20.673C15.9265 20.3854 16.3854 19.9265 16.673 19.362C17 18.7202 17 17.8802 17 16.2V7L11 1Z" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg> -->
+                        📋 Счёт на оплату (PDF)
+                    </a>
+                    </br>
+                    <?php endif; ?>
+                    <?php if ($waybill_id && wp_get_attachment_url($waybill_id)) : ?>
+                    <a href="<?php echo esc_url(wp_get_attachment_url($waybill_id)); ?>" target="_blank" class="view-order__doc-link">
+<!--                     <svg width="19" height="22" viewBox="0 0 19 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M17 11.5V5.8C17 4.11984 17 3.27976 16.673 2.63803C16.3854 2.07354 15.9265 1.6146 15.362 1.32698C14.7202 1 13.8802 1 12.2 1H5.8C4.11984 1 3.27976 1 2.63803 1.32698C2.07354 1.6146 1.6146 2.07354 1.32698 2.63803C1 3.27976 1 4.11984 1 5.8V16.2C1 17.8802 1 18.7202 1.32698 19.362C1.6146 19.9265 2.07354 20.3854 2.63803 20.673C3.27976 21 4.11984 21 5.8 21H9M11 10H5M7 14H5M13 6H5M11.5 18L13.5 20L18 15.5" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg> -->
+
+                        📦 Товарная накладная (PDF)
+                    </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
             
             <!-- Менеджер -->
             <?php if ( $manager_name ) : ?>
@@ -286,62 +324,34 @@ $tracking_number = $order->get_meta( '_tracking_number' );
             <?php endif; ?>
             
             <!-- Адрес доставки -->
-            <?php if ( $order->get_formatted_shipping_address() ) : ?>
+            <?php 
+            $shipping_city = $order->get_meta( '_shipping_city' );
+            $shipping_address_1 = $order->get_meta( '_shipping_address_1' );
+            $shipping_address_2 = $order->get_meta( '_shipping_address_2' );
+            $shipping_apartment = $order->get_meta( '_shipping_apartment' );
+            
+            if ( $delivery_type === 'delivery' && ( $shipping_city || $shipping_address_1 ) ) : ?>
             <div class="view-order__card">
                 <h2 class="view-order__section-title">Адрес доставки</h2>
                 <address class="view-order__address">
-                    <?php echo wp_kses_post( $order->get_formatted_shipping_address() ); ?>
+                    <?php 
+                    if ( $shipping_city ) echo esc_html( $shipping_city ) . '<br>';
+                    if ( $shipping_address_1 ) echo esc_html( $shipping_address_1 );
+                    if ( $shipping_address_2 ) echo ', д. ' . esc_html( $shipping_address_2 );
+                    if ( $shipping_apartment ) echo ', кв. ' . esc_html( $shipping_apartment );
+                    ?>
+                </address>
+            </div>
+            <?php elseif ( $delivery_type === 'pickup' ) : ?>
+            <div class="view-order__card">
+                <h2 class="view-order__section-title">Адрес склада</h2>
+                <address class="view-order__address">
+                    <strong>Санкт-Петербург</strong><br>
+                    ул. Карпатская д. 16<br>
+                    <small style="color: #666;">Время работы: Пн-Пт 09:00-18:00</small>
                 </address>
             </div>
             <?php endif; ?>
-            
-            <!-- Этапы заказа -->
-            <div class="view-order__card">
-                <h2 class="view-order__section-title">Этапы заказа</h2>
-                
-                <div class="view-order__steps">
-                    <?php
-                    // Определяем текущий этап
-                    $current_step = 1;
-                    if ( in_array( $order_status, array( 'processing' ) ) ) {
-                        $current_step = 2;
-                    } elseif ( $order_status === 'on-hold' ) {
-                        $current_step = 2;
-                    } elseif ( $tracking_number ) {
-                        $current_step = 4;
-                    } elseif ( $order_status === 'completed' ) {
-                        $current_step = 4;
-                    }
-                    
-                    $steps = array(
-                        1 => array( 'title' => 'Заказ создан', 'desc' => 'Менеджер проверяет наличие' ),
-                        2 => array( 'title' => 'Отправка счета', 'desc' => 'Счет на оплату' ),
-                        3 => array( 'title' => 'Отправка товаров', 'desc' => 'Подготовка к отправке' ),
-                        4 => array( 'title' => 'Трекинг', 'desc' => 'Отслеживание доставки' ),
-                    );
-                    
-                    foreach ( $steps as $step_num => $step ) :
-                        $is_completed = $step_num < $current_step;
-                        $is_current = $step_num === $current_step;
-                    ?>
-                    <div class="view-order__step <?php echo $is_completed ? 'view-order__step--completed' : ''; ?> <?php echo $is_current ? 'view-order__step--current' : ''; ?>">
-                        <div class="view-order__step-indicator">
-                            <?php if ( $is_completed ) : ?>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <?php else : ?>
-                            <span><?php echo $step_num; ?></span>
-                            <?php endif; ?>
-                        </div>
-                        <div class="view-order__step-content">
-                            <h4><?php echo esc_html( $step['title'] ); ?></h4>
-                            <p><?php echo esc_html( $step['desc'] ); ?></p>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
             
             <!-- Действия -->
             <div class="view-order__actions">
@@ -363,5 +373,8 @@ $tracking_number = $order->get_meta( '_tracking_number' );
             
         </div>
     </div>
+    
+    
+    
 </div>
 </div>

@@ -8490,6 +8490,15 @@ div[class*="woocommerce-coming-soon"],
   font-size: 16px;
 }
 
+/* Индикатор загрузки избранного */
+.wishlist-loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-gray);
+  font-size: 16px;
+  font-family: var(--font-manrope);
+}
+
 /* Адаптивность */
 @media (max-width: 1024px) {
   .account-layout {

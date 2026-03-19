@@ -144,7 +144,7 @@ get_header();
                                 <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
                                 <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                             </svg>
-                            <?php echo esc_html( $status_label ); ?>
+                            Заказ на проверке
                         </span>
                     </div>
                     
@@ -229,63 +229,70 @@ get_header();
                 </div>
             </div>
             
-            <!-- Контактная информация (менеджер или контакты по умолчанию) -->
-            <div class="thankyou__contact-info">
-                <h2 class="thankyou__section-title">Контактная информация</h2>
-                
-                <?php
-                // Контакты по умолчанию (если нет менеджера)
-                $default_phone = '+7 (931) 109 94 76';
-                $default_email = 'sales@asker-corp.ru';
-                
-                // Определяем что показывать
-                $show_manager = ! empty( $manager_name );
-                $contact_phone = $show_manager && $manager_phone ? $manager_phone : $default_phone;
-                $contact_email = $show_manager && $manager_email ? $manager_email : $default_email;
-                $contact_title = $show_manager ? 'Ваш менеджер' : 'Отдел продаж';
-                $contact_name = $show_manager ? $manager_name : 'Asker Parts';
-                ?>
-                
-                <div class="thankyou__contact-cards">
-                    <div class="thankyou__contact-card">
-                        <div class="thankyou__contact-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2"/>
-                                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
-                            </svg>
-                        </div>
-                        <div class="thankyou__contact-details">
-                            <h3><?php echo esc_html( $contact_title ); ?></h3>
-                            <p><?php echo esc_html( $contact_name ); ?></p>
-                        </div>
-                    </div>
-                    
-                    <div class="thankyou__contact-card">
-                        <div class="thankyou__contact-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor" stroke-width="2"/>
-                            </svg>
-                        </div>
-                        <div class="thankyou__contact-details">
-                            <h3>Телефон</h3>
-                            <p><a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9+]/', '', $contact_phone ) ); ?>"><?php echo esc_html( $contact_phone ); ?></a></p>
-                        </div>
-                    </div>
-                    
-                    <div class="thankyou__contact-card">
-                        <div class="thankyou__contact-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="2"/>
-                                <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2"/>
-                            </svg>
-                        </div>
-                        <div class="thankyou__contact-details">
-                            <h3>Email</h3>
-                            <p><a href="mailto:<?php echo esc_attr( $contact_email ); ?>"><?php echo esc_html( $contact_email ); ?></a></p>
-                        </div>
-                    </div>
+<!-- Контактная информация (менеджер или контакты по умолчанию) -->
+<div class="thankyou__contact-info">
+    <h2 class="thankyou__section-title">Контактная информация</h2>
+    
+    <?php
+    // Контакты по умолчанию (если нет менеджера)
+    $default_phone = '+7 (931) 521-13-11';
+    $default_email = 'vladimir@asker-corp.ru';
+    
+    // Определяем что показывать
+    $show_manager = ! empty( $manager_name );
+    $contact_phone = $show_manager && $manager_phone ? $manager_phone : $default_phone;
+    $contact_email = $show_manager && $manager_email ? $manager_email : $default_email;
+    $contact_title = $show_manager ? 'Ваш менеджер' : 'Владимир Курдов';
+    $contact_name = $show_manager ? $manager_name : 'Asker Parts';
+    ?>
+    
+    <div class="thankyou__contact-cards">
+        <!-- Менеджер / Отдел -->
+        <div class="thankyou__contact-card thankyou__contact-card--vertical">
+            <div class="thankyou__contact-header">
+                <div class="thankyou__contact-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                    </svg>
                 </div>
+                <h3><?php echo esc_html( $contact_title ); ?></h3>
             </div>
+            <p class="thankyou__contact-value"><?php echo esc_html( $contact_name ); ?></p>
+        </div>
+        
+        <!-- Телефон -->
+        <div class="thankyou__contact-card thankyou__contact-card--vertical">
+            <div class="thankyou__contact-header">
+                <div class="thankyou__contact-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </div>
+                <h3>Телефон</h3>
+            </div>
+            <p class="thankyou__contact-value">
+                <a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9+]/', '', $contact_phone ) ); ?>"><?php echo esc_html( $contact_phone ); ?></a>
+            </p>
+        </div>
+        
+        <!-- Email -->
+        <div class="thankyou__contact-card thankyou__contact-card--vertical">
+            <div class="thankyou__contact-header">
+                <div class="thankyou__contact-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="2"/>
+                        <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </div>
+                <h3>Email</h3>
+            </div>
+            <p class="thankyou__contact-value">
+                <a href="mailto:<?php echo esc_attr( $contact_email ); ?>"><?php echo esc_html( $contact_email ); ?></a>
+            </p>
+        </div>
+    </div>
+</div>
             
             <!-- Важная информация -->
             <div class="thankyou__important-info">

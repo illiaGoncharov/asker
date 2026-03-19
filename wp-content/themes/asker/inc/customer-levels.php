@@ -183,6 +183,11 @@ function asker_send_level_up_email( $user_id, $level_data ) {
 /**
  * Применяем персональную скидку в корзине (уровень + индивидуальная)
  */
+
+/**
+ * Применяем персональную скидку напрямую к цене товаров
+ * Скидка учитывается в стоимости товара, а не выносится отдельной строкой
+ */
 function asker_apply_customer_level_discount( $cart ) {
     if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
         return;
@@ -191,6 +196,13 @@ function asker_apply_customer_level_discount( $cart ) {
     if ( ! is_user_logged_in() ) {
         return;
     }
+    
+    // Защита от рекурсии
+    static $discount_applied = false;
+    if ( $discount_applied ) {
+        return;
+    }
+    $discount_applied = true;
     
     $user_id = get_current_user_id();
     $level_data = asker_get_customer_level( $user_id );
@@ -203,21 +215,26 @@ function asker_apply_customer_level_discount( $cart ) {
         return;
     }
     
-    // Считаем скидку от суммы товаров
-    $subtotal = $cart->get_subtotal();
-    $discount_amount = $subtotal * ( $total_discount_percent / 100 );
-    
-    // Формируем название скидки
-    $discount_label = 'Персональная скидка (' . $level_data['level'];
-    if ( $individual_discount > 0 ) {
-        $discount_label .= ' + инд.';
+    // Применяем скидку к каждому товару в корзине
+    foreach ( $cart->get_cart() as $cart_item_key => $cart_item ) {
+        // Получаем оригинальную цену товара
+        $product = $cart_item['data'];
+        $original_price = floatval( $product->get_regular_price() );
+        
+        // Если regular_price нет, берем текущую цену
+        if ( ! $original_price ) {
+            $original_price = floatval( $product->get_price() );
+        }
+        
+        // Рассчитываем цену со скидкой
+        $discounted_price = $original_price * ( 1 - $total_discount_percent / 100 );
+        
+        // Устанавливаем новую цену товара
+        $product->set_price( $discounted_price );
     }
-    $discount_label .= ', -' . $total_discount_percent . '%)';
-    
-    // Применяем скидку
-    $cart->add_fee( $discount_label, -$discount_amount );
 }
-add_action( 'woocommerce_cart_calculate_fees', 'asker_apply_customer_level_discount' );
+add_action( 'woocommerce_before_calculate_totals', 'asker_apply_customer_level_discount', 10, 1 );
+
 
 /**
  * Добавляем колонки в список пользователей

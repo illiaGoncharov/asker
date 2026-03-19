@@ -49,6 +49,84 @@ get_header(); ?>
 
                                     if ( $_product && $_product->exists() && $cart_item['quantity'] > 0 && apply_filters( 'woocommerce_cart_item_visible', true, $cart_item, $cart_item_key ) ) {
                                         $product_permalink = apply_filters( 'woocommerce_cart_item_permalink', $_product->is_visible() ? $_product->get_permalink( $cart_item ) : '', $cart_item, $cart_item_key );
+                                        
+                                        // ========== ПЕРСОНАЛИЗАЦИЯ ЦЕН ==========
+                                        $has_discount = false;
+                                        $discount_percent = 0;
+                                        $price_html = '';
+                                        $subtotal_html = '';
+                                        
+                                        // Проверяем авторизацию и скидку пользователя
+                                        if ( is_user_logged_in() ) {
+                                            $user_id = get_current_user_id();
+                                            
+                                            // Получаем скидку пользователя
+                                            if ( function_exists( 'asker_get_total_discount' ) ) {
+                                                $discount_percent = asker_get_total_discount( $user_id );
+                                            } else {
+                                                // Fallback: получаем напрямую из мета-полей
+                                                $level_discount = get_user_meta( $user_id, 'user_level_discount', true );
+                                                $individual_discount = get_user_meta( $user_id, 'individual_discount', true );
+                                                $discount_percent = max( floatval( $level_discount ), floatval( $individual_discount ) );
+                                            }
+                                            
+                                            if ( $discount_percent > 0 ) {
+                                                $has_discount = true;
+                                            }
+                                        }
+                                        
+                                        // Формируем HTML цены за единицу
+                                        if ( $has_discount ) {
+                                            $regular_price = $_product->get_regular_price();
+                                            $sale_price = $_product->get_sale_price();
+                                            
+                                            if ( ! empty( $regular_price ) ) {
+                                                if ( ! empty( $sale_price ) ) {
+                                                    // Товар со скидкой + персональная скидка
+                                                    $discounted_price = $sale_price * ( 1 - $discount_percent / 100 );
+                                                    $price_html = '<div class="price-with-discount-cart">';
+                                                    $price_html .= '<span class="original-price-cart"><del>' . wc_price( $regular_price ) . '</del></span>';
+                                                    $price_html .= '<span class="personal-price-cart">' . wc_price( $discounted_price ) . '</span>';
+                                                    $price_html .= '</div>';
+                                                    
+                                                    // Стоимость с учетом количества
+                                                    $subtotal_regular = $regular_price * $cart_item['quantity'];
+                                                    $subtotal_discounted = $discounted_price * $cart_item['quantity'];
+                                                    $subtotal_html = '<div class="price-with-discount-cart">';
+                                                    $subtotal_html .= '<span class="original-price-cart"><del>' . wc_price( $subtotal_regular ) . '</del></span>';
+                                                    $subtotal_html .= '<span class="personal-price-cart">' . wc_price( $subtotal_discounted ) . '</span>';
+                                                    $subtotal_html .= '</div>';
+                                                } else {
+                                                    // Обычный товар + персональная скидка
+                                                    $discounted_price = $regular_price * ( 1 - $discount_percent / 100 );
+                                                    $price_html = '<div class="price-with-discount-cart">';
+                                                    $price_html .= '<span class="original-price-cart"><del>' . wc_price( $regular_price ) . '</del></span>';
+                                                    $price_html .= '<span class="personal-price-cart">' . wc_price( $discounted_price ) . '</span>';
+                                                    $price_html .= '</div>';
+                                                    
+                                                    // Стоимость с учетом количества
+                                                    $subtotal_regular = $regular_price * $cart_item['quantity'];
+                                                    $subtotal_discounted = $discounted_price * $cart_item['quantity'];
+                                                    $subtotal_html = '<div class="price-with-discount-cart">';
+                                                    $subtotal_html .= '<span class="original-price-cart"><del>' . wc_price( $subtotal_regular ) . '</del></span>';
+                                                    $subtotal_html .= '<span class="personal-price-cart">' . wc_price( $subtotal_discounted ) . '</span>';
+                                                    $subtotal_html .= '</div>';
+                                                }
+                                            } else {
+                                                // На всякий случай, если цены нет
+                                                $price_html = WC()->cart->get_product_price( $_product );
+                                                $subtotal_html = WC()->cart->get_product_subtotal( $_product, $cart_item['quantity'] );
+                                            }
+                                        } else {
+                                            // Обычная цена без персональной скидки
+                                            $price_html = WC()->cart->get_product_price( $_product );
+                                            $subtotal_html = WC()->cart->get_product_subtotal( $_product, $cart_item['quantity'] );
+                                        }
+                                        
+                                        // Убираем копейки из цены
+                                        $price_html = preg_replace( '/,00/', '', $price_html );
+                                        $subtotal_html = preg_replace( '/,00/', '', $subtotal_html );
+                                        // ========== КОНЕЦ ПЕРСОНАЛИЗАЦИИ ==========
                                         ?>
                                         <tr class="cart-item" data-key="<?php echo esc_attr( $cart_item_key ); ?>">
                                             <td class="cart-checkbox">
@@ -76,7 +154,7 @@ get_header(); ?>
                                                 </div>
                                             </td>
                                             <td class="cart-product-price">
-                                                <?php echo apply_filters( 'woocommerce_cart_item_price', WC()->cart->get_product_price( $_product ), $cart_item, $cart_item_key ); ?>
+                                                <?php echo $price_html; ?>
                                             </td>
                                             <td class="cart-product-quantity">
                                                 <div class="quantity-controls">
@@ -91,7 +169,7 @@ get_header(); ?>
                                                 </div>
                                             </td>
                                             <td class="cart-product-subtotal">
-                                                <?php echo apply_filters( 'woocommerce_cart_item_subtotal', WC()->cart->get_product_subtotal( $_product, $cart_item['quantity'] ), $cart_item, $cart_item_key ); ?>
+                                                <?php echo $subtotal_html; ?>
                                             </td>
                                             <td class="cart-product-remove">
                                                 <button type="button" class="remove-item" data-key="<?php echo esc_attr( $cart_item_key ); ?>" title="Удалить">×</button>
@@ -119,13 +197,13 @@ get_header(); ?>
                         Обновить корзину <span class="icon-refresh">↻</span>
                     </button>
 
-                    <div class="coupon-section">
+<!--                    <div class="coupon-section">
                         <form class="coupon-form" method="post">
                             <?php wp_nonce_field( 'woocommerce-cart', 'woocommerce-cart-nonce' ); ?>
                             <input type="text" name="coupon_code" placeholder="Введите промокод" />
                             <button type="submit" name="apply_coupon" class="btn-apply-coupon">Применить промокод</button>
                         </form>
-                    </div>
+                    </div>-->
 
                     <div class="cart-totals">
                         <?php
@@ -293,6 +371,39 @@ get_header(); ?>
     color: #111827;
     white-space: nowrap;
     min-width: 120px;
+}
+
+/* Стили для персонализированных цен в корзине */
+.cart-product-price .price-with-discount-cart,
+.cart-product-subtotal .price-with-discount-cart {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
+
+.cart-product-price .price-with-discount-cart .original-price-cart,
+.cart-product-subtotal .price-with-discount-cart .original-price-cart {
+    font-size: 14px;
+    color: #9CA3AF;
+    font-weight: 400;
+}
+
+.cart-product-price .price-with-discount-cart .original-price-cart del,
+.cart-product-subtotal .price-with-discount-cart .original-price-cart del {
+    text-decoration: line-through;
+}
+
+.cart-product-price .price-with-discount-cart .personal-price-cart,
+.cart-product-subtotal .price-with-discount-cart .personal-price-cart {
+    font-size: 16px;
+    font-weight: 700;
+    color: #059669;
+}
+
+.cart-product-price .price-with-discount-cart .personal-price-cart .woocommerce-Price-amount,
+.cart-product-subtotal .price-with-discount-cart .personal-price-cart .woocommerce-Price-amount {
+    color: #059669;
 }
 
 /* Не переносить цены на новую строку */
@@ -606,6 +717,11 @@ get_header(); ?>
     .cart-actions-bottom {
         flex-direction: column;
         gap: 12px;
+    }
+    
+    .cart-product-price .price-with-discount-cart .personal-price-cart,
+    .cart-product-subtotal .price-with-discount-cart .personal-price-cart {
+        font-size: 14px;
     }
 }
 </style>
@@ -934,3 +1050,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <?php get_footer(); ?>
+

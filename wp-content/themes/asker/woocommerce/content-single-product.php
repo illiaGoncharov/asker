@@ -100,9 +100,67 @@ if ( ! $product ) {
 				<span>Нашли дешевле?</span>
 			</button>
 
-			<!-- Цена -->
+			<!-- Цена с персонализацией -->
 			<div class="product-price">
-				<?php echo $product->get_price_html(); ?>
+				<?php
+				// Получаем базовую цену
+				$regular_price = $product->get_regular_price();
+				$sale_price = $product->get_sale_price();
+				
+				// Проверяем, авторизован ли пользователь и есть ли у него скидка
+				$has_discount = false;
+				$discount_percent = 0;
+				
+				if ( is_user_logged_in() ) {
+					$user_id = get_current_user_id();
+					
+					// Получаем скидку пользователя
+					if ( function_exists( 'asker_get_total_discount' ) ) {
+						$discount_percent = asker_get_total_discount( $user_id );
+					} else {
+						// Если функция не существует, пробуем получить напрямую из мета-полей
+						$level_discount = get_user_meta( $user_id, 'user_level_discount', true );
+						$individual_discount = get_user_meta( $user_id, 'individual_discount', true );
+						$discount_percent = max( floatval( $level_discount ), floatval( $individual_discount ) );
+					}
+					
+					if ( $discount_percent > 0 ) {
+						$has_discount = true;
+					}
+				}
+				
+				// Отображаем цену в зависимости от наличия скидки
+				if ( $has_discount && ! empty( $regular_price ) ) :
+					// У пользователя есть персональная скидка
+					
+					if ( ! empty( $sale_price ) ) {
+						// Товар уже со скидкой (акция) + персональная скидка
+						$discounted_price = $sale_price * ( 1 - $discount_percent / 100 );
+						?>
+						<div class="price-wrapper-personalized">
+							<span class="regular-price-crossed"><del><?php echo wc_price( $regular_price ); ?></del></span>
+							<span class="sale-price-crossed"><del><?php echo wc_price( $sale_price ); ?></del></span>
+							<span class="personalized-price"><?php echo wc_price( $discounted_price ); ?></span>
+							<span class="discount-badge">Ваша скидка: <?php echo esc_html( $discount_percent ); ?>%</span>
+						</div>
+						<?php
+					} else {
+						// Обычный товар + персональная скидка
+						$discounted_price = $regular_price * ( 1 - $discount_percent / 100 );
+						?>
+						<div class="price-wrapper-personalized">
+							<span class="regular-price-crossed"><del><?php echo wc_price( $regular_price ); ?></del></span>
+							<span class="personalized-price"><?php echo wc_price( $discounted_price ); ?></span>
+							<span class="discount-badge">Ваша скидка: <?php echo esc_html( $discount_percent ); ?>%</span>
+						</div>
+						<?php
+					}
+					
+				else :
+					// Обычная цена без персональной скидки
+					echo $product->get_price_html();
+				endif;
+				?>
 			</div>
 
 			<!-- Форма добавления в корзину -->
@@ -154,6 +212,7 @@ if ( ! $product ) {
 				<?php do_action( 'woocommerce_after_add_to_cart_button' ); ?>
 			</form>
 
+
 			<?php 
 			// Кнопка "Купить на Ozon" если есть ссылка
 			$ozon_link = asker_get_ozon_link( $product->get_id() );
@@ -194,4 +253,83 @@ if ( ! $product ) {
 	?>
 
 <?php do_action( 'woocommerce_after_single_product' ); ?>
+
+<style>
+/* Стили для персонализированной цены */
+.price-wrapper-personalized {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.price-wrapper-personalized .regular-price-crossed,
+.price-wrapper-personalized .sale-price-crossed {
+    font-size: 18px;
+    color: #9CA3AF;
+    font-weight: 400;
+}
+
+.price-wrapper-personalized .regular-price-crossed del,
+.price-wrapper-personalized .sale-price-crossed del {
+    text-decoration: line-through;
+}
+
+.price-wrapper-personalized .personalized-price {
+    font-size: 32px;
+    font-weight: 700;
+    color: #059669;
+}
+
+.price-wrapper-personalized .personalized-price .woocommerce-Price-amount {
+    color: #059669;
+}
+
+.discount-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    width: fit-content;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2);
+}
+
+/* Информационный блок о скидке */
+.user-discount-info-block {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 0;
+    padding: 12px 16px;
+    background: #F0FDF4;
+    border: 1px solid #D1FAE5;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #059669;
+}
+
+.user-discount-info-block svg {
+    flex-shrink: 0;
+}
+
+.user-discount-info-block strong {
+    font-weight: 700;
+}
+
+/* Адаптив */
+@media (max-width: 768px) {
+    .price-wrapper-personalized .personalized-price {
+        font-size: 24px;
+    }
+    
+    .price-wrapper-personalized .regular-price-crossed,
+    .price-wrapper-personalized .sale-price-crossed {
+        font-size: 16px;
+    }
+}
+</style>
+
 <?php endif; ?>

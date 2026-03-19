@@ -1160,22 +1160,23 @@ function asker_no_products_found() {
 
 /**
  * AJAX: Синхронизация избранного (localStorage -> user_meta)
+ * Для гостей просто возвращаем success (данные хранятся в localStorage)
  */
 function asker_sync_wishlist() {
-    if (!is_user_logged_in()) {
-        wp_send_json_error(['message' => 'Требуется авторизация']);
-        return;
-    }
-    
     $product_ids = isset($_POST['product_ids']) ? array_map('intval', $_POST['product_ids']) : array();
     
-    // Сохраняем в user_meta
-    $user_id = get_current_user_id();
-    update_user_meta($user_id, 'asker_wishlist', $product_ids);
-    
-    wp_send_json_success(['message' => 'Избранное синхронизировано', 'count' => count($product_ids)]);
+    // Для авторизованных — сохраняем в user_meta
+    if (is_user_logged_in()) {
+        $user_id = get_current_user_id();
+        update_user_meta($user_id, 'asker_wishlist', $product_ids);
+        wp_send_json_success(['message' => 'Избранное синхронизировано', 'count' => count($product_ids)]);
+    } else {
+        // Для гостей — просто подтверждаем (данные в localStorage)
+        wp_send_json_success(['message' => 'OK', 'count' => count($product_ids)]);
+    }
 }
 add_action('wp_ajax_asker_sync_wishlist', 'asker_sync_wishlist');
+add_action('wp_ajax_nopriv_asker_sync_wishlist', 'asker_sync_wishlist');
 
 /**
  * AJAX: Добавить/удалить товар из избранного
@@ -2459,9 +2460,19 @@ add_action( 'wp_ajax_nopriv_woocommerce_add_to_cart', 'asker_add_to_cart_ajax' )
 /**
  * AJAX обработчик для создания заказа
  * СТРОГАЯ валидация - заказ не создастся без всех обязательных данных
+ * + СОХРАНЕНИЕ КАСТОМНЫХ ПОЛЕЙ (ТК, доставка, и т.д.)
  */
 function asker_create_order_ajax() {
     try {
+        
+        // Добавьте СРАЗУ после try { в функции asker_create_order_ajax()
+
+error_log('=== DEBUG ===');
+error_log('delivery_company: ' . (isset($_POST['delivery_company']) ? $_POST['delivery_company'] : 'НЕТ!!!'));
+error_log('delivery_type: ' . (isset($_POST['delivery_type']) ? $_POST['delivery_type'] : 'НЕТ!!!'));
+error_log('Все POST ключи: ' . implode(', ', array_keys($_POST)));
+error_log('=============');
+
         // Логирование для отладки
         error_log( '=== ASKER CREATE ORDER ===' );
         error_log( 'POST data: ' . print_r( $_POST, true ) );
@@ -2634,11 +2645,137 @@ function asker_create_order_ajax() {
             $order->set_customer_note( sanitize_textarea_field( $_POST['order_comments'] ) );
         }
         
+        // ========================================
+// ========================================
+        // СОХРАНЕНИЕ КАСТОМНЫХ ПОЛЕЙ
+        // ========================================
+        
+// Добавляем комментарий к заказу
+if ( ! empty( $_POST['order_comments'] ) ) {
+    $order->set_customer_note( sanitize_textarea_field( $_POST['order_comments'] ) );
+}
+
+        // ========================================
+        // СОХРАНЕНИЕ КАСТОМНЫХ ПОЛЕЙ + СКИДКИ И ИНН
+        // ========================================
+        
+        // 1. СКИДКИ (если пользователь авторизован)
+        if ( is_user_logged_in() ) {
+            $user_id = get_current_user_id();
+            
+            // Уровневая скидка
+            if ( function_exists( 'asker_get_customer_level' ) ) {
+                $level_data = asker_get_customer_level( $user_id );
+                $order->update_meta_data( '_level_name', $level_data['level'] );
+                $order->update_meta_data( '_level_discount', $level_data['discount'] );
+            }
+            
+            // Индивидуальная скидка
+            $individual_discount = get_user_meta( $user_id, 'individual_discount', true );
+            if ( $individual_discount ) {
+                $order->update_meta_data( '_individual_discount', floatval( $individual_discount ) );
+            }
+            
+            // Итоговая скидка клиента
+            if ( function_exists( 'asker_get_total_discount' ) ) {
+                $total_discount = asker_get_total_discount( $user_id );
+                $order->update_meta_data( '_total_customer_discount', floatval( $total_discount ) );
+            }
+            
+            // Сумма скидки в рублях (из WooCommerce)
+            $discount_amount = $order->get_total_discount();
+            if ( $discount_amount > 0 ) {
+                $order->update_meta_data( '_discount_amount', floatval( $discount_amount ) );
+            }
+        }
+                
+        // 2. ИНН (единая схема: company_inn везде)
+        $inn = get_user_meta( get_current_user_id(), 'company_inn', true );
+        if ( empty( $inn ) && ! empty( $_POST['company_inn'] ) ) {
+            $inn = sanitize_text_field( $_POST['company_inn'] );
+        }
+        if ( $inn ) {
+            $order->update_meta_data( '_company_inn', $inn );
+        }
+        // 3. Название компании
+        $company = get_user_meta( get_current_user_id(), 'billing_company', true );
+        if ( empty( $company ) && ! empty( $_POST['company_name'] ) ) {
+            $company = sanitize_text_field( $_POST['company_name'] );
+        }
+        if ( $company ) {
+            $order->update_meta_data( '_billing_company', $company );
+        }
+        
+        // 4. Тип клиента (юр/физ лицо)
+        if ( isset( $_POST['customer_type'] ) ) {
+            $order->update_meta_data( '_customer_type', sanitize_text_field( $_POST['customer_type'] ) );
+        }
+        
+        // 5. ИНН из формы чекаута (дубль для надежности)
+        if ( isset( $_POST['billing_tax_id'] ) && ! empty( $_POST['billing_tax_id'] ) ) {
+            $order->update_meta_data( '_billing_tax_id', sanitize_text_field( $_POST['billing_tax_id'] ) );
+        }
+        
+        // 6. Тип доставки (delivery/pickup)
+        if ( isset( $_POST['delivery_type'] ) ) {
+            $delivery_type = sanitize_text_field( $_POST['delivery_type'] );
+            $order->update_meta_data( '_delivery_type', $delivery_type );
+            
+            // Если доставка - сохраняем ТК и адрес
+            if ( $delivery_type === 'delivery' ) {
+                
+                // ТРАНСПОРТНАЯ КОМПАНИЯ
+                if ( isset( $_POST['delivery_company'] ) && ! empty( $_POST['delivery_company'] ) ) {
+                    $delivery_company = sanitize_text_field( $_POST['delivery_company'] );
+                    
+                    // Сохраняем код ТК
+                    $order->update_meta_data( '_delivery_company', $delivery_company );
+                    
+                    // Получаем название ТК для отображения
+                    $companies = array(
+                        'cdek' => 'СДЭК',
+                        'pek' => 'ПЭК',
+                        'dellin' => 'Деловые линии',
+                        'vozovoz' => 'Возовоз',
+                        'other' => 'Другое'
+                    );
+                    
+                    $company_name = isset( $companies[ $delivery_company ] ) ? $companies[ $delivery_company ] : $delivery_company;
+                    $order->update_meta_data( '_delivery_company_name', $company_name );
+                }
+                
+                // Адрес доставки
+                if ( isset( $_POST['shipping_city'] ) && ! empty( $_POST['shipping_city'] ) ) {
+                    $order->update_meta_data( '_shipping_city', sanitize_text_field( $_POST['shipping_city'] ) );
+                }
+                if ( isset( $_POST['shipping_address_1'] ) && ! empty( $_POST['shipping_address_1'] ) ) {
+                    $order->update_meta_data( '_shipping_address_1', sanitize_text_field( $_POST['shipping_address_1'] ) );
+                }
+                if ( isset( $_POST['shipping_address_2'] ) && ! empty( $_POST['shipping_address_2'] ) ) {
+                    $order->update_meta_data( '_shipping_address_2', sanitize_text_field( $_POST['shipping_address_2'] ) );
+                }
+                if ( isset( $_POST['shipping_apartment'] ) && ! empty( $_POST['shipping_apartment'] ) ) {
+                    $order->update_meta_data( '_shipping_apartment', sanitize_text_field( $_POST['shipping_apartment'] ) );
+                }
+                
+            } else {
+                // Если самовывоз - сохраняем контакты
+                if ( isset( $_POST['pickup_contact_person'] ) && ! empty( $_POST['pickup_contact_person'] ) ) {
+                    $order->update_meta_data( '_pickup_contact_person', sanitize_text_field( $_POST['pickup_contact_person'] ) );
+                }
+                if ( isset( $_POST['pickup_phone'] ) && ! empty( $_POST['pickup_phone'] ) ) {
+                    $order->update_meta_data( '_pickup_phone', sanitize_text_field( $_POST['pickup_phone'] ) );
+                }
+            }
+        }
+
         // Рассчитываем итоги
         $order->calculate_totals();
         
         // Сохраняем заказ
         $order->save();
+        
+        error_log( "Order #{$order->get_id()} created successfully with custom fields" );
         
         // Очищаем корзину
         $cart->empty_cart();
@@ -2651,6 +2788,7 @@ function asker_create_order_ajax() {
         ) );
         
     } catch ( Exception $e ) {
+        error_log( 'Order creation error: ' . $e->getMessage() );
         wp_send_json( array(
             'result' => 'failure',
             'messages' => 'Ошибка создания заказа: ' . $e->getMessage()
@@ -2673,25 +2811,43 @@ function asker_fix_checkout_field_saving( $order_id ) {
         return;
     }
     
-    // Сохраняем все поля биллинга
-    $billing_fields = array(
-        'billing_first_name',
-        'billing_last_name', 
-        'billing_phone',
-        'billing_email',
-        'billing_company',
-        'billing_vat',
-        'billing_city',
-        'billing_address_1',
-        'billing_address_2',
-        'billing_postcode',
-        'billing_state'
-    );
+    error_log('=== STANDARD WC CHECKOUT ===');
+    error_log('delivery_company: ' . (isset($_POST['delivery_company']) ? $_POST['delivery_company'] : 'НЕТ'));
+    error_log('delivery_type: ' . (isset($_POST['delivery_type']) ? $_POST['delivery_type'] : 'НЕТ'));
     
-    foreach ( $billing_fields as $field ) {
-        if ( ! empty( $_POST[ $field ] ) ) {
-            $order->update_meta_data( '_' . $field, sanitize_text_field( $_POST[ $field ] ) );
-        }
+    // ТРАНСПОРТНАЯ КОМПАНИЯ
+    if ( isset( $_POST['delivery_company'] ) && ! empty( $_POST['delivery_company'] ) ) {
+        $delivery_company = sanitize_text_field( $_POST['delivery_company'] );
+        
+        $companies = array(
+            'cdek' => 'СДЭК',
+            'pek' => 'ПЭК',
+            'dellin' => 'Деловые линии',
+            'vozovoz' => 'Возовоз',
+            'other' => 'Другое'
+        );
+        
+        $company_name = isset( $companies[ $delivery_company ] ) ? $companies[ $delivery_company ] : $delivery_company;
+        
+        $order->update_meta_data( '_delivery_company', $delivery_company );
+        $order->update_meta_data( '_delivery_company_name', $company_name );
+        
+        error_log("SAVED: {$delivery_company} ({$company_name})");
+    }
+    
+    // Тип доставки
+    if ( isset( $_POST['delivery_type'] ) ) {
+        $order->update_meta_data( '_delivery_type', sanitize_text_field( $_POST['delivery_type'] ) );
+    }
+    
+    // Тип клиента
+    if ( isset( $_POST['customer_type'] ) ) {
+        $order->update_meta_data( '_customer_type', sanitize_text_field( $_POST['customer_type'] ) );
+    }
+    
+    // ИНН
+    if ( isset( $_POST['billing_tax_id'] ) && ! empty( $_POST['billing_tax_id'] ) ) {
+        $order->update_meta_data( '_billing_tax_id', sanitize_text_field( $_POST['billing_tax_id'] ) );
     }
     
     $order->save();
@@ -3170,59 +3326,13 @@ function asker_generate_username_from_email( $username, $email, $new_user_args )
 add_filter( 'woocommerce_registration_generate_username', 'asker_generate_username_from_email', 10, 3 );
 
 /**
- * ПРИНУДИТЕЛЬНО отключаем автогенерацию пароля
+ * ВКЛЮЧАЕМ автогенерацию пароля WooCommerce
+ * Пароль генерируется случайный, пользователь его не знает
+ * Он устанавливает свой пароль после подтверждения email
+ * @see inc/registration.php
  */
-add_filter( 'woocommerce_registration_generate_password', '__return_false', 999 );
-add_filter( 'pre_option_woocommerce_registration_generate_password', function() { return 'no'; }, 999 );
-
-/**
- * Устанавливаем пароль из POST в данные нового пользователя ДО его создания
- */
-function asker_set_customer_password( $customer_data ) {
-    if ( isset( $_POST['password'] ) && ! empty( $_POST['password'] ) ) {
-        $customer_data['user_pass'] = $_POST['password'];
-    }
-    return $customer_data;
-}
-add_filter( 'woocommerce_new_customer_data', 'asker_set_customer_password', 999, 1 );
-
-/**
- * ПРИНУДИТЕЛЬНО устанавливаем пароль через WordPress хук user_register
- * Это последний рубеж - срабатывает для ЛЮБОГО создания пользователя
- */
-function asker_force_password_on_user_register( $user_id ) {
-    // Проверяем что это регистрация через форму (не админка)
-    if ( isset( $_POST['password'] ) && ! empty( $_POST['password'] ) ) {
-        global $wpdb;
-        // Хешируем пароль и обновляем напрямую в базе
-        $hashed_password = wp_hash_password( $_POST['password'] );
-        $wpdb->update( 
-            $wpdb->users, 
-            array( 'user_pass' => $hashed_password ), 
-            array( 'ID' => $user_id ) 
-        );
-        // Очищаем кэш пользователя
-        clean_user_cache( $user_id );
-    }
-}
-add_action( 'user_register', 'asker_force_password_on_user_register', 999 );
-
-/**
- * Также через WooCommerce хук на всякий случай
- */
-function asker_set_password_on_registration( $customer_id, $new_customer_data, $password_generated ) {
-    if ( isset( $_POST['password'] ) && ! empty( $_POST['password'] ) ) {
-        global $wpdb;
-        $hashed_password = wp_hash_password( $_POST['password'] );
-        $wpdb->update( 
-            $wpdb->users, 
-            array( 'user_pass' => $hashed_password ), 
-            array( 'ID' => $customer_id ) 
-        );
-        clean_user_cache( $customer_id );
-    }
-}
-add_action( 'woocommerce_created_customer', 'asker_set_password_on_registration', 999, 3 );
+add_filter( 'woocommerce_registration_generate_password', '__return_true', 999 );
+add_filter( 'pre_option_woocommerce_registration_generate_password', function() { return 'yes'; }, 999 );
 
 /**
  * Включаем регистрацию на странице My Account
@@ -3233,17 +3343,11 @@ function asker_enable_registration() {
 add_filter( 'woocommerce_enable_myaccount_registration', 'asker_enable_registration' );
 
 /**
- * Автоматический вход после регистрации
+ * Автоматический вход после регистрации ОТКЛЮЧЕН
+ * Пользователь должен подтвердить email и пройти верификацию админом
+ * @see inc/registration.php
  */
-function asker_auto_login_after_registration( $customer_id ) {
-    // Входим автоматически после регистрации
-    wp_set_current_user( $customer_id );
-    wp_set_auth_cookie( $customer_id );
-    
-    // Добавляем сообщение об успехе
-    wc_add_notice( 'Регистрация прошла успешно! Добро пожаловать!', 'success' );
-}
-add_action( 'woocommerce_created_customer', 'asker_auto_login_after_registration' );
+// Функция перенесена в inc/registration.php
 
 /**
  * Прямой выход без подтверждения
@@ -3391,9 +3495,9 @@ add_action( 'send_headers', 'asker_add_security_headers' );
  * Отключаем file editing через админку
  * Если нужно редактировать файлы через админку - закомментировать
  */
-if ( ! defined( 'DISALLOW_FILE_EDIT' ) ) {
+/**if ( ! defined( 'DISALLOW_FILE_EDIT' ) ) {
     define( 'DISALLOW_FILE_EDIT', true );
-}
+}*/
 
 /**
  * Ограничиваем количество попыток входа (базовая защита от брутфорса)
@@ -3441,7 +3545,7 @@ function asker_check_login_attempts( $user, $username, $password ) {
     
     return $user;
 }
-add_filter( 'authenticate', 'asker_check_login_attempts', 30, 3 );
+/*add_filter( 'authenticate', 'asker_check_login_attempts', 30, 3 );*/
 
 /**
  * Увеличиваем счетчик неудачных попыток входа
@@ -3730,4 +3834,595 @@ function asker_test_ajax() {
 }
 add_action( 'wp_ajax_asker_test', 'asker_test_ajax' );
 add_action( 'wp_ajax_nopriv_asker_test', 'asker_test_ajax' );
+
+
+
+/**
+ * Показываем всю информацию в колонке Доставка (справа)
+ */
+add_action('woocommerce_admin_order_data_after_shipping_address', 'asker_display_delivery_info_in_shipping', 10, 1);
+
+function asker_display_delivery_info_in_shipping($order) {
+    echo '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">';
+    
+    // Тип клиента
+    $customer_type = $order->get_meta('_customer_type');
+    if ($customer_type) {
+        echo '<p><strong>Тип клиента:</strong> ';
+        echo ($customer_type === 'legal') ? '🏢 Юр. лицо' : '👤 Физ. лицо';
+        echo '</p>';
+        
+        if ($customer_type === 'legal') {
+            $tax_id = $order->get_meta('_billing_tax_id');
+            if ($tax_id) {
+                echo '<p><strong>ИНН:</strong> ' . esc_html($tax_id) . '</p>';
+            }
+        }
+    }
+    
+    // Тип доставки
+    $delivery_type = $order->get_meta('_delivery_type');
+    
+    if ($delivery_type === 'pickup') {
+        echo '<p><strong>Тип:</strong> 📦 Самовывоз</p>';
+        
+        $pickup_contact = $order->get_meta('_pickup_contact_person');
+        if ($pickup_contact) {
+            echo '<p><strong>Контактное лицо:</strong> ' . esc_html($pickup_contact) . '</p>';
+        }
+        
+        $pickup_phone = $order->get_meta('_pickup_phone');
+        if ($pickup_phone) {
+            echo '<p><strong>Телефон:</strong> ' . esc_html($pickup_phone) . '</p>';
+        }
+        
+    } else {
+        echo '<p><strong>Тип:</strong> 🚚 Доставка</p>';
+        
+        // ТРАНСПОРТНАЯ КОМПАНИЯ
+        $company_name = $order->get_meta('_delivery_company_name');
+        
+        if ($company_name) {
+            echo '<div style="background: #f0f6fc; padding: 8px 10px; border-left: 3px solid #2271b1; margin: 10px 0;">';
+            echo '<strong style="color: #2271b1;">🚛 ТК:</strong> ';
+            echo '<span style="font-weight: 600;">' . esc_html($company_name) . '</span>';
+            echo '</div>';
+        } else {
+            echo '<div style="background: #fff3cd; padding: 8px 10px; border-left: 3px solid #ffc107; margin: 10px 0;">';
+            echo '<span style="color: #856404;">⚠️ ТК не указана</span>';
+            echo '</div>';
+        }
+        
+        // Адрес доставки
+        $city = $order->get_meta('_shipping_city');
+        $street = $order->get_meta('_shipping_address_1');
+        $house = $order->get_meta('_shipping_address_2');
+        $apt = $order->get_meta('_shipping_apartment');
+        
+        if ($city || $street) {
+            echo '<p style="margin-top: 10px;"><strong>Адрес:</strong><br>';
+            if ($city) echo 'г. ' . esc_html($city) . '<br>';
+            if ($street) echo 'ул. ' . esc_html($street);
+            if ($house) echo ', д. ' . esc_html($house);
+            if ($apt) echo ', кв. ' . esc_html($apt);
+            echo '</p>';
+        }
+    }
+    
+    echo '</div>';
+}
+
+/**
+ * ========================================
+ * ИНТЕГРАЦИЯ С 1С: ПЕРЕДАЧА ИНН И СКИДОК
+ * ========================================
+ * Официальная документация:
+ * https://itgalaxy.company/выгрузка-заказов-с-сайта-в-1с/
+ */
+
+/**
+ * 1. Добавляем ИНН в данные контрагента
+ * 
+ * Фильтр: itglx_wc1c_order_xml_contragent_data_array
+ * Параметры: $dataset (массив данных контрагента), $order (объект заказа)
+ */
+add_filter( 'itglx_wc1c_order_xml_contragent_data_array', 'asker_add_inn_to_contragent_1c', 10, 2 );
+function asker_add_inn_to_contragent_1c( $dataset, $order ) {
+    
+    // Получаем ИНН из заказа (сохраняется при оформлении)
+    $inn = $order->get_meta( '_company_inn' );
+    
+    // Если ИНН не сохранен в заказе, пробуем получить из профиля пользователя
+    if ( empty( $inn ) && $order->get_customer_id() ) {
+        $inn = get_user_meta( $order->get_customer_id(), 'company_inn', true );
+    }
+    
+    // Если ИНН найден - добавляем в данные контрагента
+    if ( ! empty( $inn ) ) {
+        $dataset['ИНН'] = htmlspecialchars( $inn );
+        
+        // Логируем для отладки (только для администраторов)
+        if ( current_user_can( 'administrator' ) ) {
+            error_log( 'Asker 1C: Added INN to contragent for order #' . $order->get_id() . ': ' . $inn );
+        }
+    }
+    
+    return $dataset;
+}
+
+/**
+ * 2. Добавляем данные о скидках в реквизиты заказа
+ * 
+ * Фильтр: itglx_wc1c_order_xml_details_array
+ * Параметры: $details (массив реквизитов), $order (объект заказа)
+ */
+add_filter( 'itglx_wc1c_order_xml_details_array', 'asker_add_discount_to_order_1c', 10, 2 );
+function asker_add_discount_to_order_1c( $details, $order ) {
+    
+    // 1. Процент скидки клиента
+    $total_discount = $order->get_meta( '_total_customer_discount' );
+    if ( $total_discount ) {
+        $details[] = [
+            'Наименование' => 'ПроцентСкидкиКлиента',
+            'Значение' => floatval( $total_discount )
+        ];
+    }
+    
+    // 2. Сумма скидки в рублях
+    $discount_amount = $order->get_meta( '_discount_amount' );
+    if ( ! $discount_amount ) {
+        // Если не сохранено в мета - берем из WooCommerce
+        $discount_amount = $order->get_total_discount();
+    }
+    if ( $discount_amount > 0 ) {
+        $details[] = [
+            'Наименование' => 'СуммаСкидки',
+            'Значение' => floatval( $discount_amount )
+        ];
+    }
+    
+    // 3. Уровень в программе лояльности
+    $level_name = $order->get_meta( '_level_name' );
+    if ( $level_name ) {
+        $details[] = [
+            'Наименование' => 'УровеньКлиента',
+            'Значение' => htmlspecialchars( $level_name )
+        ];
+        
+        $level_discount = $order->get_meta( '_level_discount' );
+        if ( $level_discount ) {
+            $details[] = [
+                'Наименование' => 'СкидкаПоУровню',
+                'Значение' => floatval( $level_discount )
+            ];
+        }
+    }
+    
+    // 4. Индивидуальная скидка
+    $individual_discount = $order->get_meta( '_individual_discount' );
+    if ( $individual_discount ) {
+        $details[] = [
+            'Наименование' => 'ИндивидуальнаяСкидка',
+            'Значение' => floatval( $individual_discount )
+        ];
+    }
+    
+    // Логируем для отладки
+    if ( current_user_can( 'administrator' ) ) {
+        error_log( 'Asker 1C: Added discount data for order #' . $order->get_id() );
+    }
+    
+    return $details;
+}
+
+/**
+ * Логирование всех данных заказа для отладки
+ * УДАЛИТЕ после настройки!
+ */
+add_action( 'woocommerce_checkout_order_processed', 'asker_log_order_data_for_1c', 10, 1 );
+function asker_log_order_data_for_1c( $order_id ) {
+    if ( ! current_user_can( 'administrator' ) ) {
+        return;
+    }
+    
+    $order = wc_get_order( $order_id );
+    
+    error_log( '=== ASKER ORDER DATA FOR 1C ===' );
+    error_log( 'Order ID: ' . $order_id );
+    error_log( 'Total Discount %: ' . $order->get_meta( '_total_customer_discount' ) );
+    error_log( 'Discount Amount: ' . $order->get_meta( '_discount_amount' ) );
+    error_log( 'Level: ' . $order->get_meta( '_level_name' ) );
+    error_log( 'INN: ' . $order->get_meta( '_company_inn' ) );
+    error_log( 'Company: ' . $order->get_meta( '_billing_company' ) );
+    error_log( '===============================' );
+}
+
+
+/**
+ * 3. Добавляем скидку в данные каждого товара
+ * 
+ * Фильтр: itglx_wc1c_xml_order_product_details_array
+ * Параметры: $details (массив реквизитов товара), $item (объект товара в заказе), $order (объект заказа)
+ */
+add_filter( 'itglx_wc1c_xml_order_product_details_array', 'asker_add_discount_to_product_1c', 10, 3 );
+function asker_add_discount_to_product_1c( $details, $item, $order ) {
+    
+    // Получаем процент скидки клиента
+    $discount_percent = $order->get_meta( '_total_customer_discount' );
+    
+    if ( ! $discount_percent || $discount_percent <= 0 ) {
+        return $details; // Нет скидки - ничего не добавляем
+    }
+    
+    // Получаем цены товара
+    $line_subtotal = floatval( $item->get_subtotal() ); // Сумма без скидки
+    $line_total = floatval( $item->get_total() ); // Сумма со скидкой
+    
+    // Рассчитываем сумму скидки на этот товар
+    $item_discount = $line_subtotal - $line_total;
+    
+    if ( $item_discount > 0 ) {
+        // Добавляем процент скидки
+        $details[] = [
+            'Наименование' => 'ПроцентСкидки',
+            'Значение' => floatval( $discount_percent )
+        ];
+        
+        // Добавляем сумму скидки на товар
+        $details[] = [
+            'Наименование' => 'СуммаСкидки',
+            'Значение' => floatval( $item_discount )
+        ];
+        
+        // Добавляем автоматическую скидку (флаг для 1С)
+        $details[] = [
+            'Наименование' => 'АвтоматическиеСкидки',
+            'Значение' => 'true'
+        ];
+    }
+    
+    return $details;
+}
+
+/**
+ * Приём документов (счет, накладная) из 1С через REST API
+ * Добавить в functions.php темы или в woocommerce.php
+ * 
+ * Endpoint: POST /wp-json/asker/v1/update-order-documents
+ * Auth: Basic Auth (те же логин/пароль что и для ITGalaxy обмена)
+ * Body JSON: { "order_number": "ТДУТ-000005", "invoice": "base64...", "waybill": "base64..." }
+ */
+
+// === 1. Регистрация REST API endpoint ===
+add_action('rest_api_init', function () {
+    register_rest_route('asker/v1', '/update-order-documents', array(
+        'methods'             => 'POST',
+        'callback'            => 'asker_update_order_documents',
+        'permission_callback' => 'asker_check_1c_auth',
+    ));
+});
+
+function asker_check_1c_auth($request) {
+    $username = isset($_SERVER['PHP_AUTH_USER']) ? trim(wp_unslash($_SERVER['PHP_AUTH_USER'])) : '';
+    $password = isset($_SERVER['PHP_AUTH_PW']) ? trim(wp_unslash($_SERVER['PHP_AUTH_PW'])) : '';
+
+    // CGI/FCGI fallback
+    if (empty($username) && empty($password)) {
+        $auth_header = '';
+        if (!empty($_SERVER['HTTP_AUTHORIZATION'])) {
+            $auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+        } elseif (!empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+            $auth_header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+        }
+        if (!empty($auth_header) && preg_match('/Basic\s+(.*)$/i', $auth_header, $matches)) {
+            list($username, $password) = explode(':', base64_decode($matches[1]), 2);
+            $username = trim($username);
+            $password = trim($password);
+        }
+    }
+
+    if (empty($username) || empty($password)) {
+        return new WP_Error('no_auth', 'Empty credentials', array('status' => 403));
+    }
+
+    // Прямая проверка — замените на свои логин и пароль
+    $valid_user = 'admin';
+    $valid_pass = 'hdhjvBe!sdfdg1234H';
+
+    if ($username === $valid_user && $password === $valid_pass) {
+        return true;
+    }
+
+    return new WP_Error('auth_failed', 'Wrong login or password', array('status' => 403));
+}
+
+// === 3. Основной обработчик ===
+function asker_update_order_documents($request) {
+    $params = $request->get_json_params();
+
+    // Проверяем номер заказа
+    $order_number = isset($params['order_number']) ? sanitize_text_field($params['order_number']) : '';
+    if (empty($order_number)) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Не указан номер заказа (order_number)',
+        ), 400);
+    }
+
+    // Ищем заказ по номеру (мета _order_number_1c или стандартный номер)
+    $order = asker_find_order_by_number($order_number);
+
+    if (!$order) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Заказ не найден: ' . $order_number,
+        ), 404);
+    }
+
+    $order_id = $order->get_id();
+    $results  = array();
+
+    // Обработка счёта (invoice) — только если передан
+    if (!empty($params['invoice'])) {
+        $res = asker_save_document_to_order($order, $params['invoice'], 'invoice', $order_number);
+        $results['invoice'] = $res;
+    }
+
+    // Обработка накладной (waybill) — только если передана
+    if (!empty($params['waybill'])) {
+        $res = asker_save_document_to_order($order, $params['waybill'], 'waybill', $order_number);
+        $results['waybill'] = $res;
+    }
+
+    // Проверяем были ли ошибки
+    $has_errors = false;
+    foreach ($results as $r) {
+        if (!$r['success']) {
+            $has_errors = true;
+        }
+    }
+
+    $status_code = $has_errors ? 500 : 200;
+
+    return new WP_REST_Response(array(
+        'success'      => !$has_errors,
+        'order_id'     => $order_id,
+        'order_number' => $order_number,
+        'results'      => $results,
+    ), $status_code);
+}
+
+function asker_find_order_by_number($order_number) {
+    $clean_number = trim($order_number);
+
+    // Способ 1: по мета _order_number_1c
+    $orders = wc_get_orders(array(
+        'limit'      => 1,
+        'meta_key'   => '_order_number_1c',
+        'meta_value' => $clean_number,
+    ));
+    if (!empty($orders)) {
+        return $orders[0];
+    }
+
+    // Способ 2: по мета _1c_order_id
+    $orders = wc_get_orders(array(
+        'limit'      => 1,
+        'meta_key'   => '_1c_order_id',
+        'meta_value' => $clean_number,
+    ));
+    if (!empty($orders)) {
+        return $orders[0];
+    }
+
+    // Способ 3: извлекаем числовую часть
+    if (preg_match('/(\d+)\s*$/', $clean_number, $matches)) {
+        $numeric_id = intval($matches[1]);
+
+        $order = wc_get_order($numeric_id);
+        if ($order && $order->get_id()) {
+            return $order;
+        }
+
+        $orders = wc_get_orders(array(
+            'limit'      => 1,
+            'meta_key'   => '_order_number',
+            'meta_value' => (string) $numeric_id,
+        ));
+        if (!empty($orders)) {
+            return $orders[0];
+        }
+    }
+
+    // Способ 4: поиск через postmeta
+    global $wpdb;
+    $order_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT post_id FROM {$wpdb->postmeta} 
+         WHERE meta_value = %s 
+         AND meta_key IN ('_order_number_1c', '_1c_order_id', '_order_number')
+         LIMIT 1",
+        $clean_number
+    ));
+
+    if ($order_id) {
+        return wc_get_order($order_id);
+    }
+
+    return null;
+}
+
+// === 5. Сохранение документа к заказу ===
+function asker_save_document_to_order($order, $base64_data, $doc_type, $order_number) {
+    // Декодируем Base64
+    $binary = base64_decode($base64_data, true);
+
+    if ($binary === false || strlen($binary) < 100) {
+        return array('success' => false, 'message' => 'Некорректные данные Base64');
+    }
+
+    // Формируем имя файла
+    $type_labels = array(
+        'invoice' => 'Счёт',
+        'waybill' => 'Накладная',
+    );
+    $label    = isset($type_labels[$doc_type]) ? $type_labels[$doc_type] : $doc_type;
+    $filename = $label . '_' . sanitize_file_name($order_number) . '_' . date('Ymd_His') . '.pdf';
+
+    // Сохраняем файл
+    $upload = wp_upload_bits($filename, null, $binary);
+
+    if ($upload['error']) {
+        error_log('[1C Documents] Upload error: ' . $upload['error']);
+        return array('success' => false, 'message' => 'Ошибка загрузки: ' . $upload['error']);
+    }
+
+    // Создаём запись в медиатеке
+    $attachment = array(
+        'post_mime_type' => 'application/pdf',
+        'post_title'     => $label . ' к заказу ' . $order_number,
+        'post_content'   => '',
+        'post_status'    => 'inherit',
+    );
+
+    $attach_id = wp_insert_attachment($attachment, $upload['file'], $order->get_id());
+
+    if (is_wp_error($attach_id)) {
+        return array('success' => false, 'message' => 'Ошибка создания вложения');
+    }
+
+    // Генерируем метаданные
+    require_once ABSPATH . 'wp-admin/includes/image.php';
+    $attach_data = wp_generate_attachment_metadata($attach_id, $upload['file']);
+    wp_update_attachment_metadata($attach_id, $attach_data);
+
+    // Сохраняем ID файла в мета заказа
+    $meta_key = ($doc_type === 'invoice') ? '_invoice_file_id' : '_waybill_file_id';
+
+    // Удаляем старый файл если был
+    $old_file_id = $order->get_meta($meta_key);
+    if ($old_file_id) {
+        wp_delete_attachment($old_file_id, true);
+    }
+
+    $order->update_meta_data($meta_key, $attach_id);
+    $order->update_meta_data('_' . $doc_type . '_file_url', $upload['url']);
+    $order->update_meta_data('_documents_updated_at', current_time('mysql'));
+    $order->save();
+
+    error_log('[1C Documents] Saved ' . $doc_type . ' for order ' . $order_number . ' | File ID: ' . $attach_id);
+
+    return array(
+        'success'  => true,
+        'file_id'  => $attach_id,
+        'file_url' => $upload['url'],
+        'size'     => strlen($binary),
+    );
+}
+
+// === 6. Показ документов в админке заказа ===
+add_action('woocommerce_admin_order_data_after_billing_address', 'asker_show_documents_in_admin', 10, 1);
+
+function asker_show_documents_in_admin($order) {
+    $invoice_id = $order->get_meta('_invoice_file_id');
+    $waybill_id = $order->get_meta('_waybill_file_id');
+    $updated_at = $order->get_meta('_documents_updated_at');
+
+    if (!$invoice_id && !$waybill_id) {
+        return;
+    }
+
+    echo '<div class="order-documents" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px;">';
+    echo '<h3 style="margin-top:0;">📄 Документы из 1С</h3>';
+
+    if ($invoice_id) {
+        $url = wp_get_attachment_url($invoice_id);
+        if ($url) {
+            echo '<p>📋 <strong>Счёт на оплату:</strong> <a href="' . esc_url($url) . '" target="_blank">Скачать PDF</a></p>';
+        }
+    }
+
+    if ($waybill_id) {
+        $url = wp_get_attachment_url($waybill_id);
+        if ($url) {
+            echo '<p>📦 <strong>Товарная накладная:</strong> <a href="' . esc_url($url) . '" target="_blank">Скачать PDF</a></p>';
+        }
+    }
+
+    if ($updated_at) {
+        echo '<p style="color: #666; font-size: 12px;">Обновлено: ' . esc_html($updated_at) . '</p>';
+    }
+
+    echo '</div>';
+}
+
+// === 7. Показ документов клиенту в личном кабинете (My Account → Заказ) ===
+add_action('woocommerce_order_details_after_order_table', 'asker_show_documents_to_customer', 10, 1);
+
+function asker_show_documents_to_customer($order) {
+    $invoice_id = $order->get_meta('_invoice_file_id');
+    $waybill_id = $order->get_meta('_waybill_file_id');
+
+    if (!$invoice_id && !$waybill_id) {
+        return;
+    }
+
+    echo '<section class="order-documents-customer" style="margin-top: 20px;">';
+    echo '<h2>Документы к заказу</h2>';
+
+    if ($invoice_id) {
+        $url = wp_get_attachment_url($invoice_id);
+        if ($url) {
+            echo '<p><a href="' . esc_url($url) . '" target="_blank" style="display:inline-block; padding:8px 16px; background:#0073aa; color:#fff; text-decoration:none; border-radius:4px;">📋 Скачать счёт на оплату (PDF)</a></p>';
+        }
+    }
+
+    if ($waybill_id) {
+        $url = wp_get_attachment_url($waybill_id);
+        if ($url) {
+            echo '<p><a href="' . esc_url($url) . '" target="_blank" style="display:inline-block; padding:8px 16px; background:#0073aa; color:#fff; text-decoration:none; border-radius:4px;">📦 Скачать товарную накладную (PDF)</a></p>';
+        }
+    }
+
+    echo '</section>';
+}
+
+// === 8. Добавление ссылок в email клиенту ===
+add_action('woocommerce_email_after_order_table', 'asker_add_documents_to_email', 10, 4);
+
+function asker_add_documents_to_email($order, $sent_to_admin, $plain_text, $email) {
+    // Только для клиента, не для админа
+    if ($sent_to_admin) {
+        return;
+    }
+
+    $invoice_id = $order->get_meta('_invoice_file_id');
+    $waybill_id = $order->get_meta('_waybill_file_id');
+
+    if (!$invoice_id && !$waybill_id) {
+        return;
+    }
+
+    if ($plain_text) {
+        echo "\n\nДокументы к заказу:\n";
+        if ($invoice_id) {
+            echo "Счёт на оплату: " . wp_get_attachment_url($invoice_id) . "\n";
+        }
+        if ($waybill_id) {
+            echo "Товарная накладная: " . wp_get_attachment_url($waybill_id) . "\n";
+        }
+    } else {
+        echo '<h2 style="margin-top:20px;">Документы к заказу</h2>';
+        echo '<table cellspacing="0" cellpadding="6" style="width:100%; border:1px solid #e5e5e5;">';
+        if ($invoice_id) {
+            echo '<tr><td style="border:1px solid #e5e5e5;">📋 Счёт на оплату</td>';
+            echo '<td style="border:1px solid #e5e5e5;"><a href="' . esc_url(wp_get_attachment_url($invoice_id)) . '">Скачать PDF</a></td></tr>';
+        }
+        if ($waybill_id) {
+            echo '<tr><td style="border:1px solid #e5e5e5;">📦 Товарная накладная</td>';
+            echo '<td style="border:1px solid #e5e5e5;"><a href="' . esc_url(wp_get_attachment_url($waybill_id)) . '">Скачать PDF</a></td></tr>';
+        }
+        echo '</table>';
+    }
+}
+
 

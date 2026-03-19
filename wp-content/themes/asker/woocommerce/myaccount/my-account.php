@@ -279,42 +279,59 @@ File: <?php echo __FILE__; ?>
                         </a>
                     </nav>
                     
-                    <?php
-                    // Получаем уровень клиента и итоговую скидку
-                    $level_data = asker_get_customer_level( get_current_user_id() );
-                    $total_discount = function_exists( 'asker_get_total_discount' ) 
-                        ? asker_get_total_discount( get_current_user_id() ) 
-                        : $level_data['discount'];
-                    ?>
-                    <div class="user-level">
-                        <div class="level-info">
-                            <span class="level-label">Ваш уровень:</span>
-                            <span class="level-name"><?php echo esc_html( $level_data['level'] ); ?></span>
-                            <div class="level-help-icon" data-tooltip="Правила уровней: Уровень определяется суммой ваших покупок. Чем больше сумма, тем выше уровень и больше скидка.">
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.2" fill="none"/>
-                                    <path d="M8 6C7.44772 6 7 6.44772 7 7C7 7.55228 7.44772 8 8 8C8.55228 8 9 7.55228 9 7C9 6.44772 8.55228 6 8 6Z" fill="currentColor"/>
-                                    <path d="M8 9.5V11.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <circle cx="8" cy="12.5" r="0.5" fill="currentColor"/>
-                            </svg>
-                            </div>
-                        </div>
-                        <div class="discount-info">
-                            <span class="discount-label">Ваша скидка:</span>
-                            <span class="discount-value"><?php echo esc_html( $total_discount ); ?>%</span>
-                        </div>
-                        
-                        <?php 
-                        // Кнопка "Запросить скидку" - только для Базового уровня, открывает форму обратной связи
-                        if ( $level_data['level'] === 'Базовый' ) : ?>
-                        <button type="button" class="request-discount-btn" onclick="openContactFormPopup()">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M8 1L10.163 5.279L15 6.017L11.5 9.421L12.326 14.219L8 12L3.674 14.219L4.5 9.421L1 6.017L5.837 5.279L8 1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Запросить скидку
-                        </button>
-                        <?php endif; ?>
+
+                <?php
+                // Получаем уровень клиента и скидки
+                $user_id = get_current_user_id();
+                $level_data = asker_get_customer_level( $user_id );
+                $level_discount = $level_data['discount']; // Скидка от уровня
+                
+                // Получаем индивидуальную скидку
+                $individual_discount = get_user_meta( $user_id, 'individual_discount', true );
+                $individual_discount = $individual_discount ? floatval( $individual_discount ) : 0;
+                ?>
+                <div class="user-level">
+<!--                     Уровень
+<div class="level-info">
+    <span class="level-label">Ваш уровень:</span>
+    <span class="level-name"><?php echo esc_html( $level_data['level'] ); ?></span>
+    
+    <div class="level-help-icon" data-tooltip="Правила уровней: Уровень определяется суммой ваших покупок. Чем больше сумма, тем выше уровень и больше скидка.">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.2" fill="none"/>
+            <path d="M8 6C7.44772 6 7 6.44772 7 7C7 7.55228 7.44772 8 8 8C8.55228 8 9 7.55228 9 7C9 6.44772 8.55228 6 8 6Z" fill="currentColor"/>
+            <path d="M8 9.5V11.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="8" cy="12.5" r="0.5" fill="currentColor"/>
+        </svg>
+    </div>
+</div>
+
+Скидка от уровня
+<div class="discount-info">
+    <span class="discount-label">Ваша скидка:</span>
+    <span class="discount-value"><?php echo esc_html( $level_discount ); ?>%</span>
+</div> -->
+                    
+                    <?php if ( $individual_discount > 0 ) : ?>
+                    <!-- Индивидуальная скидка (если есть) - в одну строку -->
+                    <div class="individual-discount-info">
+                        <span class="discount-label">Индивидуальная скидка:</span>
+                        <span class="discount-value"><?php echo esc_html( $individual_discount ); ?>%</span>
                     </div>
+                    <?php endif; ?>
+                    
+                    <?php 
+                    // Кнопка "Запросить скидку" - только для Базового уровня
+                    if ( $level_data['level'] === 'Базовый' ) : ?>
+                    <button type="button" class="request-discount-btn" onclick="openDiscountRequestPopup()">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 1L10.163 5.279L15 6.017L11.5 9.421L12.326 14.219L8 12L3.674 14.219L4.5 9.421L1 6.017L5.837 5.279L8 1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Запросить скидку
+                    </button>
+                    <?php endif; ?>
+                </div>
+
                     
                     <?php
                     // Получаем данные менеджера
@@ -421,147 +438,233 @@ File: <?php echo __FILE__; ?>
                 
                 <!-- Основной контент -->
                 <main class="account-content">
-                    <!-- Вкладка Обзор -->
-                    <div class="tab-content active" id="overview">
-                        <div class="content-section">
-                            <h2>Ваши последние заказы</h2>
-                            
-                            <div class="orders-table">
-                                <?php
-                                // Получаем заказы пользователя из WooCommerce
-                                if (class_exists('WooCommerce')) {
-                                    $customer_orders = wc_get_orders(array(
-                                        'customer_id' => get_current_user_id(),
-                                        'status' => array('wc-pending', 'wc-processing', 'wc-on-hold', 'wc-completed', 'wc-cancelled', 'wc-refunded', 'wc-failed'),
-                                        'limit' => 10,
-                                        'orderby' => 'date',
-                                        'order' => 'DESC'
-                                    ));
-                                    
-                                    // Безопасная проверка на случай, если wc_get_orders вернет null или WP_Error
-                                    if (is_wp_error($customer_orders)) {
-                                        $customer_orders = array();
-                                    }
-                                    if (!is_array($customer_orders)) {
-                                        $customer_orders = array();
-                                    }
-                                    
-                                    if (!empty($customer_orders)) {
-                                        ?>
-                                        <table>
-                                            <thead>
-                                                <tr>
-                                                    <th>№ заказа</th>
-                                                    <th>Дата</th>
-                                                    <th>Статус</th>
-                                                    <th>Сумма заказа</th>
-                                                    <th>Действия</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php foreach ($customer_orders as $order): ?>
-                                                    <tr>
-                                                        <td>#<?php echo $order->get_order_number(); ?></td>
-                                                        <td><?php echo $order->get_date_created()->date('d.m.Y'); ?></td>
-                                                        <td>
-                                                            <?php
-                                                            $status = $order->get_status();
-                                                            $status_label = wc_get_order_status_name($status);
-                                                            $status_class = '';
-                                                            $status_icon = '';
-                                                            
-                                                            switch ($status) {
-                                                                case 'completed':
-                                                                    $status_class = 'completed';
-                                                                    $status_icon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-                                                                    break;
-                                                                case 'processing':
-                                                                case 'on-hold':
-                                                                    $status_class = 'delivery';
-                                                                    $status_icon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 3H15L13 9H3L1 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 9V13C13 13.6 12.6 14 12 14H4C3.4 14 3 13.6 3 13V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-                                                                    break;
-                                                                case 'cancelled':
-                                                                case 'failed':
-                                                                    $status_class = 'cancelled';
-                                                                    $status_icon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-                                                                    break;
-                                                                default:
-                                                                    $status_class = 'pending';
-                                                                    $status_icon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="2"/><path d="M8 5V8L10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-                                                            }
-                                                            ?>
-                                                            <span class="status <?php echo $status_class; ?>">
-                                                                <?php echo $status_icon; ?>
-                                                                <?php echo $status_label; ?>
-                                                            </span>
-                                                        </td>
-                                                        <td><?php echo $order->get_formatted_order_total(); ?></td>
-                                                        <td>
-                                                            <div class="order-actions">
-                                                                <a href="<?php echo $order->get_view_order_url(); ?>" class="btn-secondary">Посмотреть</a>
-                                                                <?php if ($status === 'completed'): ?>
-                                                                    <a href="<?php echo wp_nonce_url(add_query_arg('order_again', $order->get_id(), wc_get_cart_url()), 'woocommerce-order_again'); ?>" class="btn-primary">Повторить</a>
-                                                                <?php endif; ?>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
+
+
+<!-- Вкладка Обзор -->
+<div class="tab-content active" id="overview">
+    <div class="content-section">
+        <h2>Ваши последние заказы</h2>
+        
+        <div class="orders-table">
+            <?php
+            // Получаем заказы пользователя из WooCommerce (МАКСИМУМ 5)
+            if (class_exists('WooCommerce')) {
+                $customer_orders = wc_get_orders(array(
+                    'customer_id' => get_current_user_id(),
+                    'status' => array('wc-pending', 'wc-processing', 'wc-on-hold', 'wc-completed', 'wc-cancelled', 'wc-refunded', 'wc-failed'),
+                    'limit' => 5,
+                    'orderby' => 'date',
+                    'order' => 'DESC'
+                ));
+                
+                if (is_wp_error($customer_orders)) {
+                    $customer_orders = array();
+                }
+                if (!is_array($customer_orders)) {
+                    $customer_orders = array();
+                }
+                
+                if (!empty($customer_orders)) {
+                    ?>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>№ заказа</th>
+                                <th>Дата</th>
+                                <th>Статус</th>
+                                <th>Сумма заказа</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($customer_orders as $order): ?>
+                                <tr>
+                                    <td>#<?php echo $order->get_order_number(); ?></td>
+                                    <td><?php echo $order->get_date_created()->date('d.m.Y'); ?></td>
+                                    <td>
                                         <?php
-                                    } else {
+                                        $status = $order->get_status();
+                                        $status_label = wc_get_order_status_name($status);
+                                        $status_class = '';
+                                        $status_icon = '';
+                                        
+                                        switch ($status) {
+                                            case 'completed':
+                                                $status_class = 'completed';
+                                                $status_icon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                                                break;
+                                            case 'processing':
+                                            case 'on-hold':
+                                                $status_class = 'delivery';
+                                                $status_icon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 3H15L13 9H3L1 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 9V13C13 13.6 12.6 14 12 14H4C3.4 14 3 13.6 3 13V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                                                break;
+                                            case 'cancelled':
+                                            case 'failed':
+                                                $status_class = 'cancelled';
+                                                $status_icon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                                                break;
+                                            default:
+                                                $status_class = 'pending';
+                                                $status_icon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="2"/><path d="M8 5V8L10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                                        }
                                         ?>
-                                        <div class="no-orders">
-                                            <p>У вас пока нет заказов</p>
-                                            <a href="<?php echo esc_url(home_url('/shop')); ?>" class="btn-primary">Перейти в каталог</a>
+                                        <span class="status <?php echo $status_class; ?>">
+                                            <?php echo $status_icon; ?>
+                                            <?php echo $status_label; ?>
+                                        </span>
+                                    </td>
+                                    <td><?php echo $order->get_formatted_order_total(); ?></td>
+                                    <td>
+                                        <div class="order-actions">
+                                            <a href="<?php echo $order->get_view_order_url(); ?>" class="btn-secondary">Посмотреть</a>
+                                            <?php if ($status === 'completed'): ?>
+                                                <a href="<?php echo wp_nonce_url(add_query_arg('order_again', $order->get_id(), wc_get_cart_url()), 'woocommerce-order_again'); ?>" class="btn-primary">Повторить</a>
+                                            <?php endif; ?>
                                         </div>
-                                        <?php
-                                    }
-                                }
-                                ?>
-                            </div>
-                            
-                            <?php
-                            // Показываем пагинацию только если заказов больше 10
-                            $all_orders = wc_get_orders(array(
-                                'customer_id' => get_current_user_id(),
-                                'status' => array('wc-pending', 'wc-processing', 'wc-on-hold', 'wc-completed', 'wc-cancelled', 'wc-refunded', 'wc-failed'),
-                                'limit' => -1
-                            ));
-                            // Безопасная проверка на случай, если wc_get_orders вернет null или WP_Error
-                            if (is_wp_error($all_orders)) {
-                                $all_orders = array();
-                            }
-                            if (!is_array($all_orders)) {
-                                $all_orders = array();
-                            }
-                            $orders_count = count($all_orders);
-                            if ($orders_count > 10):
-                            ?>
-                            <div class="pagination">
-                                <button class="pagination-btn prev" disabled>
-                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                        <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                    Предыдущая
-                                </button>
-                                
-                                <div class="pagination-numbers">
-                                    <span class="page-number active">1</span>
-                                    <span class="page-number">2</span>
-                                    <span class="page-number">3</span>
-                                </div>
-                                
-                                <button class="pagination-btn next">
-                                    Следующая
-                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                        <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                </button>
-                            </div>
-                            <?php endif; ?>
-                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                    
+                    <!-- Ссылка на все заказы -->
+<!--                     <div style="margin-top: 20px; text-align: center;"> -->
+<!--                         <a href="#" class="btn-secondary nav-item" data-tab="orders" style="display: inline-block; padding: 10px 24px; text-decoration: none;">Посмотреть все заказы</a> -->
+<!--                     </div> -->
+                    <?php
+                } else {
+                    ?>
+                    <div class="no-orders">
+                        <p>У вас пока нет заказов</p>
+                        <a href="<?php echo esc_url(home_url('/shop')); ?>" class="btn-primary">Перейти в каталог</a>
                     </div>
+                    <?php
+                }
+            }
+            ?>
+        </div>
+    </div>
+    
+    <!-- Популярные товары -->
+    <div class="content-section" style="margin-top: 40px;">
+        <h2>Популярные товары</h2>
+        <div class="products-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-top: 24px;">
+            <?php
+            // Получаем ID главной страницы
+            $frontpage_id = get_option('page_on_front');
+            
+            // Получаем выбранные товары из ACF с главной страницы
+            $featured_products = function_exists('get_field') ? get_field('featured_products', $frontpage_id) : false;
+            
+            // Отладка для администраторов
+            if (current_user_can('administrator') && isset($_GET['debug_products'])) {
+                echo '<!-- DEBUG: frontpage_id = ' . $frontpage_id . ', featured_products = ' . print_r($featured_products, true) . ' -->';
+            }
+            
+            if ($featured_products && is_array($featured_products)) :
+                $featured_products = array_slice($featured_products, 0, 3);
+                foreach ($featured_products as $product_id) :
+                    $product = wc_get_product($product_id);
+                    if ($product) :
+                        $product_image = wp_get_attachment_image_src(get_post_thumbnail_id($product_id), 'medium');
+                        $product_url = get_permalink($product_id);
+                        
+                        // ========== ПЕРСОНАЛИЗАЦИЯ ЦЕН ==========
+                        $has_discount = false;
+                        $discount_percent = 0;
+                        $price_html = '';
+                        
+                        if ( is_user_logged_in() ) {
+                            $user_id = get_current_user_id();
+                            
+                            if ( function_exists( 'asker_get_total_discount' ) ) {
+                                $discount_percent = asker_get_total_discount( $user_id );
+                            } else {
+                                $level_discount = get_user_meta( $user_id, 'user_level_discount', true );
+                                $individual_discount = get_user_meta( $user_id, 'individual_discount', true );
+                                $discount_percent = max( floatval( $level_discount ), floatval( $individual_discount ) );
+                            }
+                            
+                            if ( $discount_percent > 0 ) {
+                                $has_discount = true;
+                            }
+                        }
+                        
+                        if ( $has_discount ) {
+                            $regular_price = $product->get_regular_price();
+                            $sale_price = $product->get_sale_price();
+                            
+                            if ( ! empty( $regular_price ) ) {
+                                if ( ! empty( $sale_price ) ) {
+                                    $discounted_price = $sale_price * ( 1 - $discount_percent / 100 );
+                                    $price_html = '<div class="price-with-discount-home">';
+                                    $price_html .= '<span class="original-price-home"><del>' . wc_price( $regular_price ) . '</del></span>';
+                                    $price_html .= '<span class="personal-price-home">' . wc_price( $discounted_price ) . '</span>';
+                                    $price_html .= '<span class="discount-label-home">-' . esc_html( $discount_percent ) . '%</span>';
+                                    $price_html .= '</div>';
+                                } else {
+                                    $discounted_price = $regular_price * ( 1 - $discount_percent / 100 );
+                                    $price_html = '<div class="price-with-discount-home">';
+                                    $price_html .= '<span class="original-price-home"><del>' . wc_price( $regular_price ) . '</del></span>';
+                                    $price_html .= '<span class="personal-price-home">' . wc_price( $discounted_price ) . '</span>';
+                                    $price_html .= '<span class="discount-label-home">-' . esc_html( $discount_percent ) . '%</span>';
+                                    $price_html .= '</div>';
+                                }
+                            } else {
+                                $price_html = $product->get_price_html();
+                            }
+                        } else {
+                            $price_html = $product->get_price_html();
+                        }
+                        
+                        $price_html = preg_replace( '/,00/', '', $price_html );
+                        // ========== КОНЕЦ ПЕРСОНАЛИЗАЦИИ ==========
+            ?>
+                <div class="product-card">
+                    <button class="favorite-btn" data-product-id="<?php echo esc_attr($product_id); ?>"></button>
+                    <a href="<?php echo esc_url($product_url); ?>">
+                        <?php if ($product_image) : ?>
+                            <img class="product-image" src="<?php echo esc_url($product_image[0]); ?>" alt="<?php echo esc_attr($product->get_name()); ?>">
+                        <?php else : ?>
+                            <div class="product-placeholder"><?php echo esc_html($product->get_name()); ?></div>
+                        <?php endif; ?>
+                    </a>
+                    <h3 class="product-title">
+                        <a href="<?php echo esc_url($product_url); ?>"><?php echo esc_html($product->get_name()); ?></a>
+                    </h3>
+                    <div class="product-bottom">
+                        <div class="product-price"><?php echo $price_html; ?></div>
+                        <?php
+                        $cart_qty = 0;
+                        if ( function_exists( 'WC' ) && WC()->cart ) {
+                            foreach ( WC()->cart->get_cart() as $cart_item ) {
+                                if ( $cart_item['product_id'] == $product_id ) {
+                                    $cart_qty = $cart_item['quantity'];
+                                    break;
+                                }
+                            }
+                        }
+                        $btn_class = 'btn-add-cart add_to_cart_button';
+                        if ( $cart_qty > 0 ) {
+                            $btn_class .= ' has-items';
+                        }
+                        ?>
+                        <button class="<?php echo esc_attr( $btn_class ); ?>" data-product-id="<?php echo esc_attr($product_id); ?>">
+                            <span class="btn-text">В корзину</span>
+                            <span class="btn-cart-count" data-count="<?php echo esc_attr( $cart_qty ); ?>"><?php echo esc_html( $cart_qty ); ?></span>
+                        </button>
+                    </div>
+                </div>
+            <?php
+                    endif;
+                endforeach;
+            else :
+                echo '<p style="grid-column: 1/-1; text-align: center; color: #999;">Товары не настроены. Добавьте товары в поле "Популярные товары" на главной странице.</p>';
+            endif;
+            ?>
+        </div>
+    </div>
+</div>
                     
                     <!-- Вкладка Профиль -->
                     <div class="tab-content" id="profile">
@@ -694,19 +797,8 @@ File: <?php echo __FILE__; ?>
                                     <label for="avatar" class="avatar-upload-label">Изменить фото</label>
                                 </div>
                                 <div class="privilege-level-bar">
-                                    <p class="privilege-level-label">Ваш уровень в программе привилегий: <strong><?php echo esc_html( $level_data['level'] ); ?></strong></p>
-                                    <div class="level-bar">
-                                        <div class="level-item <?php echo $active_bar_level === 'basic' ? 'level-item--active' : ''; ?>">
-                                            <span>Базовый</span>
-                                        </div>
-                                        <div class="level-item <?php echo $active_bar_level === 'premium' ? 'level-item--active' : ''; ?>">
-                                            <span>Премиум</span>
-                                        </div>
-                                        <div class="level-item <?php echo $active_bar_level === 'vip' ? 'level-item--active' : ''; ?>">
-                                            <span>VIP</span>
-                                        </div>
-                                    </div>
-                                    <p class="privilege-discount">Ваша скидка: <span class="discount-value"><?php echo esc_html( $total_discount_profile ); ?>%</span> от розничной цены</p>
+                                    <p class="privilege-level-label">Индивидуальная скидка: 
+                                    <p class="privilege-discount">Скидка: <span class="discount-value"><?php echo esc_html( $total_discount_profile ); ?>%</span> от розничной цены</p>
                                 </div>
                             </div>
                             
@@ -745,7 +837,7 @@ File: <?php echo __FILE__; ?>
                                         </div>
                                         <div class="form-group">
                                             <label for="company_inn">ИНН компании</label>
-                                            <input type="text" id="company_inn" name="company_inn" value="<?php echo esc_attr(get_user_meta(get_current_user_id(), 'billing_inn', true)); ?>">
+                                            <input type="text" id="company_inn" name="company_inn" value="<?php echo esc_attr(get_user_meta(get_current_user_id(), 'company_inn', true)); ?>">
                                         </div>
                                     </div>
                                     
@@ -776,7 +868,7 @@ File: <?php echo __FILE__; ?>
                                         </label>
                                     </div>
                                     
-                                    <button type="submit" class="btn-save">Сохранить изменения</button>
+                                    <button type="submit" name="save_profile" class="btn-save">Сохранить изменения</button>
                                 </form>
                             </div>
                         </div>
@@ -943,151 +1035,260 @@ File: <?php echo __FILE__; ?>
                         </div>
                     </div>
                     
-                    <!-- Вкладка Избранное -->
-                    <div class="tab-content" id="wishlist">
-                        <div class="content-section">
-                            <h2>Ваши избранные товары</h2>
-                            <p class="wishlist-subtitle">Мы можете добавить товары в корзину и оформить заказ</p>
-                            <div class="wishlist-products">
-                                <?php
-                                $customer_id = get_current_user_id();
-                                $wishlist_items = get_user_meta($customer_id, 'asker_wishlist', true);
+<!-- Вкладка Избранное - ОБНОВЛЕННАЯ С ПЕРСОНАЛЬНЫМИ ЦЕНАМИ -->
+<div class="tab-content" id="wishlist">
+    <div class="content-section">
+        <h2>Ваши избранные товары</h2>
+        <p class="wishlist-subtitle">Мы можете добавить товары в корзину и оформить заказ</p>
+        <div class="wishlist-products">
+            <?php
+            $customer_id = get_current_user_id();
+            $wishlist_items = get_user_meta($customer_id, 'asker_wishlist', true);
+            
+            // Если в user_meta пусто, пытаемся синхронизировать с localStorage через JS
+            if (empty($wishlist_items) || !is_array($wishlist_items)) {
+                $wishlist_items = array();
+            }
+            
+            // Пагинация для избранного
+            $paged = isset($_GET['wishlist_page']) ? max(1, intval($_GET['wishlist_page'])) : 1;
+            $per_page = 10;
+            $total_items = count($wishlist_items);
+            $total_pages = ceil($total_items / $per_page);
+            $offset = ($paged - 1) * $per_page;
+            $paged_items = array_slice($wishlist_items, $offset, $per_page);
+            
+            if (!empty($paged_items)) :
+                ?>
+                <div class="wishlist-list">
+                    <?php foreach ($paged_items as $product_id) :
+                        $product = wc_get_product($product_id);
+                        if ($product && $product->is_visible()) :
+                            $product_image = wp_get_attachment_image_src(get_post_thumbnail_id($product_id), 'medium');
+                            $product_url = get_permalink($product_id);
+                            $sku = $product->get_sku();
+                            
+                            // ========== ПЕРСОНАЛИЗАЦИЯ ЦЕН ==========
+                            $has_discount = false;
+                            $discount_percent = 0;
+                            $price_html = '';
+                            
+                            // Проверяем авторизацию и скидку пользователя
+                            if ( is_user_logged_in() ) {
+                                $user_id = get_current_user_id();
                                 
-                                // Если в user_meta пусто, пытаемся синхронизировать с localStorage через JS
-                                if (empty($wishlist_items) || !is_array($wishlist_items)) {
-                                    $wishlist_items = array();
+                                // Получаем скидку пользователя
+                                if ( function_exists( 'asker_get_total_discount' ) ) {
+                                    $discount_percent = asker_get_total_discount( $user_id );
+                                } else {
+                                    // Fallback: получаем напрямую из мета-полей
+                                    $level_discount = get_user_meta( $user_id, 'user_level_discount', true );
+                                    $individual_discount = get_user_meta( $user_id, 'individual_discount', true );
+                                    $discount_percent = max( floatval( $level_discount ), floatval( $individual_discount ) );
                                 }
                                 
-                                // Пагинация для избранного
-                                $paged = isset($_GET['wishlist_page']) ? max(1, intval($_GET['wishlist_page'])) : 1;
-                                $per_page = 10;
-                                $total_items = count($wishlist_items);
-                                $total_pages = ceil($total_items / $per_page);
-                                $offset = ($paged - 1) * $per_page;
-                                $paged_items = array_slice($wishlist_items, $offset, $per_page);
+                                if ( $discount_percent > 0 ) {
+                                    $has_discount = true;
+                                }
+                            }
+                            
+                            // Формируем HTML цены
+                            if ( $has_discount ) {
+                                $regular_price = $product->get_regular_price();
+                                $sale_price = $product->get_sale_price();
                                 
-                                if (!empty($paged_items)) :
-                                    ?>
-                                    <div class="wishlist-list">
-                                        <?php foreach ($paged_items as $product_id) :
-                                            $product = wc_get_product($product_id);
-                                            if ($product && $product->is_visible()) :
-                                                $product_image = wp_get_attachment_image_src(get_post_thumbnail_id($product_id), 'medium');
-                                                $product_url = get_permalink($product_id);
-                                                $price = $product->get_price_html();
-                                                $sku = $product->get_sku();
-                                                ?>
-                                                <div class="wishlist-item">
-                                                    <a href="<?php echo esc_url($product_url); ?>" class="wishlist-item-image">
-                                                        <?php if ($product_image) : ?>
-                                                            <img src="<?php echo esc_url($product_image[0]); ?>" alt="">
-                                                        <?php else : ?>
-                                                            <div class="product-placeholder"></div>
-                                                        <?php endif; ?>
-                                                    </a>
-                                                    <div class="wishlist-item-info">
-                                                        <h3 class="wishlist-item-title">
-                                                        <a href="<?php echo esc_url($product_url); ?>"><?php echo esc_html($product->get_name()); ?></a>
-                                                    </h3>
-                                                        <?php if ($sku) : ?>
-                                                            <p class="wishlist-item-sku">Аритикул: <?php echo esc_html($sku); ?></p>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                    <div class="wishlist-item-price"><?php echo $price; ?></div>
-                                                    <button class="wishlist-item-remove" data-product-id="<?php echo esc_attr($product_id); ?>" aria-label="Удалить из избранного">
-                                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                            <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                                        </svg>
-                                                    </button>
-                                                    <div class="wishlist-item-right">
-                                                        <div class="wishlist-item-quantity">
-                                                            <button class="quantity-btn quantity-minus" data-product-id="<?php echo esc_attr($product_id); ?>">-</button>
-                                                            <input type="number" class="quantity-input" value="1" min="1" data-product-id="<?php echo esc_attr($product_id); ?>">
-                                                            <button class="quantity-btn quantity-plus" data-product-id="<?php echo esc_attr($product_id); ?>">+</button>
-                                                        </div>
-                                                        <?php
-                                                        // Получаем количество этого товара в корзине
-                                                        $cart_qty = 0;
-                                                        if ( function_exists( 'WC' ) && WC()->cart ) {
-                                                            foreach ( WC()->cart->get_cart() as $cart_item ) {
-                                                                if ( $cart_item['product_id'] == $product_id ) {
-                                                                    $cart_qty = $cart_item['quantity'];
-                                                                    break;
-                                                                }
-                                                            }
-                                                        }
-                                                        $btn_class = 'wishlist-item-add-cart btn-add-cart add_to_cart_button';
-                                                        if ( $cart_qty > 0 ) {
-                                                            $btn_class .= ' has-items';
-                                                        }
-                                                        ?>
-                                                        <button class="<?php echo esc_attr( $btn_class ); ?>" data-product-id="<?php echo esc_attr($product_id); ?>"><span class="btn-text">В корзину</span><span class="btn-cart-count" data-count="<?php echo esc_attr( $cart_qty ); ?>"><?php echo esc_html( $cart_qty ); ?></span></button>
-                                                    </div>
-                                                </div>
-                                            <?php
-                                            endif;
-                                        endforeach; ?>
-                                    </div>
-                                    
-                                    <?php if ($total_pages > 1) : ?>
-                                    <div class="wishlist-pagination">
-                                        <?php if ($paged > 1) : ?>
-                                            <a href="?wishlist_page=<?php echo $paged - 1; ?>#wishlist" class="pagination-btn pagination-btn--prev">
-                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                                    <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                                </svg>
-                                                Предыдущая
-                                            </a>
-                                        <?php endif; ?>
-                                        
-                                        <div class="pagination-numbers">
-                                            <?php
-                                            // Показываем максимум 7 страниц
-                                            $range = 3;
-                                            $start = max(1, $paged - $range);
-                                            $end = min($total_pages, $paged + $range);
-                                            
-                                            if ($start > 1) {
-                                                echo '<a href="?wishlist_page=1#wishlist" class="page-number">1</a>';
-                                                if ($start > 2) echo '<span class="page-dots">...</span>';
-                                            }
-                                            
-                                            for ($i = $start; $i <= $end; $i++) :
-                                                if ($i === $paged) : ?>
-                                                    <span class="page-number page-number--active"><?php echo $i; ?></span>
-                                                <?php else : ?>
-                                                    <a href="?wishlist_page=<?php echo $i; ?>#wishlist" class="page-number"><?php echo $i; ?></a>
-                                                <?php endif;
-                                            endfor;
-                                            
-                                            if ($end < $total_pages) {
-                                                if ($end < $total_pages - 1) echo '<span class="page-dots">...</span>';
-                                                echo '<a href="?wishlist_page=' . $total_pages . '#wishlist" class="page-number">' . $total_pages . '</a>';
-                                            }
-                                            ?>
-                                        </div>
-                                        
-                                        <?php if ($paged < $total_pages) : ?>
-                                            <a href="?wishlist_page=<?php echo $paged + 1; ?>#wishlist" class="pagination-btn pagination-btn--next">
-                                                Следующая
-                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                                    <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                                </svg>
-                                            </a>
-                                        <?php endif; ?>
-                                    </div>
+                                if ( ! empty( $regular_price ) ) {
+                                    if ( ! empty( $sale_price ) ) {
+                                        // Товар со скидкой + персональная скидка
+                                        $discounted_price = $sale_price * ( 1 - $discount_percent / 100 );
+                                        $price_html = '<div class="price-with-discount-account">';
+                                        $price_html .= '<span class="original-price-account"><del>' . wc_price( $regular_price ) . '</del></span>';
+                                        $price_html .= '<span class="personal-price-account">' . wc_price( $discounted_price ) . '</span>';
+                                        $price_html .= '<span class="discount-label-account">-' . esc_html( $discount_percent ) . '%</span>';
+                                        $price_html .= '</div>';
+                                    } else {
+                                        // Обычный товар + персональная скидка
+                                        $discounted_price = $regular_price * ( 1 - $discount_percent / 100 );
+                                        $price_html = '<div class="price-with-discount-account">';
+                                        $price_html .= '<span class="original-price-account"><del>' . wc_price( $regular_price ) . '</del></span>';
+                                        $price_html .= '<span class="personal-price-account">' . wc_price( $discounted_price ) . '</span>';
+                                        $price_html .= '<span class="discount-label-account">-' . esc_html( $discount_percent ) . '%</span>';
+                                        $price_html .= '</div>';
+                                    }
+                                } else {
+                                    // На всякий случай, если цены нет
+                                    $price_html = $product->get_price_html();
+                                }
+                            } else {
+                                // Обычная цена без персональной скидки
+                                $price_html = $product->get_price_html();
+                            }
+                            
+                            // Убираем копейки из цены
+                            $price_html = preg_replace( '/,00/', '', $price_html );
+                            // ========== КОНЕЦ ПЕРСОНАЛИЗАЦИИ ==========
+                            ?>
+                            <div class="wishlist-item">
+                                <a href="<?php echo esc_url($product_url); ?>" class="wishlist-item-image">
+                                    <?php if ($product_image) : ?>
+                                        <img src="<?php echo esc_url($product_image[0]); ?>" alt="">
+                                    <?php else : ?>
+                                        <div class="product-placeholder"></div>
                                     <?php endif; ?>
-                                <?php else : ?>
-                                    <div class="no-products">
-                                        <p>В вашем избранном пока нет товаров.</p>
-                                        <a href="<?php echo esc_url(home_url('/shop')); ?>" class="btn-primary">Перейти в каталог</a>
+                                </a>
+                                <div class="wishlist-item-info">
+                                    <h3 class="wishlist-item-title">
+                                        <a href="<?php echo esc_url($product_url); ?>"><?php echo esc_html($product->get_name()); ?></a>
+                                    </h3>
+                                    <?php if ($sku) : ?>
+                                        <p class="wishlist-item-sku">Артикул: <?php echo esc_html($sku); ?></p>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="wishlist-item-price"><?php echo $price_html; ?></div>
+                                <button class="wishlist-item-remove" data-product-id="<?php echo esc_attr($product_id); ?>" aria-label="Удалить из избранного">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+                                <div class="wishlist-item-right">
+                                    <div class="wishlist-item-quantity">
+                                        <button class="quantity-btn quantity-minus" data-product-id="<?php echo esc_attr($product_id); ?>">-</button>
+                                        <input type="number" class="quantity-input" value="1" min="1" data-product-id="<?php echo esc_attr($product_id); ?>">
+                                        <button class="quantity-btn quantity-plus" data-product-id="<?php echo esc_attr($product_id); ?>">+</button>
                                     </div>
-                                <?php endif; ?>
+                                    <?php
+                                    // Получаем количество этого товара в корзине
+                                    $cart_qty = 0;
+                                    if ( function_exists( 'WC' ) && WC()->cart ) {
+                                        foreach ( WC()->cart->get_cart() as $cart_item ) {
+                                            if ( $cart_item['product_id'] == $product_id ) {
+                                                $cart_qty = $cart_item['quantity'];
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    $btn_class = 'wishlist-item-add-cart btn-add-cart add_to_cart_button';
+                                    if ( $cart_qty > 0 ) {
+                                        $btn_class .= ' has-items';
+                                    }
+                                    ?>
+                                    <button class="<?php echo esc_attr( $btn_class ); ?>" data-product-id="<?php echo esc_attr($product_id); ?>"><span class="btn-text">В корзину</span><span class="btn-cart-count" data-count="<?php echo esc_attr( $cart_qty ); ?>"><?php echo esc_html( $cart_qty ); ?></span></button>
+                                </div>
                             </div>
-                        </div>
+                        <?php
+                        endif;
+                    endforeach; ?>
+                </div>
+                
+                <?php if ($total_pages > 1) : ?>
+                <div class="wishlist-pagination">
+                    <?php if ($paged > 1) : ?>
+                        <a href="?wishlist_page=<?php echo $paged - 1; ?>#wishlist" class="pagination-btn pagination-btn--prev">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Предыдущая
+                        </a>
+                    <?php endif; ?>
+                    
+                    <div class="pagination-numbers">
+                        <?php
+                        // Показываем максимум 7 страниц
+                        $range = 3;
+                        $start = max(1, $paged - $range);
+                        $end = min($total_pages, $paged + $range);
+                        
+                        if ($start > 1) {
+                            echo '<a href="?wishlist_page=1#wishlist" class="page-number">1</a>';
+                            if ($start > 2) echo '<span class="page-dots">...</span>';
+                        }
+                        
+                        for ($i = $start; $i <= $end; $i++) :
+                            if ($i === $paged) : ?>
+                                <span class="page-number page-number--active"><?php echo $i; ?></span>
+                            <?php else : ?>
+                                <a href="?wishlist_page=<?php echo $i; ?>#wishlist" class="page-number"><?php echo $i; ?></a>
+                            <?php endif;
+                        endfor;
+                        
+                        if ($end < $total_pages) {
+                            if ($end < $total_pages - 1) echo '<span class="page-dots">...</span>';
+                            echo '<a href="?wishlist_page=' . $total_pages . '#wishlist" class="page-number">' . $total_pages . '</a>';
+                        }
+                        ?>
                     </div>
-                </main>
+                    
+                    <?php if ($paged < $total_pages) : ?>
+                        <a href="?wishlist_page=<?php echo $paged + 1; ?>#wishlist" class="pagination-btn pagination-btn--next">
+                            Следующая
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </a>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+            <?php else : ?>
+                <div class="no-products">
+                    <p>В вашем избранном пока нет товаров.</p>
+                    <a href="<?php echo esc_url(home_url('/shop')); ?>" class="btn-primary">Перейти в каталог</a>
+                </div>
+            <?php endif; ?>
         </div>
+    </div>
+</div>
+
+<style>
+/* Стили для персонализированных цен в избранном личного кабинета */
+.wishlist-item-price .price-with-discount-account {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
+
+.wishlist-item-price .price-with-discount-account .original-price-account {
+    font-size: 14px;
+    color: #9CA3AF;
+    font-weight: 400;
+}
+
+.wishlist-item-price .price-with-discount-account .original-price-account del {
+    text-decoration: line-through;
+}
+
+.wishlist-item-price .price-with-discount-account .personal-price-account {
+    font-size: 20px;
+    font-weight: 700;
+    color: #059669;
+}
+
+.wishlist-item-price .price-with-discount-account .personal-price-account .woocommerce-Price-amount {
+    color: #059669;
+}
+
+.wishlist-item-price .price-with-discount-account .discount-label-account {
+    display: inline-block;
+    background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.2);
+}
+
+/* Адаптив */
+@media (max-width: 768px) {
+    .wishlist-item-price .price-with-discount-account .personal-price-account {
+        font-size: 18px;
+    }
+    
+    .wishlist-item-price .price-with-discount-account .original-price-account {
+        font-size: 12px;
+    }
+}
+</style>
         
         <script>
             // Синхронизация избранного: загружаем из user_meta в localStorage при загрузке ЛК
@@ -1374,5 +1575,7 @@ jQuery(document).ready(function($) {
     }
 })();
 </script>
+
+
 <?php endif; ?>
 

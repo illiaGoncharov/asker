@@ -412,43 +412,8 @@ function asker_cf7_translate_response_message( $message, $status ) {
 add_filter( 'wpcf7_display_message', 'asker_cf7_translate_response_message', 10, 2 );
 
 /**
- * Показываем сообщение об успешной регистрации
+ * Логика регистрации (редирект, notices) перенесена в inc/registration.php
+ * Теперь используется многошаговая регистрация с подтверждением email
+ * @see inc/registration.php
  */
-function asker_registration_success_message() {
-    // Проверяем, что пользователь только что зарегистрировался
-    if ( isset( $_GET['registered'] ) && $_GET['registered'] === 'success' ) {
-        wc_add_notice( 'Регистрация прошла успешно! Добро пожаловать в Asker Parts.', 'success' );
-    }
-}
-add_action( 'woocommerce_before_my_account', 'asker_registration_success_message' );
-
-/**
- * Редирект после успешной регистрации с параметром
- */
-function asker_registration_redirect( $redirect ) {
-    // Добавляем параметр для показа сообщения
-    return add_query_arg( 'registered', 'success', wc_get_page_permalink( 'myaccount' ) );
-}
-add_filter( 'woocommerce_registration_redirect', 'asker_registration_redirect' );
-
-/**
- * Альтернативный способ - показываем notice сразу после регистрации
- */
-function asker_after_registration_notice( $customer_id ) {
-    // Устанавливаем transient для показа сообщения
-    set_transient( 'asker_registration_success_' . $customer_id, true, 60 );
-}
-add_action( 'woocommerce_created_customer', 'asker_after_registration_notice' );
-
-/**
- * Показываем сообщение при входе нового пользователя
- */
-function asker_show_registration_success_on_login() {
-    $user_id = get_current_user_id();
-    if ( $user_id && get_transient( 'asker_registration_success_' . $user_id ) ) {
-        wc_add_notice( '🎉 Регистрация прошла успешно! Добро пожаловать в Asker Parts.', 'success' );
-        delete_transient( 'asker_registration_success_' . $user_id );
-    }
-}
-add_action( 'wp', 'asker_show_registration_success_on_login' );
 

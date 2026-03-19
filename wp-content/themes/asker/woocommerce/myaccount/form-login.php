@@ -17,17 +17,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 <?php
 // Определяем, какую вкладку показывать по умолчанию
 $show_register_tab = false;
+$registration_email_error = false;
+
+// Если регистрация была заблокирована из-за дубликата email (устанавливается в inc/registration.php)
+if ( isset( $_POST['_registration_blocked'] ) ) {
+    $show_register_tab = true;
+    $registration_email_error = true;
+}
 
 // Если была отправлена форма регистрации — показываем вкладку регистрации
-// Проверяем через nonce, чтобы срабатывало только при реальной отправке формы
-if ( isset( $_POST['register'] ) && 
-     isset( $_POST['woocommerce-register-nonce'] ) && 
-     wp_verify_nonce( $_POST['woocommerce-register-nonce'], 'woocommerce-register' ) ) {
+if ( isset( $_POST['register'] ) ) {
     $show_register_tab = true;
 }
 
 // Проверяем, есть ли параметр в URL для показа формы регистрации
 if ( isset( $_GET['action'] ) && $_GET['action'] === 'register' ) {
+    $show_register_tab = true;
+}
+
+// Если есть ошибки WooCommerce и они связаны с регистрацией — показываем вкладку регистрации
+if ( function_exists( 'wc_notice_count' ) && wc_notice_count( 'error' ) > 0 && isset( $_POST['register'] ) ) {
     $show_register_tab = true;
 }
 ?>
@@ -45,6 +54,12 @@ if ( isset( $_GET['action'] ) && $_GET['action'] === 'register' ) {
         <!-- Уведомления об ошибках и успехе -->
         <?php woocommerce_output_all_notices(); ?>
         
+        <?php if ( $registration_email_error ) : ?>
+            <div class="woocommerce-error" role="alert">
+                Этот email уже используется. <a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>">Войти?</a>
+            </div>
+        <?php endif; ?>
+        
         <!-- Форма входа -->
         <div class="auth-form-wrapper auth-form-wrapper--login <?php echo ! $show_register_tab ? 'active' : ''; ?>">
             <?php do_action( 'woocommerce_before_customer_login_form' ); ?>
@@ -55,7 +70,7 @@ if ( isset( $_GET['action'] ) && $_GET['action'] === 'register' ) {
                 <?php 
                 $message = '';
                 if ( isset( $_GET['login'] ) && $_GET['login'] === 'failed' ) {
-                    $message = '<div class="woocommerce-error">Неверное имя пользователя или пароль.</div>';
+                    $message = '<div class="woocommerce-error">Неверный email или пароль.</div>';
                 }
                 if ( $message ) : 
                     echo wp_kses_post( $message ); 
@@ -63,8 +78,8 @@ if ( isset( $_GET['action'] ) && $_GET['action'] === 'register' ) {
                 ?>
                 
                 <div class="form-group">
-                    <label for="username">Имя пользователя или Email&nbsp;<span class="required">*</span></label>
-                    <input type="text" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="username" id="username" autocomplete="username" value="<?php echo ( ! empty( $_POST['username'] ) ) ? esc_attr( wp_unslash( $_POST['username'] ) ) : ''; ?>" required />
+                    <label for="username">E-mail&nbsp;<span class="required">*</span></label>
+                    <input type="email" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="username" id="username" autocomplete="email" value="<?php echo ( ! empty( $_POST['username'] ) ) ? esc_attr( wp_unslash( $_POST['username'] ) ) : ''; ?>" required />
                 </div>
                 
                 <div class="form-group form-group--password">
@@ -149,16 +164,24 @@ if ( isset( $_GET['action'] ) && $_GET['action'] === 'register' ) {
             <form method="post" class="auth-form woocommerce-form woocommerce-form-register register" <?php do_action( 'woocommerce_register_form_tag' ); ?> >
                 <?php do_action( 'woocommerce_register_form_start' ); ?>
                 
+                <!-- Тогл Физ. лицо / Юр. лицо -->
+                <div class="form-group form-group--customer-type">
+                    <div class="customer-type-toggle">
+                        <label class="customer-type-toggle__option">
+                            <input type="radio" name="customer_type" value="individual" <?php checked( empty( $_POST['customer_type'] ) || $_POST['customer_type'] === 'individual' ); ?> />
+                            <span class="customer-type-toggle__label">Физическое лицо</span>
+                        </label>
+                        <label class="customer-type-toggle__option">
+                            <input type="radio" name="customer_type" value="legal_entity" <?php checked( isset( $_POST['customer_type'] ) && $_POST['customer_type'] === 'legal_entity' ); ?> />
+                            <span class="customer-type-toggle__label">Юридическое лицо</span>
+                        </label>
+                    </div>
+                </div>
+                
                 <!-- Поле имени -->
                 <div class="form-group">
                     <label for="reg_first_name">Имя&nbsp;<span class="required">*</span></label>
                     <input type="text" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="first_name" id="reg_first_name" autocomplete="given-name" value="<?php echo ( ! empty( $_POST['first_name'] ) ) ? esc_attr( wp_unslash( $_POST['first_name'] ) ) : ''; ?>" required />
-                </div>
-                
-                <!-- Поле телефона -->
-                <div class="form-group">
-                    <label for="reg_phone">Телефон&nbsp;<span class="required">*</span></label>
-                    <input type="tel" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="billing_phone" id="reg_phone" autocomplete="tel" value="<?php echo ( ! empty( $_POST['billing_phone'] ) ) ? esc_attr( wp_unslash( $_POST['billing_phone'] ) ) : ''; ?>" required />
                 </div>
                 
                 <!-- Поле email -->
@@ -167,19 +190,27 @@ if ( isset( $_GET['action'] ) && $_GET['action'] === 'register' ) {
                     <input type="email" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="email" id="reg_email" autocomplete="email" value="<?php echo ( ! empty( $_POST['email'] ) ) ? esc_attr( wp_unslash( $_POST['email'] ) ) : ''; ?>" required />
                 </div>
                 
-                <!-- Поле пароля -->
+                <!-- Поле телефона -->
                 <div class="form-group">
-                    <label for="reg_password">Пароль&nbsp;<span class="required">*</span></label>
-                    <input type="password" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="password" id="reg_password" autocomplete="new-password" required minlength="8" />
-                    <div class="password-requirements" id="password-requirements">
-                        <p class="password-requirements__title">Пароль должен содержать:</p>
-                        <ul class="password-requirements__list">
-                            <li class="password-req" data-req="length"><span class="password-req__icon">○</span> Минимум 8 символов</li>
-                            <li class="password-req" data-req="digit"><span class="password-req__icon">○</span> Хотя бы одну цифру</li>
-                            <li class="password-req" data-req="upper"><span class="password-req__icon">○</span> Хотя бы одну заглавную букву</li>
-                            <li class="password-req" data-req="special"><span class="password-req__icon">○</span> Хотя бы один спецсимвол (!@#$%^&* и др.)</li>
-                        </ul>
-                    </div>
+                    <label for="reg_phone">Телефон&nbsp;<span class="required">*</span></label>
+                    <input type="tel" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="phone" id="reg_phone" autocomplete="tel" value="<?php echo ( ! empty( $_POST['phone'] ) ) ? esc_attr( wp_unslash( $_POST['phone'] ) ) : ''; ?>" placeholder="+7 (___) ___-__-__" required />
+                </div>
+                
+                <!-- Поля для юр. лица (скрыты по умолчанию) -->
+                <div class="form-group form-group--company" id="company-fields" style="display: none;">
+                    <label for="reg_company_name">Название компании&nbsp;<span class="required">*</span></label>
+                    <input type="text" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="company_name" id="reg_company_name" autocomplete="organization" value="<?php echo ( ! empty( $_POST['company_name'] ) ) ? esc_attr( wp_unslash( $_POST['company_name'] ) ) : ''; ?>" />
+                </div>
+                
+                <div class="form-group form-group--inn" id="inn-field" style="display: none;">
+                    <label for="reg_company_inn">ИНН компании&nbsp;<span class="required">*</span></label>
+                    <input type="text" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="company_inn" id="reg_company_inn" autocomplete="off" pattern="[0-9]{10,12}" maxlength="12" value="<?php echo ( ! empty( $_POST['company_inn'] ) ) ? esc_attr( wp_unslash( $_POST['company_inn'] ) ) : ''; ?>" />
+                    <small class="form-hint">10 или 12 цифр</small>
+                </div>
+                
+                <div class="form-group form-group--known-manager">
+                    <label for="reg_known_manager">Если вы уже работаете с нами, укажите имя вашего менеджера</label>
+                    <input type="text" class="woocommerce-Input woocommerce-Input--text input-text form-control" name="known_manager_name" id="reg_known_manager" placeholder="Имя менеджера" value="<?php echo ( ! empty( $_POST['known_manager_name'] ) ) ? esc_attr( wp_unslash( $_POST['known_manager_name'] ) ) : ''; ?>" />
                 </div>
                 
                 <?php do_action( 'woocommerce_register_form' ); ?>
@@ -194,28 +225,10 @@ if ( isset( $_GET['action'] ) && $_GET['action'] === 'register' ) {
                             // Сначала ищем страницу по слагу
                             $privacy_page = get_page_by_path( 'privacy-policy' );
                             if ( $privacy_page && $privacy_page->post_status === 'publish' ) {
-                                // Используем slug для URL
                                 $privacy_url = home_url( '/privacy-policy' );
                             } else {
-                                // Если не найдена по слагу, пробуем через настройки WordPress
                                 $privacy_id = get_option( 'wp_page_for_privacy_policy' );
-                                if ( $privacy_id ) {
-                                    $privacy_page = get_post( $privacy_id );
-                                    if ( $privacy_page && $privacy_page->post_status === 'publish' ) {
-                                        // Обновляем slug если нужно
-                                        if ( $privacy_page->post_name !== 'privacy-policy' ) {
-                                            wp_update_post([
-                                                'ID' => $privacy_id,
-                                                'post_name' => 'privacy-policy'
-                                            ]);
-                                        }
-                                        $privacy_url = home_url( '/privacy-policy' );
-                                    } else {
-                                        $privacy_url = home_url( '/privacy-policy' );
-                                    }
-                                } else {
-                                    $privacy_url = home_url( '/privacy-policy' );
-                                }
+                                $privacy_url = home_url( '/privacy-policy' );
                             }
                             echo esc_url( $privacy_url );
                         ?>" class="auth-consent__link" target="_blank">Подробнее</a></span>
@@ -287,61 +300,73 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Валидация пароля в реальном времени
-    const regPassword = document.getElementById('reg_password');
-    const requirementsList = document.getElementById('password-requirements');
+    // Переключение типа клиента (Физ. лицо / Юр. лицо)
+    const customerTypeRadios = document.querySelectorAll('input[name="customer_type"]');
+    const companyFields = document.getElementById('company-fields');
+    const innField = document.getElementById('inn-field');
+    const companyNameInput = document.getElementById('reg_company_name');
+    const companyInnInput = document.getElementById('reg_company_inn');
     
-    if (regPassword && requirementsList) {
-        const requirements = {
-            length: { regex: /.{8,}/, element: requirementsList.querySelector('[data-req="length"]') },
-            digit: { regex: /[0-9]/, element: requirementsList.querySelector('[data-req="digit"]') },
-            upper: { regex: /[A-ZА-ЯЁ]/u, element: requirementsList.querySelector('[data-req="upper"]') },
-            special: { regex: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/, element: requirementsList.querySelector('[data-req="special"]') }
-        };
+    function toggleCompanyFields() {
+        const selectedType = document.querySelector('input[name="customer_type"]:checked');
+        const isLegalEntity = selectedType && selectedType.value === 'legal_entity';
         
-        function validatePassword() {
-            const password = regPassword.value;
-            let allValid = true;
+        if (companyFields) {
+            companyFields.style.display = isLegalEntity ? 'flex' : 'none';
+        }
+        if (innField) {
+            innField.style.display = isLegalEntity ? 'flex' : 'none';
+        }
+        
+        // Устанавливаем/убираем required
+        if (companyNameInput) {
+            companyNameInput.required = isLegalEntity;
+        }
+        if (companyInnInput) {
+            companyInnInput.required = isLegalEntity;
+        }
+    }
+    
+    // Инициализация при загрузке
+    toggleCompanyFields();
+    
+    // Обработчик изменения типа клиента
+    customerTypeRadios.forEach(radio => {
+        radio.addEventListener('change', toggleCompanyFields);
+    });
+    
+    // Валидация ИНН (только цифры)
+    if (companyInnInput) {
+        companyInnInput.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    }
+    
+    // Валидация формы регистрации при отправке
+    const regForm = document.querySelector('.woocommerce-form-register');
+    if (regForm) {
+        regForm.addEventListener('submit', function(e) {
+            const selectedType = document.querySelector('input[name="customer_type"]:checked');
+            const isLegalEntity = selectedType && selectedType.value === 'legal_entity';
             
-            for (const [key, req] of Object.entries(requirements)) {
-                if (req.element) {
-                    const icon = req.element.querySelector('.password-req__icon');
-                    if (req.regex.test(password)) {
-                        req.element.classList.add('password-req--valid');
-                        req.element.classList.remove('password-req--invalid');
-                        if (icon) icon.textContent = '✓';
-                    } else {
-                        req.element.classList.remove('password-req--valid');
-                        if (password.length > 0) {
-                            req.element.classList.add('password-req--invalid');
-                        } else {
-                            req.element.classList.remove('password-req--invalid');
-                        }
-                        if (icon) icon.textContent = '○';
-                        allValid = false;
-                    }
+            if (isLegalEntity) {
+                // Проверяем заполнение полей компании
+                if (!companyNameInput.value.trim()) {
+                    e.preventDefault();
+                    companyNameInput.focus();
+                    alert('Пожалуйста, укажите название компании');
+                    return false;
+                }
+                
+                const inn = companyInnInput.value.trim();
+                if (!inn || (inn.length !== 10 && inn.length !== 12)) {
+                    e.preventDefault();
+                    companyInnInput.focus();
+                    alert('ИНН должен содержать 10 или 12 цифр');
+                    return false;
                 }
             }
-            
-            return allValid;
-        }
-        
-        regPassword.addEventListener('input', validatePassword);
-        regPassword.addEventListener('focus', function() {
-            requirementsList.style.display = 'block';
         });
-        
-        // Валидация при отправке формы
-        const regForm = regPassword.closest('form');
-        if (regForm) {
-            regForm.addEventListener('submit', function(e) {
-                if (!validatePassword()) {
-                    e.preventDefault();
-                    regPassword.focus();
-                    requirementsList.style.display = 'block';
-                }
-            });
-        }
     }
 });
 </script>

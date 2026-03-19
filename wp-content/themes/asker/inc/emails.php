@@ -4,6 +4,24 @@
  * Красивые HTML письма в стиле сайта
  */
 
+function asker_wp_mail_from_name( $from_name ) {
+	$woo_name = get_option( 'woocommerce_email_from_name' );
+	if ( ! empty( $woo_name ) ) {
+		return $woo_name;
+	}
+	return 'Asker';
+}
+add_filter( 'wp_mail_from_name', 'asker_wp_mail_from_name' );
+
+function asker_wp_mail_from( $from_email ) {
+	$woo_email = get_option( 'woocommerce_email_from_address' );
+	if ( ! empty( $woo_email ) && $woo_email !== 'dev-email@wpengine.local' ) {
+		return $woo_email;
+	}
+	return $from_email;
+}
+add_filter( 'wp_mail_from', 'asker_wp_mail_from' );
+
 /**
  * Подключаем кастомные шаблоны email
  */
@@ -440,4 +458,286 @@ function asker_translate_new_order_email_text( $text, $email ) {
     return $text;
 }
 add_filter( 'woocommerce_email_format_string', 'asker_translate_new_order_email_text', 10, 2 );
+
+
+/**
+ * ========================================
+ * ШАБЛОНЫ EMAIL ДЛЯ РЕГИСТРАЦИИ
+ * ========================================
+ */
+
+/**
+ * Получаем HTML шаблон email
+ * 
+ * @param string $template_name Название шаблона
+ * @param array $args Переменные для шаблона
+ * @return string HTML письма
+ */
+function asker_get_email_template( $template_name, $args = array() ) {
+    $site_name = get_bloginfo( 'name' );
+    $site_url = home_url();
+    $logo_url = get_template_directory_uri() . '/assets/img/logo.png';
+    
+    // Базовые стили для всех писем
+    $header = '
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: Arial, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+            <tr>
+                <td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <!-- Header -->
+                        <tr>
+                            <td style="background: linear-gradient(135deg, #111827 0%, #1f2937 100%); padding: 30px; text-align: center;">
+                                <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">Asker Parts</h1>
+                            </td>
+                        </tr>
+                        <!-- Body -->
+                        <tr>
+                            <td style="padding: 40px 30px;">
+    ';
+    
+    $footer = '
+                            </td>
+                        </tr>
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background-color: #f9fafb; padding: 20px; text-align: center;">
+                                <p style="margin: 0 0 10px 0; font-size: 12px; color: #999999;">&copy; ' . date('Y') . ' ' . esc_html( $site_name ) . '. Все права защищены.</p>
+                                <p style="margin: 0; font-size: 12px; color: #999999;">Это письмо отправлено автоматически.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    ';
+    
+    // Получаем содержимое письма в зависимости от шаблона
+    $content = '';
+    
+    switch ( $template_name ) {
+        case 'verification':
+            $content = asker_email_template_verification( $args );
+            break;
+            
+        case 'awaiting_verification':
+            $content = asker_email_template_awaiting_verification( $args );
+            break;
+            
+        case 'admin_new_registration':
+            $content = asker_email_template_admin_new_registration( $args );
+            break;
+            
+        case 'account_approved':
+            $content = asker_email_template_account_approved( $args );
+            break;
+            
+        default:
+            $content = '<p>Шаблон не найден.</p>';
+    }
+    
+    return $header . $content . $footer;
+}
+
+/**
+ * Шаблон: Подтверждение email
+ */
+function asker_email_template_verification( $args ) {
+    $greeting_name = isset( $args['greeting_name'] ) ? esc_html( $args['greeting_name'] ) : 'клиент';
+    $set_password_url = isset( $args['set_password_url'] ) ? esc_url( $args['set_password_url'] ) : '';
+    $manager_name = isset( $args['manager_name'] ) ? esc_html( $args['manager_name'] ) : '';
+    $manager_phone = isset( $args['manager_phone'] ) ? esc_html( $args['manager_phone'] ) : '';
+    
+    // Блок с менеджером
+    //$manager_block = '';
+    //if ( $manager_name || $manager_phone ) {
+    //    $manager_info = $manager_name;
+    //    if ( $manager_phone ) {
+    //        $manager_info .= $manager_name ? ', ' . $manager_phone : $manager_phone;
+    //    }
+    //    $manager_block = '
+    //    <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+    //        В данный момент за Вами закреплён личный менеджер <strong style="color: #111827;">' . $manager_info . '</strong>; если у Вас возникнут вопросы, Вы можете связаться с ним напрямую.
+    //    </p>';
+    //}
+    
+    return '
+        <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+            Благодарим Вас за регистрацию на сайте Asker-corp.ru!
+        </p>
+        
+        <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+            Пройдите по ссылке и установите пароль.
+        </p>
+        
+        <p style="text-align: center; margin: 30px 0;">
+            <a href="' . $set_password_url . '" style="display: inline-block; padding: 15px 40px; background-color: #FFD600; color: #111827; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px;">
+                Установить пароль
+            </a>
+        </p>
+        
+        ' . $manager_block . '
+        
+        <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+            Если кнопка не работает, скопируйте ссылку и вставьте в адресную строку браузера:<br>
+            <a href="' . $set_password_url . '" style="color: #111827; word-break: break-all;">' . $set_password_url . '</a>
+        </p>
+        
+        <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 30px 0 0 0;">
+            С уважением,<br>
+            <strong style="color: #111827;">команда Asker</strong>
+        </p>
+        
+        <p style="color: #999999; font-size: 12px; line-height: 1.5; margin: 20px 0 0 0; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            Ссылка действительна 24 часа. Если вы не регистрировались на нашем сайте, проигнорируйте это письмо.
+        </p>
+    ';
+}
+
+/**
+ * Шаблон: Ожидание верификации
+ */
+function asker_email_template_awaiting_verification( $args ) {
+    $greeting_name = isset( $args['greeting_name'] ) ? esc_html( $args['greeting_name'] ) : 'клиент';
+    $manager_name = isset( $args['manager_name'] ) ? esc_html( $args['manager_name'] ) : 'Отдел продаж';
+    $manager_phone = isset( $args['manager_phone'] ) ? esc_html( $args['manager_phone'] ) : '';
+    $manager_email = isset( $args['manager_email'] ) ? esc_html( $args['manager_email'] ) : '';
+    
+    $manager_info = '';
+    if ( $manager_name ) {
+        $manager_info .= '<p style="color: #111827; font-size: 16px; font-weight: 600; margin: 0 0 10px 0;">' . $manager_name . '</p>';
+    }
+    if ( $manager_phone ) {
+        $manager_info .= '<p style="color: #666666; font-size: 14px; margin: 0 0 5px 0;">Телефон: <a href="tel:' . preg_replace( '/[^0-9+]/', '', $manager_phone ) . '" style="color: #111827;">' . $manager_phone . '</a></p>';
+    }
+    if ( $manager_email ) {
+        $manager_info .= '<p style="color: #666666; font-size: 14px; margin: 0;">Email: <a href="mailto:' . $manager_email . '" style="color: #111827;">' . $manager_email . '</a></p>';
+    }
+    
+    return '
+        <h2 style="color: #111827; font-size: 20px; margin: 0 0 20px 0;">Здравствуйте, ' . $greeting_name . '!</h2>
+        
+        <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+            Спасибо! Ваш пароль успешно установлен.
+        </p>
+        
+        <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+            В настоящий момент мы проверяем введённые данные для вашей безопасности. Сразу после завершения проверки вы получите уведомление и сможете войти в личный кабинет.
+        </p>
+        
+        <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 30px 0;">
+            <h3 style="color: #111827; font-size: 16px; margin: 0 0 15px 0;">Ваш менеджер для связи:</h3>
+            ' . $manager_info . '
+        </div>
+        
+        <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+            Если у вас есть вопросы, свяжитесь с менеджером — мы всегда рады помочь!
+        </p>
+    ';
+}
+
+/**
+ * Шаблон: Аккаунт одобрен
+ */
+function asker_email_template_account_approved( $args ) {
+    $greeting_name = isset( $args['greeting_name'] ) ? esc_html( $args['greeting_name'] ) : 'клиент';
+    $login_url = isset( $args['login_url'] ) ? esc_url( $args['login_url'] ) : wc_get_page_permalink( 'myaccount' );
+    
+    return '
+        <h2 style="color: #111827; font-size: 20px; margin: 0 0 20px 0;">Здравствуйте, ' . $greeting_name . '!</h2>
+        
+        <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+            Отличные новости! Ваш аккаунт на сайте Asker Parts успешно верифицирован.
+        </p>
+        
+        <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+            Теперь вы можете войти в личный кабинет, чтобы:
+        </p>
+        
+        <ul style="color: #666666; font-size: 16px; line-height: 1.8; margin: 0 0 20px 20px; padding: 0;">
+            <li>Просматривать каталог товаров с оптовыми ценами</li>
+            <li>Оформлять заказы</li>
+            <li>Отслеживать статус доставки</li>
+            <li>Управлять настройками аккаунта</li>
+        </ul>
+        
+        <p style="text-align: center; margin: 30px 0;">
+            <a href="' . $login_url . '" style="display: inline-block; padding: 15px 40px; background-color: #FFD600; color: #111827; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px;">
+                Войти в личный кабинет
+            </a>
+        </p>
+        
+        <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+            Если у вас возникнут вопросы, свяжитесь с нашим отделом продаж — мы всегда готовы помочь!
+        </p>
+    ';
+}
+
+/**
+ * Шаблон: Уведомление админу о новой регистрации
+ */
+function asker_email_template_admin_new_registration( $args ) {
+    $user_email = isset( $args['user_email'] ) ? esc_html( $args['user_email'] ) : '';
+    $first_name = isset( $args['first_name'] ) ? esc_html( $args['first_name'] ) : 'Не указано';
+    $customer_type_label = isset( $args['customer_type_label'] ) ? esc_html( $args['customer_type_label'] ) : 'Не указано';
+    $company_name = isset( $args['company_name'] ) ? esc_html( $args['company_name'] ) : '';
+    $company_inn = isset( $args['company_inn'] ) ? esc_html( $args['company_inn'] ) : '';
+    $user_id = isset( $args['user_id'] ) ? absint( $args['user_id'] ) : 0;
+    $admin_url = isset( $args['admin_url'] ) ? esc_url( $args['admin_url'] ) : admin_url( 'users.php' );
+    
+    $known_manager_name = isset( $args['known_manager_name'] ) ? esc_html( $args['known_manager_name'] ) : '';
+    
+    $company_info = '';
+    if ( $company_name ) {
+        $company_info .= '<tr><td style="padding: 10px; color: #666666; border-bottom: 1px solid #e5e7eb;">Компания</td><td style="padding: 10px; color: #111827; border-bottom: 1px solid #e5e7eb;">' . $company_name . '</td></tr>';
+    }
+    if ( $company_inn ) {
+        $company_info .= '<tr><td style="padding: 10px; color: #666666; border-bottom: 1px solid #e5e7eb;">ИНН</td><td style="padding: 10px; color: #111827; border-bottom: 1px solid #e5e7eb;">' . $company_inn . '</td></tr>';
+    }
+    if ( $known_manager_name ) {
+        $company_info .= '<tr><td style="padding: 10px; color: #666666; border-bottom: 1px solid #e5e7eb;">Указанный менеджер</td><td style="padding: 10px; color: #111827; border-bottom: 1px solid #e5e7eb;">' . $known_manager_name . '</td></tr>';
+    }
+    
+    return '
+        <h2 style="color: #111827; font-size: 20px; margin: 0 0 20px 0;">Новая регистрация</h2>
+        
+        <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+            На сайте зарегистрировался новый пользователь. Требуется активация аккаунта.
+        </p>
+        
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 8px; margin: 20px 0;">
+            <tr>
+                <td style="padding: 10px; color: #666666; border-bottom: 1px solid #e5e7eb; width: 40%;">Email</td>
+                <td style="padding: 10px; color: #111827; border-bottom: 1px solid #e5e7eb;">' . $user_email . '</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; color: #666666; border-bottom: 1px solid #e5e7eb;">Имя</td>
+                <td style="padding: 10px; color: #111827; border-bottom: 1px solid #e5e7eb;">' . $first_name . '</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; color: #666666; border-bottom: 1px solid #e5e7eb;">Тип клиента</td>
+                <td style="padding: 10px; color: #111827; border-bottom: 1px solid #e5e7eb;">' . $customer_type_label . '</td>
+            </tr>
+            ' . $company_info . '
+            <tr>
+                <td style="padding: 10px; color: #666666;">ID пользователя</td>
+                <td style="padding: 10px; color: #111827;">' . $user_id . '</td>
+            </tr>
+        </table>
+        
+        <p style="text-align: center; margin: 30px 0;">
+            <a href="' . $admin_url . '" style="display: inline-block; padding: 15px 40px; background-color: #111827; color: #ffffff; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px;">
+                Перейти к пользователям
+            </a>
+        </p>
+    ';
+}
 

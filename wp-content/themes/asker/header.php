@@ -162,52 +162,11 @@
     </script>
     <script src="<?php echo get_template_directory_uri(); ?>/assets/js/header-functions.js"></script>
     
-    <!-- Скрипт очистки избранного при выходе и проверки авторизации -->
+    <!-- Скрипт очистки избранного при выходе из аккаунта -->
     <script>
     (function() {
-        // Проверяем статус авторизации при загрузке страницы
-        const isLoggedIn = <?php echo is_user_logged_in() ? 'true' : 'false'; ?>;
-        
-        // Если пользователь не авторизован - очищаем localStorage избранного
-        if (!isLoggedIn) {
-            try {
-                localStorage.removeItem('favorites');
-                // Обновляем счетчики сразу если DOM готов
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', function() {
-                        updateWishlistCounters();
-                    });
-                } else {
-                    updateWishlistCounters();
-                }
-            } catch (e) {
-                // Игнорируем ошибки
-            }
-        }
-        
-        function updateWishlistCounters() {
-            const wishlistCount = document.querySelector('.wishlist-count');
-            const mobileWishlistCount = document.querySelector('.mobile-wishlist-count');
-            if (wishlistCount) {
-                wishlistCount.textContent = '0';
-                wishlistCount.setAttribute('data-count', '0');
-                wishlistCount.style.display = 'none';
-            }
-            if (mobileWishlistCount) {
-                mobileWishlistCount.textContent = '0';
-                mobileWishlistCount.style.display = 'none';
-            }
-        }
-        
-        // Обработчик клика на ссылку выхода
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initLogoutHandler);
-        } else {
-            initLogoutHandler();
-        }
-        
+        // Обработчик клика на ссылку выхода - очищаем localStorage при logout
         function initLogoutHandler() {
-            // Обрабатываем все ссылки выхода
             const logoutLinks = document.querySelectorAll('a[href*="wp-login.php?action=logout"], .logout-link');
             logoutLinks.forEach(function(link) {
                 link.addEventListener('click', function(e) {
@@ -219,6 +178,12 @@
                     }
                 });
             });
+        }
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initLogoutHandler);
+        } else {
+            initLogoutHandler();
         }
     })();
     </script>
@@ -400,9 +365,9 @@
         </nav>
         <div class="mobile-menu-contacts">
             <h4>Контакты</h4>
-            <a href="mailto:<?php echo get_option('woocommerce_store_email', 'info@askerspb.ru'); ?>" class="mobile-contact-link">
+            <a href="mailto:<?php echo get_option('woocommerce_store_email', 'sales@asker-corp.ru'); ?>" class="mobile-contact-link">
                 <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/message.svg" alt="" class="mobile-contact-icon">
-                <span><?php echo get_option('woocommerce_store_email', 'info@askerspb.ru'); ?></span>
+                <span><?php echo get_option('woocommerce_store_email', 'sales@asker-corp.ru'); ?></span>
             </a>
             <a href="https://t.me/Askercorp" target="_blank" class="mobile-contact-link" onclick="document.querySelector('.mobile-menu-close').click();">
                 <img src="<?php echo get_template_directory_uri(); ?>/assets/images/icons/chat.svg" alt="" class="mobile-contact-icon">

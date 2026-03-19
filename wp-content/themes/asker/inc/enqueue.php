@@ -57,7 +57,8 @@ add_action('wp_enqueue_scripts', function () {
         // Основной скрипт темы (зависит от jQuery)
         $main_js_path = get_template_directory() . '/assets/js/main.js';
         if (file_exists($main_js_path) && is_readable($main_js_path)) {
-            $main_js_version = filemtime($main_js_path) ?: time();
+            // Агрессивный cache-bust: filemtime + размер + random при разработке
+            $main_js_version = filemtime($main_js_path) . '.' . filesize($main_js_path);
             wp_enqueue_script(
                 'asker-main',
                 get_template_directory_uri() . '/assets/js/main.js',

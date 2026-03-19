@@ -24,9 +24,66 @@ if ( $related_products ) : ?>
                     $product_id = $product->get_id();
                     $product_image = wp_get_attachment_image_src( get_post_thumbnail_id( $product_id ), 'medium' );
                     $product_url = get_permalink( $product_id );
-                    $price = $product->get_price_html();
+                    
+                    // ========== ПЕРСОНАЛИЗАЦИЯ ЦЕН ==========
+                    $has_discount = false;
+                    $discount_percent = 0;
+                    $price_html = '';
+                    
+                    // Проверяем авторизацию и скидку пользователя
+                    if ( is_user_logged_in() ) {
+                        $user_id = get_current_user_id();
+                        
+                        // Получаем скидку пользователя
+                        if ( function_exists( 'asker_get_total_discount' ) ) {
+                            $discount_percent = asker_get_total_discount( $user_id );
+                        } else {
+                            // Fallback: получаем напрямую из мета-полей
+                            $level_discount = get_user_meta( $user_id, 'user_level_discount', true );
+                            $individual_discount = get_user_meta( $user_id, 'individual_discount', true );
+                            $discount_percent = max( floatval( $level_discount ), floatval( $individual_discount ) );
+                        }
+                        
+                        if ( $discount_percent > 0 ) {
+                            $has_discount = true;
+                        }
+                    }
+                    
+                    // Формируем HTML цены
+                    if ( $has_discount ) {
+                        $regular_price = $product->get_regular_price();
+                        $sale_price = $product->get_sale_price();
+                        
+                        if ( ! empty( $regular_price ) ) {
+                            if ( ! empty( $sale_price ) ) {
+                                // Товар со скидкой + персональная скидка
+                                $discounted_price = $sale_price * ( 1 - $discount_percent / 100 );
+                                $price_html = '<div class="price-with-discount">';
+                                $price_html .= '<span class="original-price"><del>' . wc_price( $regular_price ) . '</del></span>';
+                                $price_html .= '<span class="personal-price">' . wc_price( $discounted_price ) . '</span>';
+                                $price_html .= '<span class="discount-label">-' . esc_html( $discount_percent ) . '%</span>';
+                                $price_html .= '</div>';
+                            } else {
+                                // Обычный товар + персональная скидка
+                                $discounted_price = $regular_price * ( 1 - $discount_percent / 100 );
+                                $price_html = '<div class="price-with-discount">';
+                                $price_html .= '<span class="original-price"><del>' . wc_price( $regular_price ) . '</del></span>';
+                                $price_html .= '<span class="personal-price">' . wc_price( $discounted_price ) . '</span>';
+                                $price_html .= '<span class="discount-label">-' . esc_html( $discount_percent ) . '%</span>';
+                                $price_html .= '</div>';
+                            }
+                        } else {
+                            // На всякий случай, если цены нет
+                            $price_html = $product->get_price_html();
+                        }
+                    } else {
+                        // Обычная цена без персональной скидки
+                        $price_html = $product->get_price_html();
+                    }
+                    
                     // Убираем копейки из цены
-                    $price = preg_replace( '/,00/', '', $price );
+                    $price_html = preg_replace( '/,00/', '', $price_html );
+                    // ========== КОНЕЦ ПЕРСОНАЛИЗАЦИИ ==========
             ?>
                 <div class="product-card">
                     <button class="favorite-btn" data-product-id="<?php echo esc_attr( $product_id ); ?>"></button>
@@ -52,7 +109,7 @@ if ( $related_products ) : ?>
                         <a href="<?php echo esc_url( $product_url ); ?>"><?php echo esc_html( $product->get_name() ); ?></a>
                     </h3>
                     <div class="product-bottom">
-                        <div class="product-price"><?php echo $price; ?></div>
+                        <div class="product-price"><?php echo $price_html; ?></div>
                         <?php
                         // Получаем количество этого товара в корзине
                         $cart_qty = 0;
@@ -79,8 +136,59 @@ if ( $related_products ) : ?>
     </div>
 </section>
 
+<style>
+/* Стили для персонализированных цен в карточках */
+.product-card .price-with-discount {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
+
+.product-card .price-with-discount .original-price {
+    font-size: 14px;
+    color: #9CA3AF;
+    font-weight: 400;
+}
+
+.product-card .price-with-discount .original-price del {
+    text-decoration: line-through;
+}
+
+.product-card .price-with-discount .personal-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: #059669;
+}
+
+.product-card .price-with-discount .personal-price .woocommerce-Price-amount {
+    color: #059669;
+}
+
+.product-card .price-with-discount .discount-label {
+    display: inline-block;
+    background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.2);
+}
+
+/* Адаптив */
+@media (max-width: 768px) {
+    .product-card .price-with-discount .personal-price {
+        font-size: 16px;
+    }
+    
+    .product-card .price-with-discount .original-price {
+        font-size: 12px;
+    }
+}
+</style>
+
 <?php
 endif;
 
 wp_reset_postdata();
-

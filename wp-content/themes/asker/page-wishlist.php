@@ -20,9 +20,11 @@ get_header(); ?>
             <div class="wishlist-products">
                 <?php
                 $customer_id = get_current_user_id();
-                $wishlist_items = get_user_meta($customer_id, 'asker_wishlist', true);
+                $is_logged_in = is_user_logged_in();
+                $wishlist_items = $is_logged_in ? get_user_meta($customer_id, 'asker_wishlist', true) : array();
                 
-                // Если в user_meta пусто, пытаемся синхронизировать с localStorage через JS
+                // Для авторизованных - берём из user_meta
+                // Для гостей - JS загрузит из localStorage
                 if (empty($wishlist_items) || !is_array($wishlist_items)) {
                     $wishlist_items = array();
                 }
@@ -43,8 +45,67 @@ get_header(); ?>
                             if ($product && $product->is_visible()) :
                                 $product_image = wp_get_attachment_image_src(get_post_thumbnail_id($product_id), 'medium');
                                 $product_url = get_permalink($product_id);
-                                $price = $product->get_price_html();
                                 $sku = $product->get_sku();
+                                
+                                // ========== ПЕРСОНАЛИЗАЦИЯ ЦЕН ==========
+                                $has_discount = false;
+                                $discount_percent = 0;
+                                $price_html = '';
+                                
+                                // Проверяем авторизацию и скидку пользователя
+                                if ( is_user_logged_in() ) {
+                                    $user_id = get_current_user_id();
+                                    
+                                    // Получаем скидку пользователя
+                                    if ( function_exists( 'asker_get_total_discount' ) ) {
+                                        $discount_percent = asker_get_total_discount( $user_id );
+                                    } else {
+                                        // Fallback: получаем напрямую из мета-полей
+                                        $level_discount = get_user_meta( $user_id, 'user_level_discount', true );
+                                        $individual_discount = get_user_meta( $user_id, 'individual_discount', true );
+                                        $discount_percent = max( floatval( $level_discount ), floatval( $individual_discount ) );
+                                    }
+                                    
+                                    if ( $discount_percent > 0 ) {
+                                        $has_discount = true;
+                                    }
+                                }
+                                
+                                // Формируем HTML цены
+                                if ( $has_discount ) {
+                                    $regular_price = $product->get_regular_price();
+                                    $sale_price = $product->get_sale_price();
+                                    
+                                    if ( ! empty( $regular_price ) ) {
+                                        if ( ! empty( $sale_price ) ) {
+                                            // Товар со скидкой + персональная скидка
+                                            $discounted_price = $sale_price * ( 1 - $discount_percent / 100 );
+                                            $price_html = '<div class="price-with-discount-wishlist">';
+                                            $price_html .= '<span class="original-price-wishlist"><del>' . wc_price( $regular_price ) . '</del></span>';
+                                            $price_html .= '<span class="personal-price-wishlist">' . wc_price( $discounted_price ) . '</span>';
+                                            $price_html .= '<span class="discount-label-wishlist">-' . esc_html( $discount_percent ) . '%</span>';
+                                            $price_html .= '</div>';
+                                        } else {
+                                            // Обычный товар + персональная скидка
+                                            $discounted_price = $regular_price * ( 1 - $discount_percent / 100 );
+                                            $price_html = '<div class="price-with-discount-wishlist">';
+                                            $price_html .= '<span class="original-price-wishlist"><del>' . wc_price( $regular_price ) . '</del></span>';
+                                            $price_html .= '<span class="personal-price-wishlist">' . wc_price( $discounted_price ) . '</span>';
+                                            $price_html .= '<span class="discount-label-wishlist">-' . esc_html( $discount_percent ) . '%</span>';
+                                            $price_html .= '</div>';
+                                        }
+                                    } else {
+                                        // На всякий случай, если цены нет
+                                        $price_html = $product->get_price_html();
+                                    }
+                                } else {
+                                    // Обычная цена без персональной скидки
+                                    $price_html = $product->get_price_html();
+                                }
+                                
+                                // Убираем копейки из цены
+                                $price_html = preg_replace( '/,00/', '', $price_html );
+                                // ========== КОНЕЦ ПЕРСОНАЛИЗАЦИИ ==========
                                 ?>
                                 <div class="wishlist-item">
                                     <a href="<?php echo esc_url($product_url); ?>" class="wishlist-item-image">
@@ -62,7 +123,7 @@ get_header(); ?>
                                             <p class="wishlist-item-sku">Артикул: <?php echo esc_html($sku); ?></p>
                                         <?php endif; ?>
                                     </div>
-                                    <div class="wishlist-item-price"><?php echo $price; ?></div>
+                                    <div class="wishlist-item-price"><?php echo $price_html; ?></div>
                                     <button class="wishlist-item-remove" data-product-id="<?php echo esc_attr($product_id); ?>" aria-label="Удалить из избранного">
                                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                             <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -148,15 +209,71 @@ get_header(); ?>
                     <?php endif; ?>
                     
                 <?php else : ?>
-                    <div class="no-products">
-                        <p>В вашем избранном пока нет товаров.</p>
-                        <a href="<?php echo esc_url(home_url('/shop')); ?>" class="btn-primary">Перейти в каталог</a>
-                    </div>
+                    <?php if (!$is_logged_in) : ?>
+                        <!-- Для гостей: JS загрузит из localStorage -->
+                        <div class="wishlist-loading">Загрузка избранного...</div>
+                    <?php else : ?>
+                        <div class="no-products">
+                            <p>В вашем избранном пока нет товаров.</p>
+                            <a href="<?php echo esc_url(home_url('/shop')); ?>" class="btn-primary">Перейти в каталог</a>
+                        </div>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>
     </div>
 </div>
 
-<?php get_footer(); ?>
+<style>
+/* Стили для персонализированных цен в избранном */
+.wishlist-item-price .price-with-discount-wishlist {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
 
+.wishlist-item-price .price-with-discount-wishlist .original-price-wishlist {
+    font-size: 14px;
+    color: #9CA3AF;
+    font-weight: 400;
+}
+
+.wishlist-item-price .price-with-discount-wishlist .original-price-wishlist del {
+    text-decoration: line-through;
+}
+
+.wishlist-item-price .price-with-discount-wishlist .personal-price-wishlist {
+    font-size: 20px;
+    font-weight: 700;
+    color: #059669;
+}
+
+.wishlist-item-price .price-with-discount-wishlist .personal-price-wishlist .woocommerce-Price-amount {
+    color: #059669;
+}
+
+.wishlist-item-price .price-with-discount-wishlist .discount-label-wishlist {
+    display: inline-block;
+    background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.2);
+}
+
+/* Адаптив */
+@media (max-width: 768px) {
+    .wishlist-item-price .price-with-discount-wishlist .personal-price-wishlist {
+        font-size: 18px;
+    }
+    
+    .wishlist-item-price .price-with-discount-wishlist .original-price-wishlist {
+        font-size: 12px;
+    }
+}
+</style>
+
+<?php get_footer(); ?>

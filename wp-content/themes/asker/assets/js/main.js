@@ -724,27 +724,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }, true); // Используем capture фазу для раннего перехвата
     
     // Функция для обновления счетчика избранного (глобальная)
-    // Убираем рекурсивный вызов, который создавал бесконечный цикл
+    // Работает для ВСЕХ пользователей (гости хранят в localStorage)
     window.updateWishlistCounter = function() {
         try {
-            // КРИТИЧНО: Проверяем статус авторизации
-            // Если пользователь не авторизован - избранное должно быть пустым
-            const isLoggedIn = document.body.classList.contains('logged-in') || 
-                              (typeof asker_ajax !== 'undefined' && asker_ajax.is_logged_in === true);
-            
-            let count = 0;
-            
-            // Если не авторизован - очищаем и возвращаем 0
-            if (!isLoggedIn) {
-                try {
-                    localStorage.removeItem('favorites');
-                } catch (e) {}
-                count = 0;
-            } else {
-                // Если авторизован - получаем из localStorage
-                const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-                count = favorites.length;
-            }
+            // Читаем избранное из localStorage для всех пользователей
+            const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+            const count = favorites.length;
             
             // Обновляем десктопный счетчик
             const counter = document.querySelector('.wishlist-count');
@@ -761,9 +746,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 mobileWishlistCount.textContent = count;
                 mobileWishlistCount.style.display = count > 0 ? 'inline-flex' : 'none';
             }
-            
-            // УБРАНО: рекурсивный вызов создавал бесконечный цикл
-            // Если счетчики не найдены - это нормально, не нужно пытаться снова
             
         } catch (error) {
             // Тихая обработка ошибок счетчика избранного
@@ -1443,12 +1425,44 @@ function renderWishlistFromLocalStorage() {
     }
 }
 
+// Инициализация wishlist на странице избранного (для всех пользователей, включая гостей)
+function initWishlistPage() {
+    // Ждём загрузки jQuery
+    if (typeof jQuery === 'undefined') {
+        setTimeout(initWishlistPage, 100);
+        return;
+    }
+    
+    const $wishlistContainer = jQuery('.wishlist-products');
+    if (!$wishlistContainer.length) {
+        return;
+    }
+    
+    // Проверяем, есть ли уже товары на странице (PHP отрендерил для авторизованных)
+    const hasServerItems = $wishlistContainer.find('.wishlist-item').length > 0;
+    
+    // Если PHP не отрендерил товары (гость или пустой user_meta), загружаем из localStorage
+    if (!hasServerItems) {
+        // Ждём asker_ajax для AJAX запроса
+        if (typeof asker_ajax === 'undefined') {
+            setTimeout(initWishlistPage, 100);
+            return;
+        }
+        renderWishlistFromLocalStorage();
+    }
+}
+
 // Инициализация при загрузке DOM
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAccountTabs);
+    document.addEventListener('DOMContentLoaded', function() {
+        initAccountTabs();
+        // Небольшая задержка для гарантии загрузки jQuery и asker_ajax
+        setTimeout(initWishlistPage, 200);
+    });
 } else {
     // DOM уже загружен
     initAccountTabs();
+    setTimeout(initWishlistPage, 200);
 }
 
 // ===== КНОПКИ +/- для количества товара =====
